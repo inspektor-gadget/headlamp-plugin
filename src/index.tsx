@@ -1,4 +1,4 @@
-import {DetailsViewSectionProps, registerAppBarAction, registerDetailsViewSection} from '@kinvolk/headlamp-plugin/lib';
+import {DetailsViewSectionProps, registerDetailsViewSection} from '@kinvolk/headlamp-plugin/lib';
 import SectionBox from "@kinvolk/headlamp-plugin/lib/CommonComponents/SectionBox";
 import React, { useState, useEffect } from 'react';
 import SimpleTable from "@kinvolk/headlamp-plugin/lib/CommonComponents/SimpleTable";
@@ -51,6 +51,11 @@ function createWebSocketURL() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const hostname = window.location.hostname;
     const port = 4466 || window.location.port;
+    // TODO: this URL has to be built with information on how IG can be accessed (mainly the pod name on the specific
+    //  node that should deliver the data for a given pod). This simple example will always connect to the same gadget
+    //  pod and might only be able to deliver data from pods on the same node. We will most likely be adding
+    //  a fanning-out mechanism to IG later on so that the requests could be automatically be forwarded to the
+    //  correct nodes.
     const path = '/proxy/ws?proxyInfo=' + encodeURIComponent('ws://gadget.gadget-rfwlb.gadget.pod.minikube-docker/cmd/?cmd=%5B%22%2Fusr%2Fbin%2Fsocat%22%2C%22%2Frun%2Fgadgetwebservice.socket%22%2C%22-%22%5D');
     return `${protocol}//${hostname}${port ? `:${port}` : ''}${path}`;
 }
@@ -73,7 +78,7 @@ function initWebSocket() {
 
         websocket.addEventListener('close', () => {
             console.log('WebSocket connection closed');
-            websocket = null; // Set to null to allow re-initialization if needed
+            websocket = null;
         });
 
         websocket.addEventListener('error', error => {
@@ -82,6 +87,9 @@ function initWebSocket() {
     }
 }
 
+// This version doesn't actually implement filtering for the Pod that is shown. Those things could be filled out as
+// params in gadget.params (e.g. `{ "podname": "abc" }`). This could also be combined with the catalog to fill out
+// most of such params automatically, depending on the context.
 function runGadget(gadget) {
     console.log('running gadget', gadget);
 
@@ -101,6 +109,8 @@ function runGadget(gadget) {
     return gadget.id;
 }
 
+// Right now, this example doesn't use the gadget catalog to automatically infer the column information for the tables;
+// instead those are hardcoded. Using the catalog would make this reusable for any gadget with this kind of output.
 registerDetailsViewSection(({ resource }: DetailsViewSectionProps) => {
     if (!resource || resource.kind !== 'Pod') return null;
 
