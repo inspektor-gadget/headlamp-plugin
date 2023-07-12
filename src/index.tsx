@@ -292,3 +292,160 @@ registerDetailsViewSection(({ resource }: DetailsViewSectionProps) => {
         </SectionBox>
     );
 });
+
+
+registerDetailsViewSection(({ resource }: DetailsViewSectionProps) => {
+    if (!resource || resource.kind !== 'Pod') return null;
+    
+    const decoder = new TextDecoder('utf-8');
+    const [entries, setEntries] = useState([]);
+    const [pods, error] = K8s.ResourceClasses.Pod.useList();
+    const gadgetID = "snapshot-gadget-process";
+    const [igPod, setIGPod] = useState(null);
+    const execRef = React.useRef(null);
+    const [textStream, setTextStream] = useState("");
+
+    function runGadgetWithActionAndPayload(socket, action, payload) {
+        socket.send('\0'+JSON.stringify({ action, payload }) + "\n");
+    }
+
+    useEffect(() => {
+        if (!pods) {
+            return
+        }
+        const igPod = pods?.find(isIGPod);
+        if (!igPod) {
+            return
+        }
+        setIGPod(igPod)
+    }, [pods])
+    
+    
+    useEffect(() => {
+        if (!igPod) {
+            return
+        }
+
+        if(execRef.current) {
+            return
+        }
+        execRef.current = igPod.exec('gadget', (items) => {
+            const text = decoder.decode(items.slice(1));
+
+            if (new Uint8Array(items)[0] !== 1) {
+              return;
+            }
+            const textSplitBasedOnNewLine = text.split('\n')
+            if(textSplitBasedOnNewLine.length > 1) {
+                textSplitBasedOnNewLine.forEach((textPart, index) => {
+                    if(index === 0) {
+                        setTextStream(oldTextStream => {
+                            // if the last parsed ended with \n start fresh
+                            if(oldTextStream.endsWith('\n')) {
+                                return textPart
+                            }
+                            return oldTextStream + textPart
+                        })
+                    } else {
+                        setTextStream(textPart)
+                    }
+                })
+            } else if(text.endsWith('\n')) {
+              const updatedText = text.slice(0, -1)
+              setTextStream(oldTextStream => {
+                // if the last parsed ended with \n start fresh
+                if(oldTextStream.endsWith('\n')) {
+                    return updatedText
+                }
+                return oldTextStream + updatedText
+            })
+            } else {
+              setTextStream(oldTextStream => oldTextStream + text)
+            }
+        }, {
+            command: ["/usr/bin/socat", "/run/gadgetstreamingservice.socket", "-"],
+            tty: false,
+            stdin: true,
+            stdout: true,
+            stderr: false,
+        })
+
+        const socket = execRef.current.getSocket()
+
+        socket.addEventListener('open', () => runGadgetWithActionAndPayload(socket, "start", { gadgetName: 'process', gadgetCategory: 'snapshot', id: gadgetID,
+        params:{"max-rows": "50","operator.KubeManager.all-namespaces": "true"} }))
+
+        return () => {
+            socket.removeEventListener('open', () => runGadgetWithActionAndPayload(socket, "start", { gadgetName: 'process', gadgetCategory: 'snapshot', id: gadgetID,
+            params:{"max-rows":"50","operator.KubeManager.all-namespaces":"true"} }))
+            execRef.current.cancel()
+        }
+    }, [resource, igPod])
+
+    useEffect(() => {
+        const jsonParts = parseJsonFromText(textStream)
+        if(jsonParts) {
+                if(Array.isArray(jsonParts) && jsonParts.length > 0 && jsonParts[0].id === gadgetID) {
+                    const payloadMap = jsonParts.map((part) => part.payload)
+                    setEntries(entries => [...entries, ...payloadMap])    
+                } else {
+                    const payloads = jsonParts.payload
+                    if(Array.isArray(payloads) && payloads.length > 0) {
+                        setEntries(entries => [...entries, ...payloads])
+                    } else {
+                        setEntries([...entries, payloads])
+                    }
+                }
+                
+        }
+    }, [textStream])
+
+    console.log("entries",entries)
+
+    return (
+        <SectionBox title="Processes">
+            <SimpleTable
+                columns={[
+                    {
+                        label: 'Command',
+                        getter: e => e.comm,
+                    },
+                    {
+                        label: 'Container',
+                        getter: e => e.container,
+                    },
+                    {
+                        label: 'mntns',
+                        getter: e => e.mountnsid
+                    },
+                    {
+                        label: 'Namespace',
+                        getter: e => e.namespace
+                    },
+                    {
+                        label: 'Node',
+                        getter: e => e.node
+                    },
+                    {
+                        label: 'Pid',
+                        getter: e => e.pid
+                    },
+                    {
+                        label: 'Pod',
+                        getter: e => e.pod
+                    },
+                    {
+                        label: 'ppid',
+                        getter: e => e.ppid
+                    },
+                    {
+                        label: 'tid',
+                        getter: e => e.tid
+                    }
+                ]}
+                data={pods === null ? null : entries}
+                reflectInURL="processes"
+            />
+        </SectionBox>
+    );
+});
