@@ -3,8 +3,13 @@ import { K8s } from '@kinvolk/headlamp-plugin/lib';
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { JsonStreamParser, isIGPod, pubSub } from './helper';
-import { SectionBox, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-
+import Accordion from '@material-ui/core/Accordion';
+import AccordionDetails from '@material-ui/core/AccordionDetails';
+import AccordionSummary from '@material-ui/core/AccordionSummary';
+import AccordionActions from "@material-ui/core/AccordionActions";
+import { TextField, Box, Button, Paper } from '@material-ui/core';
+import { SectionBox, SectionHeader, SimpleTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Icon } from '@iconify/react';
 
 function GenericGadgetRenderer(props: {
     name: string,
@@ -25,8 +30,8 @@ function GenericGadgetRenderer(props: {
     const [pods, error] = K8s.ResourceClasses.Pod.useList();
     const [igPod, setIGPod] = useState(null);
     const execRef = React.useRef(null);
-
-    console.log("params and operation params", params, operatorParamsCollection)
+    const [filters, setFilters] = React.useState({});
+    const [applyFilters, setApplyFilters] = React.useState(false);
     function runGadgetWithActionAndPayload(socket, action, payload) {
         socket.send('\0'+JSON.stringify({ action, payload }) + "\n");
     }
@@ -41,7 +46,7 @@ function GenericGadgetRenderer(props: {
         }
         setIGPod(igPod)
     }, [pods])
-    
+    console.log("apply filters", applyFilters)
     
     useEffect(() => {
         if (!igPod) {
@@ -51,6 +56,11 @@ function GenericGadgetRenderer(props: {
         if(execRef.current) {
             return
         }
+        console.log("inside apply filters")
+        if(applyFilters) {
+            execRef.current.close();
+        }
+
         execRef.current = igPod.exec('gadget', () => {}, {
             command: ["/usr/bin/socat", "/run/gadgetstreamingservice.socket", "-"],
             tty: false,
@@ -73,17 +83,27 @@ function GenericGadgetRenderer(props: {
             parser.feed(text);
         })
 
+        let massagedFilters = {};
+        console.log(Object.keys(filters))
+        
+        console.log(massagedFilters)
+        Object.keys(filters).forEach((key) => {
+            console.log(key)
+            massagedFilters[key] = filters[key].value;
+        })
+        console.log(massagedFilters)
         socket.addEventListener('open', () => runGadgetWithActionAndPayload(socket, "start", {
             gadgetName: name,
             gadgetCategory: category,
-            id: gadgetID
+            id: gadgetID,
+            params: {...massagedFilters}
         }))
 
         return () => {
             socket.removeEventListener('open', () => runGadgetWithActionAndPayload(socket, "stop", { gadgetName: name, gadgetCategory: category, id: gadgetID }))
             execRef.current.cancel()
         }
-    }, [igPod])
+    }, [igPod, applyFilters])
 
     React.useEffect(() => {
         pubSub.subscribe(gadgetID, (data: any) => {
@@ -99,12 +119,70 @@ function GenericGadgetRenderer(props: {
             }
         })
     }, [])
+    
+    function prepareFilters(params, operatorParamsCollection) {
+        const filters = {};
+
+        for(const key in operatorParamsCollection) {
+            switch(key) {
+                case "KubeManager":
+                    operatorParamsCollection[key].forEach((param) => {
+                        switch(param.type) {
+                            case "":
+                                filters[`operator.KubeManager.${param.key}`] = {
+                                    value: param.defaultValue,
+                                    component: (props: {}) => {
+                                    const [value, setValue] = React.useState(param.defaultValue);
+                                    return <TextField variant="outlined" label={param.key} onChange={() => {
+                                        setValue(value);
+                                        filters[`operator.KubeManager.${param.key}`].value = value;
+                                    }}/>
+                                    }
+                                }
+                        }
+                    })
+            }
+        }
+
+        return filters;
+        
+    }
+
+    useEffect(() => {
+        setFilters(prepareFilters(params,operatorParamsCollection))
+    }, [operatorParamsCollection])
 
     return (
         <>
-        <SectionBox title="Filters">
-            
-        </SectionBox>
+        <Accordion square component={Paper}>
+            <AccordionSummary
+            expandIcon={<Icon icon={"mdi:chevron-down"} />}
+            aria-controls=""
+            id="gadget-filters">
+             <SectionHeader title="Filters" />
+            </AccordionSummary>
+
+            <AccordionDetails>
+                {
+                    <Box display="flex">
+                        {
+                    Object.keys(filters)?.map((key) => {
+                        const FilterComponent = filters[key].component;
+                        return <Box m={1} width="100%">
+                            <FilterComponent key={key} />
+                            </Box>
+                    })}
+                    </Box>
+                }
+            </AccordionDetails>
+            <AccordionActions>
+                <Button variant="contained" onClick={() => {
+                    setApplyFilters((prevFilterVal) => !prevFilterVal);
+                }}>
+                    Apply
+                </Button>
+            </AccordionActions>
+        </Accordion>
         <SectionBox title={name} backLink={true}>
             <SimpleTable
                 columns={columns}
