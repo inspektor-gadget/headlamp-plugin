@@ -28,5 +28,8 @@
   },
   "devDependencies": {
     "@kinvolk/headlamp-plugin": "^0.5.5"
+  },
+  "dependencies": {
+    "@devexpress/dx-react-chart-material-ui": "^4.0.5"
   }
 }
