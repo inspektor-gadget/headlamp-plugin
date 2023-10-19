@@ -107,14 +107,23 @@ export function PersistentGadget(props: {
         
     }, [])
 
+
+    
     React.useEffect(() => {
-        if(gadgetPayload) {
-            pubSub.subscribe(gadgetPayload.id, (data: any) => {
+            pubSub.subscribe((gadgetPayload && gadgetPayload.id) || gadgetID, (data: any) => {
                 setGadgetPayload(null)
-                setEntries(data)
                 setGadgetStatus(GadgetStatus.Gadget_STOPPED);
+                let dataToUse = data
+                console.log("entries data",dataToUse)
+            if (dataToUse.payload) {
+                dataToUse = data["payload"];
+            }
+            if (!Array.isArray(dataToUse)) {
+                setEntries((prev) => prev === null ? [dataToUse] : [...prev, dataToUse]);
+            } else {
+                setEntries((prev) => prev === null ? [...dataToUse] : [...prev, ...dataToUse]);
+            }
             })
-        }
     }, [gadgetPayload])
 
     function startGadgetHandler() {
@@ -123,7 +132,7 @@ export function PersistentGadget(props: {
             gadgetName,
             gadgetCategory,
             id: gadgetID,
-            background: true
+            // background: true
         }))
 
     }
@@ -203,21 +212,25 @@ export function PersistentGadget(props: {
             gadgetName,
             gadgetCategory,
             id: gadgetPayload ? gadgetPayload.id : gadgetID,
-            background: true
+            // background: true
         }))
         
         socket.send(runGadgetWithActionAndPayload(socket, "delete", {
                 gadgetName,
                 gadgetCategory,
                 id: gadgetPayload ? gadgetPayload.id : gadgetID,
-                background: true
+                // background: true
         }))
     }
 
+    console.log("entries",entries)
     if(gadgetStatus === GadgetStatus.Gadget_NOT_STARTED) {
         return <SectionBox title={title} backLink={true}><GadgetNotRunningComponent/></SectionBox> 
     } else if(gadgetStatus === GadgetStatus.Gadget_STARTED) {
-        return <SectionBox title={title} backLink={true}><GadgetRunningComponent gadgetPayload={gadgetPayload}/></SectionBox>
+        return <SectionBox title={title} backLink={true}>
+          <GadgetRunningComponent gadgetPayload={gadgetPayload}/>
+        { entries && <GadgetResultComponent entries={entries}/>}
+        </SectionBox>
     } else if(gadgetStatus === GadgetStatus.Gadget_STOPPED) {
         return entries && <GadgetResultComponent restartFunc={startGadgetHandler} entries={entries}/>
 }

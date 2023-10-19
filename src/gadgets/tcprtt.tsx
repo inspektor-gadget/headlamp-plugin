@@ -11,27 +11,34 @@ import {
   } from '@devexpress/dx-react-chart-material-ui';
 import { Animation } from '@devexpress/dx-react-chart';
 import { Icon } from '@iconify/react';
+import { BarChart } from './barChart';
 
 
 export function TcprttChart(props: {
     restartFunc: () => void,
     entries: any,
 }) {
-    const [data, setData] = React.useState([]);
+    const [data, setData] = React.useState(null);
     const { restartFunc, entries } = props;
     const title="Tcprtt gives you the distribution of tcp packets time taken for a round trip over a certain interval of time"
     
     React.useEffect(() => {
         if(entries) {
             const intervals = entries.payload?.histograms[0]?.intervals;
-            console.log("intervals",intervals)
-            
-            setData(intervals.map((interval) => {
-                return {
-                    'timeline': `${interval.start}-${interval.end}`,
-                    count: interval.count
+            const unit = entries.payload?.histograms[0]?.unit || ''
+            console.log(entries)
+            const labels = intervals.map((interval) => `${interval.start}-${interval.end} ${unit}`)
+            setData(
+                {
+                    'labels': labels,
+                    datasets: [{  
+                      label: 'count',
+                      data: intervals.map((interval) => interval.count),
+                      borderColor: 'rgb(255, 99, 132)',
+                      backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    }]
                 }
-            }))
+            )
         }
     }, [entries])
     console.log("data", data)
@@ -51,23 +58,12 @@ export function TcprttChart(props: {
     </Grid>
     </Grid>
    <Paper>
-   <Chart
-     data={data}
-   >
-     <ValueAxis />
-     <ArgumentAxis 
-     />
-
-     <BarSeries
-       valueField={"count"}
-       argumentField="timeline"
-       name={"No of tcp packets round trip time(in microseconds)"}
-     />
-     <Title text={title} />
-     <Animation />
-     <Legend position="bottom" />
-    
-   </Chart>
+   {data && 
+   <BarChart
+    data={data}
+    title="Tcp packet round trip time"
+    />
+  }
  </Paper>
  </SectionBox>
  )

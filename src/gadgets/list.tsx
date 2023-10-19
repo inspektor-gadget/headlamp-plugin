@@ -23,6 +23,7 @@ export default function GadgetList() {
             return
         }
         const igPod = pods?.find(isIGPod);
+        console.log("igPod is",igPod)
         if (!igPod) {
             return
         }
