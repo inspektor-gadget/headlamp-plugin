@@ -3,11 +3,14 @@ import { K8s } from '@kinvolk/headlamp-plugin/lib';
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { JsonStreamParser, isIGPod, pubSub } from './helper';
+import { makeStyles } from '@material-ui/styles'
 import Accordion from '@material-ui/core/Accordion';
 import AccordionDetails from '@material-ui/core/AccordionDetails';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
-import { Button, Paper, Grid, Select } from '@material-ui/core';
-import { SectionBox, SectionHeader, SimpleTable, Loader } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Button, Paper, Grid } from '@material-ui/core';
+import JSONPretty from 'react-json-pretty';
+import 'react-json-pretty/themes/monikai.css';
+import { SectionBox, SectionHeader, SimpleTable, Loader, DateLabel, Link } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { Icon } from '@iconify/react';
 import _ from 'lodash';
 import { prepareFilters } from './filters';
@@ -316,8 +319,6 @@ function GenericGadgetRenderer(props: {
             <AccordionDetails>
                 {
                     <Grid container spacing="2">
-                        <Select>
-                        </Select>
                         {
                     Object.keys(filters)?.map((key) => {
                         const FilterComponent = filters[key].component;
@@ -369,8 +370,16 @@ function GenericGadgetRenderer(props: {
     )
 }
 
+const useJsonPrettyStyle = makeStyles({
+    root: {
+        '& .__json-pretty__': {
+            background: 'none'
+        }
+    } 
+})
 export default function Gadget() {
     const location = useLocation()
+    const classes = useJsonPrettyStyle()
     const {gadget, category} = useParams<{gadget: string, category: string}>();
     const gadgetObj = location.state;
     let columns = [];
@@ -386,8 +395,23 @@ export default function Gadget() {
                     label: col.name,
                     getter: e => {
                         console.log("e is",e)
+                        
                         if(_.isObject(e[col.name])) {
-                            return JSON.stringify(e[col.name])
+                            //@ts-ignore
+                            return <JSONPretty data={e[col.name]} className={
+                                classes.root
+                            }/>
+                        }
+                        if(col.name === 'namespace' || col.name === "pod" || col.name === "node") {
+                            return <Link
+                            routeName={col.name}
+                            params={{ name: e[col.name] || "default", namespace: e["namespace"] || "default"}}
+                          >
+                            {col.name === "namespace" ? e[col.name] || "default" : e[col.name]}
+                          </Link>
+                        }
+                        if(col.name === 'timestamp') {
+                         return <DateLabel date={e[col.name]}/>       
                         }
                         return e[col.name]
                     },

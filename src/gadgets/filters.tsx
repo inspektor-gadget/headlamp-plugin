@@ -27,8 +27,7 @@ export function prepareFilters(params, operatorParamsCollection, pods, namespace
                 
                     }
                 }
-            }
-            if(item.possibleValues) {
+            } else if(item.possibleValues) {
                 filters[`${item.key}`] = {
                     value: item.defaultValue,
                     component: () => {
@@ -68,7 +67,6 @@ export function prepareFilters(params, operatorParamsCollection, pods, namespace
     for(const key in operatorParamsCollection) {
                 operatorParamsCollection[key]?.forEach((param) => {
                     if(namespaces && param.valueHint.split(":")[1] === "namespace") {
-                        console.log("inside namespace component")
                         filters[`operator.${key}.${param.key}`] = {
                             value: "",
                             component: () => {
