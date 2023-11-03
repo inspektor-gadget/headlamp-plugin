@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { K8s } from "@kinvolk/headlamp-plugin/lib";
 import { SectionBox, SimpleTable, Link } from "@kinvolk/headlamp-plugin/lib/CommonComponents";
+import { blackListGadgets } from "./blacklist";
 
 export default function GadgetList() {
     const decoder = new TextDecoder('utf-8');
@@ -23,7 +24,6 @@ export default function GadgetList() {
             return
         }
         const igPod = pods?.find(isIGPod);
-        console.log("igPod is",igPod)
         if (!igPod) {
             return
         }
@@ -76,7 +76,6 @@ export default function GadgetList() {
         pubSub.subscribe(gadgetID, (data: {payload: any}) => {
             setGadgets(data.payload.Gadgets)
             setOperators(data.payload.Operators)
-            console.log("gadgets data ", data)
         })
     }, [])
     return <>
@@ -106,8 +105,17 @@ export default function GadgetList() {
                         label: "Description",
                         getter: (gadget) => gadget.description,
                     },
+                    {
+                        label: "Creator",
+                        getter: () => "Inspektor-Gadget" 
+                    }
                 ]}
-                data={gadgets}
+                data={gadgets ? gadgets.filter((gadget) => {
+                    if(blackListGadgets.includes(gadget?.name)) {
+                        return false
+                    } 
+                    return true
+                }) : null}
             />
         </SectionBox>
     </>

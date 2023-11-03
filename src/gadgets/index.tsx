@@ -7,7 +7,7 @@ import { makeStyles } from '@material-ui/styles'
 import Accordion from '@material-ui/core/Accordion';
 import AccordionDetails from '@material-ui/core/AccordionDetails';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
-import { Button, Paper, Grid } from '@material-ui/core';
+import { Button, Paper, Grid, Checkbox } from '@material-ui/core';
 import JSONPretty from 'react-json-pretty';
 import 'react-json-pretty/themes/monikai.css';
 import { SectionBox, SectionHeader, SimpleTable, Loader, DateLabel, Link } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
@@ -117,17 +117,17 @@ function GenericGadgetRenderer(props: {
         
 
         if(gadgetPayload && !isBackgroundRunning) {
-            socket.send(runGadgetWithActionAndPayload(socket, "stop", {
+            runGadgetWithActionAndPayload(socket, "stop", {
                 gadgetName: name,
                 gadgetCategory: category,
                 id: gadgetPayload? gadgetPayload.id : gadgetID,
-            }))
+        })
 
-            socket.send(runGadgetWithActionAndPayload(socket, "delete", {
+            runGadgetWithActionAndPayload(socket, "delete", {
                 name,
                 category,
                 id: gadgetPayload ? gadgetPayload.id : gadgetID,
-        }))
+            })
         }
     
         let massagedFilters = {};
@@ -136,13 +136,13 @@ function GenericGadgetRenderer(props: {
             massagedFilters[key] = filters[key].value;
         })
 
-        socket.send(runGadgetWithActionAndPayload(socket, "start", {
+        runGadgetWithActionAndPayload(socket, "start", {
             gadgetName: name,
             gadgetCategory: category,
             id: gadgetPayload ? gadgetPayload.id : gadgetID,
             params: {...massagedFilters},
             background: isBackgroundRunning
-        }))
+        })
         
         setEntries(null);
     }, [applyFilters, isBackgroundRunning])
@@ -150,7 +150,6 @@ function GenericGadgetRenderer(props: {
     React.useEffect(() => {
         pubSub.subscribe(gadgetID, (data: any) => {
             setLoading(false)
-            setGadgetRunningStatus(true);
 
             if (name === 'block-io' && category === "profile") {
                 const unit = data.payload.unit || ''
@@ -170,7 +169,6 @@ function GenericGadgetRenderer(props: {
             } else if(name === "tcprtt" && category === "profile") {
                 const intervals = data.payload?.histograms[0]?.intervals;
             const unit = data.payload?.histograms[0]?.unit || ''
-            console.log(entries)
             const labels = intervals.map((interval) => `${interval.start}-${interval.end} ${unit}`)
             setEntries(
                 {
@@ -204,6 +202,8 @@ function GenericGadgetRenderer(props: {
                     if(tags.includes(gadgetID)) {
                         setGadgetPayload(item); 
                         setIsBackgroundRunning(true)
+                        setLoading(true)
+                        setGadgetRunningStatus(true)
                     }
                 }
             })
@@ -214,8 +214,6 @@ function GenericGadgetRenderer(props: {
         if(gadgetPayload) {
             pubSub.subscribe(gadgetPayload.id, (data) => {
                 setLoading(false)
-            setGadgetRunningStatus(true);
-
             if (name === 'block-io' && category === "profile") {
                 const unit = data.payload.unit || ''
                 const intervals = data.payload?.intervals;
@@ -270,40 +268,40 @@ function GenericGadgetRenderer(props: {
         
     }, [isBackgroundRunning])
 
-    function gadgetStartStopHandler() {
-        if(!gadgetRunningStatus) {
+    function gadgetStartStopHandler(action) {
+        if(!action) {
             setLoading(true);
         }
+        console.log("action is",action)
         const socket = execRef.current.getSocket();
-        if(!gadgetRunningStatus) {
+        if(!action) {
             // stop the gadget 
-
+            setGadgetRunningStatus(true)
             let massagedFilters = {};
             
             Object.keys(filters).forEach((key) => {
                 massagedFilters[key] = filters[key].value;
             })
-            socket.send(runGadgetWithActionAndPayload(socket, "start", {
+            runGadgetWithActionAndPayload(socket, "start", {
                 gadgetName: name,
                 gadgetCategory: category,
                 id: gadgetPayload ? gadgetPayload.id : gadgetID,
                 params: {...massagedFilters},
                 background: isBackgroundRunning
-            }))
-            setGadgetRunningStatus(true)
+            })
+           
         } else {
-            socket.send(runGadgetWithActionAndPayload(socket, "stop", {
+            runGadgetWithActionAndPayload(socket, "stop", {
                 gadgetName: name,
                 id: gadgetPayload ? gadgetPayload.id : gadgetID,
                 gadgetCategory: category
-            }))
+            })
             setGadgetRunningStatus(false)
         }
     }
     
-    console.log("columns and entries are ",columns, entries)
     return (
-        <SectionBox title={name} backLink={true} style={{
+        execRef.current ? <SectionBox title={name} backLink={true} style={{
             margin: "1rem 0rem"
         }}>
         <Accordion square component={Paper} style={{
@@ -333,17 +331,17 @@ function GenericGadgetRenderer(props: {
         <Grid container justifyContent="space-between" spacing="2">
             <Grid item>
                 Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}
-                <Button onClick={gadgetStartStopHandler}>
+                <Button onClick={() => gadgetStartStopHandler(gadgetRunningStatus)}>
                     { !gadgetRunningStatus ? 'Start' : 'Stop' }
                 </Button>
             </Grid>
-            {/* <Grid item>
+            {category === "profile" && <Grid item>
                 Run In the Background
                 <Checkbox
                     checked={isBackgroundRunning}
                     onChange={handleChange}
                 />
-            </Grid> */}
+            </Grid> }
                 <Grid item>
                 <Button  onClick={() => {
                     setLoading(true);
@@ -366,7 +364,7 @@ function GenericGadgetRenderer(props: {
             />) : <Loader/>
         }
             
-        </SectionBox>
+        </SectionBox> : <Loader />
     )
 }
 
@@ -383,7 +381,6 @@ export default function Gadget() {
     const {gadget, category} = useParams<{gadget: string, category: string}>();
     const gadgetObj = location.state;
     let columns = [];
-    console.log("column definition is", gadgetObj.columnsDefinition)
     if(gadgetObj.columnsDefinition) {
         let gadgetColumnKeys = Object.keys(gadgetObj.columnsDefinition)
         for(let i=0;i < Object.keys(gadgetObj.columnsDefinition).length;i++) {
