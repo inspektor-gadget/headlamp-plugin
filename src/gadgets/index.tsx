@@ -110,44 +110,6 @@ function GenericGadgetRenderer(props: {
     }, [igPod])
 
     React.useEffect(() => {
-        if(!igPod) {
-            return
-        }        
-        const socket = execRef.current.getSocket()
-        
-
-        if(gadgetPayload && !isBackgroundRunning) {
-            runGadgetWithActionAndPayload(socket, "stop", {
-                gadgetName: name,
-                gadgetCategory: category,
-                id: gadgetPayload? gadgetPayload.id : gadgetID,
-        })
-
-            runGadgetWithActionAndPayload(socket, "delete", {
-                name,
-                category,
-                id: gadgetPayload ? gadgetPayload.id : gadgetID,
-            })
-        }
-    
-        let massagedFilters = {};
-        
-        Object.keys(filters).forEach((key) => {
-            massagedFilters[key] = filters[key].value;
-        })
-
-        runGadgetWithActionAndPayload(socket, "start", {
-            gadgetName: name,
-            gadgetCategory: category,
-            id: gadgetPayload ? gadgetPayload.id : gadgetID,
-            params: {...massagedFilters},
-            background: isBackgroundRunning
-        })
-        
-        setEntries(null);
-    }, [applyFilters, isBackgroundRunning])
-
-    React.useEffect(() => {
         pubSub.subscribe(gadgetID, (data: any) => {
             setLoading(false)
 
@@ -269,7 +231,6 @@ function GenericGadgetRenderer(props: {
     }, [isBackgroundRunning])
 
     function gadgetStartStopHandler(action) {
-        setApplyFilters((prevFilter) => !prevFilter)
         if(!action) {
             setLoading(true);
         }
@@ -279,10 +240,11 @@ function GenericGadgetRenderer(props: {
             // stop the gadget 
             setGadgetRunningStatus(true)
             let massagedFilters = {};
-            
+        
             Object.keys(filters).forEach((key) => {
                 massagedFilters[key] = filters[key].value;
             })
+    
             runGadgetWithActionAndPayload(socket, "start", {
                 gadgetName: name,
                 gadgetCategory: category,
@@ -292,11 +254,25 @@ function GenericGadgetRenderer(props: {
             })
            
         } else {
-            runGadgetWithActionAndPayload(socket, "stop", {
-                gadgetName: name,
-                id: gadgetPayload ? gadgetPayload.id : gadgetID,
-                gadgetCategory: category
+            if(gadgetPayload && !isBackgroundRunning) {
+                runGadgetWithActionAndPayload(socket, "stop", {
+                    gadgetName: name,
+                    gadgetCategory: category,
+                    id: gadgetPayload? gadgetPayload.id : gadgetID,
             })
+    
+                runGadgetWithActionAndPayload(socket, "delete", {
+                    name,
+                    category,
+                    id: gadgetPayload ? gadgetPayload.id : gadgetID,
+                })
+            } else {
+                runGadgetWithActionAndPayload(socket, "stop", {
+                    gadgetName: name,
+                    id: gadgetPayload ? gadgetPayload.id : gadgetID,
+                    gadgetCategory: category
+                })
+            }
             setGadgetRunningStatus(false)
         }
     }
