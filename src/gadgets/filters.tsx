@@ -22,7 +22,7 @@ export function prepareFilters(params, operatorParamsCollection, pods, namespace
                                     setValue(event.target.checked)
                                     filters[`${item.key}`].value = String(event.target.checked);
                         }} />}
-                        label={item.title}
+                        label={item.title || item.key}
                       />
                 
                     }

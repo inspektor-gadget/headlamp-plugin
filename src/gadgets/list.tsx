@@ -75,6 +75,7 @@ export default function GadgetList() {
     React.useEffect(() => {
         pubSub.subscribe(gadgetID, (data: {payload: any}) => {
             setGadgets(data.payload.Gadgets)
+            console.log("gadget catalog is", data.payload.Gadgets)
             setOperators(data.payload.Operators)
         })
     }, [])
@@ -106,7 +107,7 @@ export default function GadgetList() {
                         getter: (gadget) => gadget.description,
                     },
                     {
-                        label: "Creator",
+                        label: "Origin",
                         getter: () => "Inspektor-Gadget" 
                     }
                 ]}

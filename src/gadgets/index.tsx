@@ -7,7 +7,7 @@ import { makeStyles } from '@material-ui/styles'
 import Accordion from '@material-ui/core/Accordion';
 import AccordionDetails from '@material-ui/core/AccordionDetails';
 import AccordionSummary from '@material-ui/core/AccordionSummary';
-import { Button, Paper, Grid, Checkbox } from '@material-ui/core';
+import { Button, Paper, Grid, Checkbox, Box } from '@material-ui/core';
 import JSONPretty from 'react-json-pretty';
 import 'react-json-pretty/themes/monikai.css';
 import { SectionBox, SectionHeader, SimpleTable, Loader, DateLabel, Link } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
@@ -269,6 +269,7 @@ function GenericGadgetRenderer(props: {
     }, [isBackgroundRunning])
 
     function gadgetStartStopHandler(action) {
+        setApplyFilters((prevFilter) => !prevFilter)
         if(!action) {
             setLoading(true);
         }
@@ -301,9 +302,10 @@ function GenericGadgetRenderer(props: {
     }
     
     return (
-        execRef.current ? <SectionBox title={name} backLink={true} style={{
+        <SectionBox title={name} backLink={true} style={{
             margin: "1rem 0rem"
         }}>
+            {Object.keys(filters).length !== 0 &&
         <Accordion square component={Paper} style={{
             margin: '1rem 0rem'
         }}>
@@ -320,7 +322,7 @@ function GenericGadgetRenderer(props: {
                         {
                     Object.keys(filters)?.map((key) => {
                         const FilterComponent = filters[key].component;
-                        return <Grid item md={12}>
+                        return <Grid item md={4}>
                             <FilterComponent key={Math.random() + key} />
                             </Grid>
                     })}
@@ -328,12 +330,11 @@ function GenericGadgetRenderer(props: {
                 }
             </AccordionDetails>
         </Accordion>
+        }
+        <Box mb={2}>
         <Grid container justifyContent="space-between" spacing="2">
             <Grid item>
-                Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}
-                <Button onClick={() => gadgetStartStopHandler(gadgetRunningStatus)}>
-                    { !gadgetRunningStatus ? 'Start' : 'Stop' }
-                </Button>
+            Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}    
             </Grid>
             {category === "profile" && <Grid item>
                 Run In the Background
@@ -342,16 +343,13 @@ function GenericGadgetRenderer(props: {
                     onChange={handleChange}
                 />
             </Grid> }
-                <Grid item>
-                <Button  onClick={() => {
-                    setLoading(true);
-                    setApplyFilters((prevFilterVal) => !prevFilterVal);
-                    setGadgetRunningStatus(true)
-                }}>
-                    Run With Filter
+            <Grid item>
+                <Button onClick={() => gadgetStartStopHandler(gadgetRunningStatus)} variant="outlined">
+                    { !gadgetRunningStatus ? 'Start' : 'Stop' }
                 </Button>
-                </Grid>
+            </Grid>
         </Grid>
+        </Box>
         { 
         !loading ? ((name === "block-io" && category === "profile") || (name === "tcprtt" && category === "profile") ? 
             <BarChart
@@ -364,7 +362,7 @@ function GenericGadgetRenderer(props: {
             />) : <Loader/>
         }
             
-        </SectionBox> : <Loader />
+        </SectionBox> 
     )
 }
 
