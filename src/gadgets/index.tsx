@@ -45,25 +45,28 @@ function GenericGadgetRenderer(props: {
     const [gadgetPayload, setGadgetPayload] = React.useState(null);
     const [isBackgroundRunning, setIsBackgroundRunning] = React.useState(gadgetPayload);
     const gadgetListID = "gadget-list";
+    const [nodeToWorkOn, setNodeToWorkOn] = React.useState(null);
     const handleChange = (event) => {
       setIsBackgroundRunning(event.target.checked);
     };
 
+    console.log("nodes are", nodes)
     function runGadgetWithActionAndPayload(socket, action, payload, extraParams={}) {
         console.log("action and payload",action, payload)
         socket.send('\0'+JSON.stringify({ action, payload, ...extraParams }) + "\n");
     }
 
     useEffect(() => {
-        if (!pods) {
+        if (!pods || !nodeToWorkOn) {
             return
         }
-        const igPod = pods?.find(isIGPod);
+        const igPods = pods?.filter(isIGPod);
+        const igPod = igPods?.find((pod) => pod.spec.nodeName === nodeToWorkOn.metadata.name);
         if (!igPod) {
             return
         }
         setIGPod(igPod)
-    }, [pods])
+    }, [nodeToWorkOn])
     
     useEffect(() => {
         if (!igPod) {
@@ -277,6 +280,35 @@ function GenericGadgetRenderer(props: {
         }
     }
     
+    if(!nodes) {
+        return <Loader/>
+    }
+
+    if(nodesError) {
+        return <div>Uhooooh..... Error fetching nodes {nodesError}</div>
+    }
+    if(!nodeToWorkOn) {
+        return <SectionBox title={name} backLink={true} style={{
+            margin: "1rem 0rem"
+        }}>
+            <SectionHeader title="Select node to run this gadget on" />
+            <Grid container spacing="2">
+                {
+                    nodes?.map((node) => {
+                        return <Grid item md={8}>
+                            <Button onClick={() => setNodeToWorkOn(node)} variant="outlined" style={{
+                                width: "100%",
+                                margin: "0.1rem 0rem"
+                            }}>
+                                {node.metadata.name}
+                            </Button>
+                            </Grid>
+                    })
+                }
+            </Grid>
+        </SectionBox>
+    }
+
     return (
         <SectionBox title={name} backLink={true} style={{
             margin: "1rem 0rem"
@@ -364,9 +396,7 @@ export default function Gadget() {
                }
                 columns.push({
                     label: col.name,
-                    getter: e => {
-                        console.log("e is",e)
-                        
+                    getter: e => {    
                         if(_.isObject(e[col.name])) {
                             //@ts-ignore
                             return <JSONPretty data={e[col.name]} className={
