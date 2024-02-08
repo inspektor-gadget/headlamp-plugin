@@ -2,7 +2,7 @@ export const IG_CONTAINER_KEY = 'k8s-app';
 export const IG_CONTAINER_VALUE = 'gadget';
 
 export function isIGPod(podResource) {
-    return podResource.metadata.labels[IG_CONTAINER_KEY] === IG_CONTAINER_VALUE;
+  return podResource.metadata.labels[IG_CONTAINER_KEY] === IG_CONTAINER_VALUE;
 }
 
 interface EventListeners {
@@ -28,12 +28,11 @@ export class PubSub {
   }
 }
 
-let buffer = "";
+let buffer = '';
 export const pubSub = new PubSub();
 let processedStreams = new Map<number, number>();
 
 export class JsonStreamParser {
-
   constructor() {
     // clear expired entries every minute
     setInterval(() => this.clearExpiredEntries(), 60 * 1000);
@@ -64,17 +63,17 @@ export class JsonStreamParser {
         for (let [key] of processedStreams.entries()) {
           processedStreams.delete(key);
         }
-      } catch(e) {
+      } catch (e) {
         console.error('Invalid JSON:', e);
       }
     }
-    buffer = "";
+    buffer = '';
   }
 
   private clearExpiredEntries() {
     const oneSecondAgo = Date.now() - 1000;
     const keysToDelete = [];
-    
+
     for (let [key, timestamp] of processedStreams.entries()) {
       if (timestamp < oneSecondAgo) {
         keysToDelete.push(key);
@@ -92,7 +91,7 @@ export class JsonStreamParser {
   private hashString(s: string): number {
     let hash = 0;
     for (let i = 0; i < s.length; i++) {
-      hash = Math.imul(31, hash) + s.charCodeAt(i) | 0;
+      hash = (Math.imul(31, hash) + s.charCodeAt(i)) | 0;
     }
     return hash;
   }
