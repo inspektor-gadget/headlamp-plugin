@@ -44,18 +44,17 @@ export class JsonStreamParser {
 
   feed(stream: string) {
     const streamHash = this.hashString(stream);
+
     if (processedStreams.has(streamHash)) {
       return;
     }
 
+
     processedStreams.set(streamHash, Date.now());
     buffer += stream;
-    const lastNewLineIndex = buffer.lastIndexOf('\n');
+    const lastNewLineIndex = buffer.lastIndexOf('}');
     if (lastNewLineIndex === -1) return;
-    const completeJSONs = buffer.substring(0, lastNewLineIndex);
-    buffer = buffer.substring(lastNewLineIndex + 1);
-    const jsonStrings = completeJSONs.split('\n');
-    for (let jsonString of jsonStrings) {
+    const jsonString = buffer.slice(0, lastNewLineIndex + 1);
       try {
         const data = JSON.parse(jsonString);
         pubSub.publish(data.id, data);
@@ -66,7 +65,6 @@ export class JsonStreamParser {
       } catch (e) {
         console.error('Invalid JSON:', e);
       }
-    }
     buffer = '';
   }
 

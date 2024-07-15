@@ -22,16 +22,16 @@ export function prepareFilters(params, operatorParamsCollection, pods, namespace
           value: item.defaultValue,
           component: (props: {}) => {
             const [value, setValue] = React.useState(JSON.parse(filters[`${item.key}`].value));
+            console.log(item.key, item.defaultValue)
             return (
               <FormControlLabel
                 control={
                   <Switch
-                    checked={value}
+                    checked={Boolean(value)}
                     color="primary"
-                    defaultValue={item.defaultValue}
+                    defaultValue={Boolean(item.defaultValue)}
                     onChange={event => {
-                      console.log('onChange', event.target);
-                      setValue(event.target.checked);
+                      setValue(String(event.target.checked));
                       filters[`${item.key}`].value = String(event.target.checked);
                     }}
                   />

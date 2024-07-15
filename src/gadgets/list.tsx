@@ -1,123 +1,23 @@
 import React from 'react';
-import { JsonStreamParser, isIGPod, pubSub } from './helper';
 import { useState } from 'react';
-import { useEffect } from 'react';
-import { K8s } from '@kinvolk/headlamp-plugin/lib';
-import { SectionBox, SimpleTable, Link } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import { blackListGadgets } from './blacklist';
+import { SectionBox, Table, Link } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { DefaultGadgets } from './default_gadgets';
 
 export default function GadgetList() {
-  const decoder = new TextDecoder('utf-8');
   const [gadgets, setGadgets] = useState(null);
-  const [operators, setOperators] = useState(null);
-  const [pods, error] = K8s.ResourceClasses.Pod.useList();
-  const gadgetID = 'app-catalog';
-  const [igPod, setIGPod] = useState(null);
-  const execRef = React.useRef(null);
-
-  function runGadgetWithActionAndPayload(socket, action, payload, other) {
-    socket.send('\0' + JSON.stringify({ action, payload, ...other }) + '\n');
-  }
-
-  async function prepareSocket() {
-    return new Promise((resolve, reject) => {
-      let intervalID = setInterval(() => {
-        let socket = execRef.current.getSocket();
-        console.log('socket is ready');
-
-        if (socket) {
-          clearInterval(intervalID);
-          resolve(socket);
-        }
-      }, 0);
-    });
-  }
-
-  useEffect(() => {
-    if (!pods) {
-      return;
-    }
-    const igPod = pods?.find(isIGPod);
-    if (!igPod) {
-      return;
-    }
-    setIGPod(igPod);
-  }, [pods]);
-
-  useEffect(() => {
-    if (!igPod) {
-      return;
-    }
-
-    if (execRef.current) {
-      return;
-    }
-
-    let socket;
-
-    (async function () {
-      console.log('i am here');
-      execRef.current = await igPod.exec('gadget', () => {}, {
-        command: ['/usr/bin/socat', '/run/gadgetstreamingservice.socket', '-'],
-        tty: false,
-        stdin: true,
-        stdout: true,
-        stderr: false,
-      });
-
-      socket = await prepareSocket();
-      socket.addEventListener('message', event => {
-        const items = new Uint8Array(event.data);
-        const text = decoder.decode(items.slice(1));
-
-        if (new Uint8Array(items)[0] !== 1) {
-          return;
-        }
-
-        const parser = new JsonStreamParser();
-        parser.feed(text);
-      });
-      socket.addEventListener('open', () =>
-        runGadgetWithActionAndPayload(
-          socket,
-          'catalog',
-          {},
-          {
-            id: gadgetID,
-          }
-        )
-      );
-    })();
-
-    return () => {
-      socket?.removeEventListener('open', () =>
-        runGadgetWithActionAndPayload(
-          socket,
-          'catalog',
-          {},
-          {
-            id: gadgetID,
-          }
-        )
-      );
-      execRef.current.cancel();
-    };
-  }, [igPod]);
-
+  
   React.useEffect(() => {
-    pubSub.subscribe(gadgetID, (data: { payload: any }) => {
-      setGadgets(data.payload.Gadgets);
-      setOperators(data.payload.Operators);
-    });
-  }, []);
+    setGadgets(DefaultGadgets);
+  },[])
+
   return (
     <>
       <SectionBox title="Gadgets">
-        <SimpleTable
+        <Table
           columns={[
             {
-              label: 'Name',
-              getter: gadget =>
+              header: 'Name',
+              accessorFn: gadget =>
                 gadget.category == '' ? (
                   <Link
                     routeName="/gadgets/:gadget"
@@ -142,31 +42,25 @@ export default function GadgetList() {
                 ),
             },
             {
-              label: 'Type',
-              getter: gadget => gadget.type,
+              header: 'Type',
+              accessorFn: gadget => gadget.type,
             },
             {
-              label: 'Category',
-              getter: gadget => gadget.category,
+              header: 'Category',
+              accessorFn: gadget => gadget.category,
             },
             {
-              label: 'Description',
-              getter: gadget => gadget.description,
+              header: 'Description',
+              accessorFn: gadget => gadget.description,
             },
             {
-              label: 'Origin',
-              getter: () => 'Inspektor-Gadget',
+              header: 'Origin',
+              accessorFn: () => 'Inspektor-Gadget',
             },
           ]}
+          loading={gadgets === null}
           data={
             gadgets
-              ? gadgets.filter(gadget => {
-                  if (blackListGadgets.includes(gadget?.name)) {
-                    return false;
-                  }
-                  return true;
-                })
-              : null
           }
         />
       </SectionBox>
