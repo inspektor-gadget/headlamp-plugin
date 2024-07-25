@@ -1,8 +1,35 @@
 export const IG_CONTAINER_KEY = 'k8s-app';
 export const IG_CONTAINER_VALUE = 'gadget';
-
+const decoder = new TextDecoder('utf-8');
+  
 export function isIGPod(podResource) {
   return podResource.metadata.labels[IG_CONTAINER_KEY] === IG_CONTAINER_VALUE;
+}
+
+export function removeDuplicates(array) {
+  const uniqueObjects = array.reduce((acc, obj) => {
+    const existingObj = acc.find(item => item.key === obj.key);
+    if (!existingObj) {
+      acc.push(obj);
+    }
+    return acc;
+  }, []);
+  
+  return uniqueObjects;
+}
+
+export function gadgetConnectionMessageHandler(event) {
+  const items = new Uint8Array(event.data);
+      if (items.length === 3) {
+        console.log('channel:', items[0])
+        console.log('port:', items[1] + items[2] * 256)
+        return;
+    }
+      const text = decoder.decode(items.slice(1));
+
+      const parser = new JsonStreamParser();
+      console.log("text is ", text)
+      parser.feed(text);
 }
 
 interface EventListeners {

@@ -2,19 +2,19 @@ import {  TextField, Switch, Grid, Paper, Box, FormControlLabel, Button, MenuIte
 import { FILTERS_TYPE } from "./filter_types";
 import { SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
 import K8s  from '@kinvolk/headlamp-plugin/lib/K8s';
-import { useLocation } from 'react-router';
+import { removeDuplicates } from './helper';
 
-export default function GadgetFilters(props: {config: any, setFilters: (func?: (val: any) => any) => void, isConnected: boolean, sendMessage: (message: string) => void, filters: any, onApplyFilters: () => void}) {
-    const { config, setFilters, isConnected, sendMessage, filters  } = props;
-    const location = useLocation();
+export default function GadgetFilters(props: {config: any, setFilters: (func?: (val: any) => any) => void, isConnected: boolean, filters: any, onApplyFilters: () => void}) {
+    const { config, setFilters, isConnected } = props;
     
     if(!isConnected) {
         return null;
     }
 
     let FilterComponents = [];
-    if(config) {
-        FilterComponents = config.params?.map((param, index) => {
+    if(config && config.params) {
+        const uniqueConfig = removeDuplicates(config.params);
+        FilterComponents = uniqueConfig?.map((param, index) => {
             const filter = FILTERS_TYPE[param.typeHint];
             
             if(param?.valueHint?.includes('pod')) {

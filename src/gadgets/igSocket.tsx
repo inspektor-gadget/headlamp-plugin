@@ -1,61 +1,85 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-
+import { stream } from '@kinvolk/headlamp-plugin/lib/ApiProxy';
 import { JsonStreamParser } from './helper';
 
-const useWebSocket = (url) => {
+const usePortForward = (url) => {
+  const decoder = new TextDecoder('utf-8');
   const [isConnected, setIsConnected] = useState(false);
-  const websocketRef = useRef(null);
+  const streamRef = useRef(null);
+  const [ws, setWs] = useState(null);
+  async function prepareSocket() {
+    return new Promise((resolve, reject) => {
+      let intervalID = setInterval(() => {
+        let socket = streamRef.current?.getSocket();
 
+        if (socket) {
+          clearInterval(intervalID);
+          resolve(socket);
+        }
+      }, 0);
+    });
+  }
+  
   useEffect(() => {
     return () => {
-      if (websocketRef.current) {
-        websocketRef.current.close();
-    }}
+      if (ws) {
+        ws.close();
+      }
+    }
   }, [])
 
   useEffect(() => {
-    const ws = new WebSocket(url);
-    websocketRef.current = ws;
+    if(!ws) {
+      return;
+    }
 
-    ws.onopen = () => {
-      console.log('Connected to WebSocket server');
+    ws.addEventListener('open', () => {
       setIsConnected(true);
-    };
+    })
 
-    ws.onmessage = (event) => {
-      const text = event.data;
-      
+    ws.addEventListener('message', (event) => {
+      const items = new Uint8Array(event.data);
+        const text = decoder.decode(items.slice(1));
+  
+        if (items.length === 3) {
+          console.log('channel:', items[0])
+          console.log('port:', items[1] + items[2] * 256)
+          return;
+      }
+        console.log("text is ", text)
+        const parser = new JsonStreamParser();
+        parser.feed(text);
+    })
+  }, [ws])
 
-      const parser = new JsonStreamParser();
-      parser.feed(text);
-    };
-
-    ws.onclose = () => {
-      console.log('Disconnected from WebSocket server');
-      setIsConnected(false);
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    return () => {
-      ws.close();
-    };
+  useEffect(() => {
+    (async function() {
+      let additionalProtocols = [
+        'v4.channel.k8s.io',
+        'v3.channel.k8s.io',
+        'v2.channel.k8s.io',
+        'channel.k8s.io',
+      ]
+      streamRef.current = await stream(url, () => {
+    }, {
+      additionalProtocols
+    })
+       let socket = await prepareSocket();
+      setWs(socket);
+      console.log('socket is', socket);
+    }()
+  )
   }, [url]);
 
-  const sendMessage = useCallback(
-    (message) => {
-      if (websocketRef.current && websocketRef.current.readyState === WebSocket.OPEN) {
-        websocketRef.current.send(message);
-      } else {
-        console.log('WebSocket is not in OPEN state');
-      }
-    },
-    []
-  );
+  function runGadgetWithActionAndPayload(action, payload, extraParams = {}) {
+    if(!ws) {
+      return
+    }
+    console.log('action and payload', action, payload);
+    ws.send('\0' + JSON.stringify({ action, payload, ...extraParams }) + '\n');
+  }
 
-  return { sendMessage, isConnected, ws: websocketRef.current};
+  return { runGadgetWithActionAndPayload, isConnected, ws};
 };
 
-export default useWebSocket;
+export default usePortForward;

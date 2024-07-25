@@ -1,11 +1,12 @@
 import { DateLabel, SectionBox, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import { Grid, Button, Box, Form } from '@mui/material';
+import { Grid, Button, Box } from '@mui/material';
 import React from 'react';
 import _ from 'lodash';
 import { pubSub } from './helper';
 import { useLocation } from 'react-router';
-import useWebSocket from './igSocket';
 import GadgetFilters from './gadgetFilters';
+import usePortForward from './igSocket';
+import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 
 function getObjectValue(obj, keyString) {
   // Split the keyString into parts using '.'
@@ -24,7 +25,11 @@ function getObjectValue(obj, keyString) {
 }
 
 function GenericGadgetRenderer() {
-  const { sendMessage, isConnected, ws } = useWebSocket("ws://localhost:8081/ws");
+  const [pods] = K8s.ResourceClasses.Pod.useList();
+  const [nodes] = K8s.ResourceClasses.Node.useList();
+
+  console.log(pods, nodes);
+  const { runGadgetWithActionAndPayload, isConnected, ws } = usePortForward('api/v1/namespaces/gadget/pods/gadget-kjpxp/portforward?ports=8082');
   const location  = useLocation();
   const [dataColumns, setDataColumns] = React.useState([]);
   const [gadgetData, setGadgetData] = React.useState([]);
@@ -51,11 +56,9 @@ function GenericGadgetRenderer() {
 
   React.useEffect(() => {
     if(isConnected) {
-      sendMessage(JSON.stringify({
-        id: gadgetID,
-        action: 'info',
-        payload: location.state.name,
-      }))
+      runGadgetWithActionAndPayload('info', 'trace_open', {
+        id: gadgetID
+      })
     }
   }, [isConnected])
   
@@ -96,21 +99,24 @@ function GenericGadgetRenderer() {
   function gadgetStartStopHandler(status) {
     setLoading(true);
     setGadgetRunningStatus(!status);
-    sendMessage(JSON.stringify({
-      id: location.state.name,
-      action: status ? 'stop' : 'start',
-      payload: {
-        id: gadgetID,
-        imageName: location.state.name,
-        paramValues: {
-          ...filters
-        }
+    runGadgetWithActionAndPayload(status ? 'stop' : 'start', {
+      imageName: location.state.name,
+      id: gadgetID,
+      paramValues: {
+        ...filters
       }
-    }))
+    })
   }
-  console.log("filters are ",filters)
+  
+  
+  if(!isConnected) {
+    return <div>
+      Establishing gadget connection...
+    </div>
+  }
+
   return <SectionBox title={location.state.category} backLink={true}>
-       <GadgetFilters config={gadgetConfig} setFilters={setFilters} isConnected={isConnected} sendMessage={sendMessage} filters={filters} onApplyFilters={() => {
+       <GadgetFilters config={gadgetConfig} setFilters={setFilters} isConnected={isConnected} filters={filters} onApplyFilters={() => {
         setGadgetData([]);
 
         // first send a stop action to stop this gadget and then start it again
