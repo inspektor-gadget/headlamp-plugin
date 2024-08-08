@@ -7,6 +7,7 @@ import { useLocation } from 'react-router';
 import GadgetFilters from './gadgetFilters';
 import usePortForward from './igSocket';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import './wasm.js'
 
 function getObjectValue(obj, keyString) {
   // Split the keyString into parts using '.'
@@ -24,12 +25,24 @@ function getObjectValue(obj, keyString) {
   return value;
 }
 
+function flattenObject(obj, parentKey = '', result = {}) {
+  for (const [key, value] of Object.entries(obj)) {
+      const newKey = parentKey ? `${parentKey}.${key}` : key;
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+          flattenObject(value, newKey, result);
+      } else {
+          result[newKey] = value;
+      }
+  }
+  return result;
+}
+
 function GenericGadgetRenderer() {
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const [nodes] = K8s.ResourceClasses.Node.useList();
 
   console.log(pods, nodes);
-  const { runGadgetWithActionAndPayload, isConnected, ws } = usePortForward('api/v1/namespaces/gadget/pods/gadget-kjpxp/portforward?ports=8082');
+  const { ig, isConnected } = usePortForward('api/v1/namespaces/gadget/pods/gadget-kjpxp/portforward?ports=8080');
   const location  = useLocation();
   const [dataColumns, setDataColumns] = React.useState([]);
   const [gadgetData, setGadgetData] = React.useState([]);
@@ -50,66 +63,69 @@ function GenericGadgetRenderer() {
 
    return () => {
       clearInterval(processBufferedData);
-      ws.close();
    }
   }, [])
 
   React.useEffect(() => {
-    if(isConnected) {
-      runGadgetWithActionAndPayload('info', 'trace_open', {
-        id: gadgetID
-      })
-    }
-  }, [isConnected])
-  
-  React.useEffect(() => {
-    pubSub.subscribe(gadgetID, (data) => {
-      setLoading(false);
-      switch(data.type) {
-        case 4:
-          setGadgetConfig(data.payload);
-          break;
-        case 1000:
-          setDataColumns(data.payload);
-          break;
-        default:
-         
-      }
-      if(data.payload.imageName) {
-        setGadgetConfig(data.payload);
-        return;
-      } 
-     
-      if(!data.type && data.payload && dataColumns.length > 0) {
-        const payload = data.payload;
-        const massagedData = {};
-        dataColumns.forEach((column) => {
-          const val = getObjectValue(payload, column);
-          massagedData[column] = val;
-        })
-          if(gadgetData.length < 10) {
-            setGadgetData(prevData => [...prevData, massagedData]);
-            return;
-          }
-          setBufferedGadgetData(prevData => [...prevData, massagedData]);
-      }
+    if(isConnected && ig) {
+      ig.getGadgetInfo({
+        version: 1,
+        imageName: location.state.name
+    }, (info) => {
+        console.info(info);
+        setGadgetConfig(info);
+    }, (err) => {
+        console.error(err);
     })
-  }, [dataColumns]);
-
+    }
+  }, [isConnected, ig])
+  
   function gadgetStartStopHandler(status) {
     setLoading(true);
     setGadgetRunningStatus(!status);
-    runGadgetWithActionAndPayload(status ? 'stop' : 'start', {
+
+    ig.runGadget({
+      version: 1,
       imageName: location.state.name,
-      id: gadgetID,
       paramValues: {
-        ...filters
+          ...filters
       }
-    })
+  }, {
+      onGadgetInfo: (gi) => { console.log('gadgetInfo', gi);
+        console.log('dataColumns', gi);
+        //setDataColumns(gi);
+       },
+      onData: (dsID, data) => {  
+        console.log('data', dsID, data);
+        setLoading(false);
+        let columns = dataColumns;
+        if(columns.length == 0) {
+          console.log("inside")
+          console.log('data columns are', Object.keys(data));
+          columns = Object.keys(data);
+          setDataColumns(Object.keys(data));
+        }
+        if(columns.length > 0) {
+          const payload = data;
+          const massagedData = {};
+          columns.forEach((column) => {
+            const val = flattenObject(payload)[column];
+            console.log("column and val", column, val);
+            massagedData[column] = val;
+          })
+            if(gadgetData.length < 10) {
+              setGadgetData(prevData => [...prevData, massagedData]);
+              return;
+            }
+            setBufferedGadgetData(prevData => [...prevData, massagedData]);
+        } }
+  }, (err) => {
+      console.error(err);
+  })
   }
   
   
-  if(!isConnected) {
+  if(!isConnected || !ig) {
     return <div>
       Establishing gadget connection...
     </div>

@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import './wasm.js';
+import { useEffect, useRef, useState } from 'react';
 import { stream } from '@kinvolk/headlamp-plugin/lib/ApiProxy';
-import { JsonStreamParser } from './helper';
+
+// @ts-ignore
+const go = new window.Go();
 
 const usePortForward = (url) => {
-  const decoder = new TextDecoder('utf-8');
   const [isConnected, setIsConnected] = useState(false);
   const streamRef = useRef(null);
   const [ws, setWs] = useState(null);
+  const [ig, setIg] = useState(null);
   async function prepareSocket() {
     return new Promise((resolve, reject) => {
       let intervalID = setInterval(() => {
@@ -29,57 +32,36 @@ const usePortForward = (url) => {
   }, [])
 
   useEffect(() => {
-    if(!ws) {
-      return;
-    }
-
-    ws.addEventListener('open', () => {
-      setIsConnected(true);
-    })
-
-    ws.addEventListener('message', (event) => {
-      const items = new Uint8Array(event.data);
-        const text = decoder.decode(items.slice(1));
-  
-        if (items.length === 3) {
-          console.log('channel:', items[0])
-          console.log('port:', items[1] + items[2] * 256)
-          return;
-      }
-        console.log("text is ", text)
-        const parser = new JsonStreamParser();
-        parser.feed(text);
-    })
-  }, [ws])
-
-  useEffect(() => {
-    (async function() {
-      let additionalProtocols = [
-        'v4.channel.k8s.io',
-        'v3.channel.k8s.io',
-        'v2.channel.k8s.io',
-        'channel.k8s.io',
-      ]
-      streamRef.current = await stream(url, () => {
-    }, {
-      additionalProtocols
-    })
-       let socket = await prepareSocket();
-      setWs(socket);
-      console.log('socket is', socket);
-    }()
-  )
+      // @ts-ignore
+      WebAssembly.instantiateStreaming(fetch("/plugins/headlamp-ig/main.wasm"), go.importObject).then((result) => {
+        go.run(result.instance);
+        (async function() {
+          let additionalProtocols = [
+            'v4.channel.k8s.io',
+            'v3.channel.k8s.io',
+            'v2.channel.k8s.io',
+            'channel.k8s.io',
+          ]
+          streamRef.current = await stream(url, () => {
+        }, {
+          additionalProtocols
+        })
+          console.log('stream is', streamRef.current);
+          let socket = await prepareSocket();
+          setWs(socket);
+          console.log('socket is', socket);
+          // @ts-ignore
+          const ig = wrapWebSocket(socket, {});
+          setTimeout(() => {
+            setIsConnected(true);
+            console.log('ig is', ig);
+            setIg(ig);
+          }, 1000)
+        })()
+        })
   }, [url]);
 
-  function runGadgetWithActionAndPayload(action, payload, extraParams = {}) {
-    if(!ws) {
-      return
-    }
-    console.log('action and payload', action, payload);
-    ws.send('\0' + JSON.stringify({ action, payload, ...extraParams }) + '\n');
-  }
-
-  return { runGadgetWithActionAndPayload, isConnected, ws};
+  return { ig, isConnected};
 };
 
 export default usePortForward;
