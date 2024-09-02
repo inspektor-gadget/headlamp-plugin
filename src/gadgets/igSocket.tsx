@@ -6,14 +6,15 @@ import { stream } from '@kinvolk/headlamp-plugin/lib/ApiProxy';
 const go = new window.Go();
 
 const usePortForward = (url) => {
-  const [isConnected, setIsConnected] = useState(false);
-  const streamRef = useRef(null);
-  const [ws, setWs] = useState(null);
-  const [ig, setIg] = useState(null);
-  async function prepareSocket() {
-    return new Promise((resolve, reject) => {
+  const [isConnected, setIsConnected] = useState({});
+  const streamRef = useRef({});
+  const [ws, setWs] = useState({});
+  const [ig, setIg] = useState({});
+
+  async function prepareSocket(url) {
+    return new Promise((resolve) => {
       let intervalID = setInterval(() => {
-        let socket = streamRef.current?.getSocket();
+        let socket = streamRef.current[url]?.getSocket();
 
         if (socket) {
           clearInterval(intervalID);
@@ -25,43 +26,47 @@ const usePortForward = (url) => {
   
   useEffect(() => {
     return () => {
-      if (ws) {
-        ws.close();
-      }
-    }
-  }, [])
+      Object.values(ws).forEach(socket => {
+        if (socket) {
+          // @ts-ignore
+          socket.close();
+        }
+      });
+    };
+  }, []);
 
   useEffect(() => {
-      // @ts-ignore
-      WebAssembly.instantiateStreaming(fetch("/plugins/headlamp-ig/main.wasm"), go.importObject).then((result) => {
-        go.run(result.instance);
-        (async function() {
-          let additionalProtocols = [
-            'v4.channel.k8s.io',
-            'v3.channel.k8s.io',
-            'v2.channel.k8s.io',
-            'channel.k8s.io',
-          ]
-          streamRef.current = await stream(url, () => {
-        }, {
-          additionalProtocols
-        })
-          console.log('stream is', streamRef.current);
-          let socket = await prepareSocket();
-          setWs(socket);
-          console.log('socket is', socket);
-          // @ts-ignore
-          const ig = wrapWebSocket(socket, {});
-          setTimeout(() => {
-            setIsConnected(true);
-            console.log('ig is', ig);
-            setIg(ig);
-          }, 1000)
-        })()
-        })
+    if (!url) return;
+
+    // @ts-ignore
+    WebAssembly.instantiateStreaming(fetch("/plugins/headlamp-ig/main.wasm"), go.importObject).then((result) => {
+      go.run(result.instance);
+      (async function() {
+        let additionalProtocols = [
+          'v4.channel.k8s.io',
+          'v3.channel.k8s.io',
+          'v2.channel.k8s.io',
+          'channel.k8s.io',
+        ];
+        streamRef.current[url] = await stream(url, () => {}, { additionalProtocols });
+        console.log(`Stream for ${url} is`, streamRef.current[url]);
+
+        let socket = await prepareSocket(url);
+        setWs(prevWs => ({ ...prevWs, [url]: socket }));
+        console.log(`Socket for ${url} is`, socket);
+
+        // @ts-ignore
+        const igConnection = wrapWebSocket(socket, {});
+        setTimeout(() => {
+          setIsConnected(prevState => ({ ...prevState, [url]: true }));
+          console.log(`IG for ${url} is`, igConnection);
+          setIg(prevIg => ({ ...prevIg, [url]: igConnection }));
+        }, 1000);
+      })();
+    });
   }, [url]);
 
-  return { ig, isConnected};
+  return { ig: ig[url], isConnected: isConnected[url] };
 };
 
 export default usePortForward;

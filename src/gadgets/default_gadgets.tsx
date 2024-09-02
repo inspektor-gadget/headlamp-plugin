@@ -44,5 +44,10 @@ export const DefaultGadgets = [
         type: 'trace',
         category: 'mount',
         description: 'The trace mount gadget is used to monitor mount and umount syscalls'
+    },{
+        name: 'profile_blockio',
+        type: 'profile',
+        category: 'blockio',
+        description: 'The profile blockio gadget is used to profile block IO operations'
     }
 ]
