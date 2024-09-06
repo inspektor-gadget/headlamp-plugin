@@ -9,10 +9,11 @@ import usePortForward from './igSocket';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import './wasm.js'
 
+const MAX_DATA_SIZE = 500; // Set the maximum limit for total data
+
 function NodeSelection() {
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
-  console.log(pods, nodes);
 
   const [nodesSelected, setNodesSelected] = React.useState([]);
   const [isNodesSelectedContinueClicked, setIsNodesSelectedContinueClicked] = React.useState(false);
@@ -24,22 +25,46 @@ function NodeSelection() {
   const [filters, setFilters] = React.useState({});
   const location  = useLocation();
   const [podStreamsConnected, setPodStreamsConnected] = React.useState(0);
+  const [bufferedGadgetData, setBufferedGadgetData] = React.useState([]);
+  const [isDataLoading, setIsDataLoading] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
 
+  React.useEffect(() => {
+    if(bufferedGadgetData.length > 0) {
+      setGadgetData(bufferedGadgetData);
+    }
+  }, [bufferedGadgetData])
+
+  const columns = React.useMemo(() => {
+    return dataColumns.map((column) => {
+      return {
+        header: column,
+        accessorFn: (data) => {
+          if(column == 'timestamp') {
+            return <DateLabel date={data[column]} />
+          }
+          return data[column]}
+      }
+    })
+  }, [dataColumns])
   const areAllPodStreamsConnected = podStreamsConnected === podsSelected.length;
 
-  console.log("pods selected", podsSelected);
   if(podsSelected.length > 0) {
     
     return <>
-    { podsSelected.map((podSelected) => <GenericGadgetRenderer podSelected={podSelected.jsonData.metadata.name} gadgetData={gadgetData} setGadgetData={setGadgetData} setGadgetConfig={setGadgetConfig} dataColumns={dataColumns} setDataColumns={setDataColumns}
+    { podsSelected.map((podSelected) => <GenericGadgetRenderer podSelected={podSelected.jsonData.metadata.name}  setGadgetConfig={setGadgetConfig} dataColumns={dataColumns} setDataColumns={setDataColumns}
     gadgetRunningStatus={gadgetRunningStatus}  filters={filters} 
     setPodStreamsConnected={setPodStreamsConnected}
     areAllPodStreamsConnected={areAllPodStreamsConnected}
     podStreamsConnected={podStreamsConnected}
+    setBufferedGadgetData={setBufferedGadgetData}
+    bufferedGadgetData={bufferedGadgetData}
+    setLoading={setLoading}
     />)}
 
 { areAllPodStreamsConnected && <SectionBox title={location.state.category} backLink={true}>
        <GadgetFilters config={gadgetConfig} isConnected={podStreamsConnected} setFilters={setFilters} filters={filters} onApplyFilters={() => {
+        console.log("apply filters called")
         setGadgetData([]);
 
         // first send a stop action to stop this gadget and then start it again
@@ -60,19 +85,10 @@ function NodeSelection() {
     </Box>
     <Table
       columns={
-        dataColumns.map((column) => {
-          return {
-            header: column,
-            accessorFn: (data) => {
-              if(column == 'timestamp') {
-                return <DateLabel date={data[column]} />
-              }
-              return data[column]}
-          }
-        })
+        columns
       }
       data={gadgetData}
-      loading={!areAllPodStreamsConnected}
+      loading={loading}
   />
   </SectionBox>
   }
@@ -100,8 +116,6 @@ function NodeSelection() {
       let podsInterestedIn = [];
       nodesSelected.forEach((nodeName) => {
         podsInterestedIn.push(...[...pods.filter((pod) => pod.spec.nodeName === nodeName && isIGPod(pod))]);
-        console.log('pods interested in are', podsInterestedIn);
-
       })
       setPodsSelected(() => { 
         
@@ -115,8 +129,6 @@ function NodeSelection() {
 
 function GenericGadgetRenderer(props: {
   podSelected: any;
-  gadgetData: any;
-  setGadgetData: any;
   setGadgetConfig: any;
   dataColumns: any;
   setDataColumns: any;
@@ -125,29 +137,13 @@ function GenericGadgetRenderer(props: {
   setPodStreamsConnected: any;
   areAllPodStreamsConnected: any;
   podStreamsConnected: any;
+  setBufferedGadgetData: any;
+  bufferedGadgetData: any;
+  setLoading: any;
 }) {
-  const { podSelected, setGadgetConfig, gadgetData, setGadgetData, dataColumns, setDataColumns, gadgetRunningStatus, filters, setPodStreamsConnected, areAllPodStreamsConnected, podStreamsConnected } = props;
+  const { podSelected, setGadgetConfig, dataColumns, setDataColumns, gadgetRunningStatus, filters, setPodStreamsConnected, areAllPodStreamsConnected, setBufferedGadgetData, bufferedGadgetData, setLoading } = props;
   const location  = useLocation();
-  const [bufferedGadgetData, setBufferedGadgetData] = React.useState([]);
-  const [loading, setLoading] = React.useState(false);
- 
-  console.log('pods selected', podSelected);
-  
   const { ig, isConnected } = usePortForward(`api/v1/namespaces/gadget/pods/${podSelected}/portforward?ports=8080`);
-
-  React.useEffect(() => {
-    const processBufferedData = setInterval(() => {
-      if(bufferedGadgetData.length > 20) {
-       setGadgetData((prevData) => [...prevData, ...bufferedGadgetData]);
-       setBufferedGadgetData([]);
-      }
-   }, 5000)
-
-   return () => {
-      clearInterval(processBufferedData);
-   }
-  }, [])
-
   React.useEffect(() => {
     if(isConnected && ig) {
       setPodStreamsConnected((prevVal) => prevVal + 1);
@@ -170,19 +166,15 @@ function GenericGadgetRenderer(props: {
       imageName: location.state.name,
       paramValues: {
           ...filters
-      }
+      },
   }, {
-      onGadgetInfo: (gi) => { console.log('gadgetInfo', gi);
-        console.log('dataColumns', gi);
+      onGadgetInfo: (gi) => {
         //setDataColumns(gi);
        },
       onData: (dsID, data) => {  
-        console.log('data', dsID, data);
         setLoading(false);
         let columns = dataColumns;
         if(columns.length == 0 && dataColumns.length == 0) {
-          console.log("inside")
-          console.log('data columns are', Object.keys(data));
           columns = Object.keys(data);
           setDataColumns(Object.keys(data));
         }
@@ -191,14 +183,19 @@ function GenericGadgetRenderer(props: {
           const massagedData = {};
           columns.forEach((column) => {
             const val = JSON.stringify(payload[column]);
-            console.log("column and val", column, val);
             massagedData[column] = val;
           })
-            if(gadgetData.length < 10) {
-              setGadgetData(prevData => [...prevData, massagedData]);
-              return;
-            }
-            setBufferedGadgetData(prevData => [...prevData, massagedData]);
+        _.debounce(() => setBufferedGadgetData((prevData) => {
+          if(prevData.length > MAX_DATA_SIZE) {
+            return prevData
+          }
+          const newBufferedData = [...prevData, massagedData];
+          // If the buffer exceeds MAX_DATA_SIZE, remove the first element
+          // if (newBufferedData.length > MAX_DATA_SIZE) {
+          //   newBufferedData.shift(); // Remove the first (oldest) element
+          // }
+          return newBufferedData;
+        }), 3000)();
         } }
   }, (err) => {
       console.error(err);

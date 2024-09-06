@@ -3,87 +3,90 @@ import { FILTERS_TYPE } from "./filter_types";
 import { SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
 import K8s  from '@kinvolk/headlamp-plugin/lib/K8s';
 import { removeDuplicates } from './helper';
+import React from 'react';
 
+let FilterComponents = [];
 export default function GadgetFilters(props: {config: any, setFilters: (func?: (val: any) => any) => void, isConnected: boolean, filters: any, onApplyFilters: () => void}) {
-    const { config, setFilters, isConnected } = props;
-    
+    const { config, setFilters, isConnected, filters } = props;
     if(!isConnected) {
         return null;
     }
 
-    let FilterComponents = [];
-    if(config && config.params) {
-        const uniqueConfig = removeDuplicates(config.params);
-        FilterComponents = uniqueConfig?.map((param, index) => {
-            const filter = FILTERS_TYPE[param.typeHint];
-            
-            if(param?.valueHint?.includes('pod')) {
-                return <PodsInputFilter setFilters={setFilters} key={param.key + index} param={param}/>
-            }
-
-            if(param?.valueHint?.includes('namespace')) {
-                return <NamespaceFilter setFilters={setFilters} key={param.key + index} param={param}/>
-            }
-
-            if(!filter) return null;
-            
-             if(filter.type === 'checkbox') {
-                console.log(param.key)
-                console.log(param.defaultValue, Boolean(param.defaultValue))
-
-                return <Grid item md={3} key={param.key + index}> 
-                <FormControlLabel control={<Switch defaultChecked={param.defaultValue === 'true'} onChange={(e) => {
-                    setFilters((prevVal) => {
-                        return {
-                            ...prevVal,
-                            [param.prefix + param.key]: String(e.target.checked)
-                        }
-                    })
-                }}
-                />} label={param.title || param.key}/>
+    React.useMemo(() => {
+        if(config && config.params) {
+            const uniqueConfig = removeDuplicates(config.params);
+            FilterComponents = uniqueConfig?.map((param, index) => {
+                const filter = FILTERS_TYPE[param.typeHint];
                 
-                </Grid>
-            }
-
-            if(filter.type === 'number') {
-                return <Grid item md={3} key={param.key + index}>
-                <TextField type={'number'} defaultValue={param.defaultValue} onChange={(e) => {
-                    setFilters((prevVal) => {
-                        return {
-                            ...prevVal,
-                            [param.prefix + param.key]: e.target.value
-                        }
-                    })
-                }}
-                 min={filter.min}
-                 max={filter.max}
-                 label={param.title || param.key}
-                 fullWidth
-                 variant="outlined"
-                />
-                </Grid>
-            }
-
-            if(filter.type === 'string') {
-                return <Grid item md={3} key={param.key + index}>
-                <TextField defaultValue={param.defaultValue} onChange={(e) => {
-                    setFilters((prevVal) => {
-                        return {
-                            ...prevVal,
-                            [param.prefix + param.key]: e.target.value
-                        }
-                    })
-                }}
-                 label={param.title || param.key}
-                 fullWidth
-                 variant="outlined"
-                />
-                </Grid>
-            }
-
-            return null
-        })
-    }
+                if(param?.valueHint?.includes('pod')) {
+                    return <PodsInputFilter setFilters={setFilters} key={param.key + index} param={param}/>
+                }
+    
+                if(param?.valueHint?.includes('namespace')) {
+                    return <NamespaceFilter setFilters={setFilters} key={param.key + index} param={param}/>
+                }
+    
+                if(!filter) return null;
+                
+                 if(filter.type === 'checkbox') {
+                    console.log(param.key)
+                    console.log(param.defaultValue, Boolean(param.defaultValue))
+    
+                    return <Grid item md={3} key={param.key + index}> 
+                    <FormControlLabel control={<Switch defaultChecked={param.defaultValue === 'true'} onChange={(e) => {
+                        setFilters((prevVal) => {
+                            return {
+                                ...prevVal,
+                                [param.prefix + param.key]: String(e.target.checked)
+                            }
+                        })
+                    }}
+                    />} label={param.title || param.key}/>
+                    
+                    </Grid>
+                }
+    
+                if(filter.type === 'number') {
+                    return <Grid item md={3} key={param.key + index}>
+                    <TextField type={'number'} defaultValue={param.defaultValue} onChange={(e) => {
+                        setFilters((prevVal) => {
+                            return {
+                                ...prevVal,
+                                [param.prefix + param.key]: e.target.value
+                            }
+                        })
+                    }}
+                     min={filter.min}
+                     max={filter.max}
+                     label={param.title || param.key}
+                     fullWidth
+                     variant="outlined"
+                    />
+                    </Grid>
+                }
+    
+                if(filter.type === 'string') {
+                    return <Grid item md={3} key={param.key + index}>
+                    <TextField defaultValue={param.defaultValue} onChange={(e) => {
+                        setFilters((prevVal) => {
+                            return {
+                                ...prevVal,
+                                [param.prefix + param.key]: e.target.value
+                            }
+                        })
+                    }}
+                     label={param.title || param.key}
+                     fullWidth
+                     variant="outlined"
+                    />
+                    </Grid>
+                }
+    
+                return null
+            })
+        }
+    }, [config, config.params])
+    
     return config && FilterComponents?.length > 0 && <SectionBox title={"Filters"}>
         <Paper>
          <Box p={2}>
