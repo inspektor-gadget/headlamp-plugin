@@ -85,7 +85,7 @@ export default function GadgetFilters(props: {config: any, setFilters: (func?: (
                 return null
             })
         }
-    }, [config, config.params])
+    }, [config, config?.params])
     
     return config && FilterComponents?.length > 0 && <SectionBox title={"Filters"}>
         <Paper>

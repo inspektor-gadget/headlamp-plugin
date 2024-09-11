@@ -10,7 +10,7 @@ const usePortForward = (url) => {
   const streamRef = useRef({});
   const [ws, setWs] = useState({});
   const [ig, setIg] = useState({});
-
+  
   async function prepareSocket(url) {
     return new Promise((resolve) => {
       let intervalID = setInterval(() => {
@@ -33,7 +33,7 @@ const usePortForward = (url) => {
         }
       });
     };
-  }, []);
+  }, [ws]);
 
   useEffect(() => {
     if (!url) return;
@@ -53,7 +53,6 @@ const usePortForward = (url) => {
 
         let socket = await prepareSocket(url);
         setWs(prevWs => ({ ...prevWs, [url]: socket }));
-        console.log(`Socket for ${url} is`, socket);
 
         // @ts-ignore
         const igConnection = wrapWebSocket(socket, {});

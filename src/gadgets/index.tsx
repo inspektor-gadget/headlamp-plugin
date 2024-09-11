@@ -1,4 +1,4 @@
-import { DateLabel, Loader, SectionBox, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { DateLabel, Link, Loader, SectionBox, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { Grid, Button, Box, Select, FormControlLabel, Checkbox } from '@mui/material';
 import React from 'react';
 import _ from 'lodash';
@@ -21,7 +21,7 @@ function NodeSelection() {
   const [gadgetData, setGadgetData] = React.useState([]);
   const [gadgetRunningStatus, setGadgetRunningStatus] = React.useState(false);
   const [dataColumns, setDataColumns] = React.useState([]);
-  const [gadgetConfig, setGadgetConfig] = React.useState({} as any);
+  const [gadgetConfig, setGadgetConfig] = React.useState(null);
   const [filters, setFilters] = React.useState({});
   const location  = useLocation();
   const [podStreamsConnected, setPodStreamsConnected] = React.useState(0);
@@ -176,14 +176,23 @@ function GenericGadgetRenderer(props: {
         let columns = dataColumns;
         if(columns.length == 0 && dataColumns.length == 0) {
           columns = Object.keys(data);
-          setDataColumns(Object.keys(data));
+          // remove the column called k8s and add containerName, namespace, node, podName
+          columns = columns.filter((column) => column !== 'k8s');
+          // add the new columns in mid
+          columns = [...columns.slice(0, 1), 'containerName', 'namespace', 'node', 'podName', ...columns.slice(1)];
+          setDataColumns(columns);
         }
         if(columns.length > 0) {
           const payload = data;
           const massagedData = {};
           columns.forEach((column) => {
-            const val = JSON.stringify(payload[column]);
-            massagedData[column] = val;
+            if(column === 'containerName') {
+              massagedData[column] = payload.k8s[column];
+            } else if(column === 'namespace' || column === 'node' || column === 'podName') {
+              massagedData[column] = payload.k8s[column];
+            } else {
+              massagedData[column] = JSON.stringify(payload[column]);
+            }
           })
         _.debounce(() => setBufferedGadgetData((prevData) => {
           if(prevData.length > MAX_DATA_SIZE) {
