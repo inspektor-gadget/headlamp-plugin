@@ -1,5 +1,12 @@
 export const DefaultGadgets = [
     {
+        name: 'snapshot_process',
+        type: 'snapshot',
+        category: 'process',
+        description: 'The snapshot process gadget gathers information about processes running inside the pods'
+
+    },
+    {
         name: 'trace_open',
         type: 'trace',
         category: 'open',
@@ -49,5 +56,10 @@ export const DefaultGadgets = [
         type: 'profile',
         category: 'blockio',
         description: 'The profile blockio gadget is used to profile block IO operations'
+    },{
+        name:'trace_oomkill',
+        type: 'trace',
+        category: 'oomkill',
+        description: 'The trace oomkill gadget traces out of memory kills'
     }
 ]

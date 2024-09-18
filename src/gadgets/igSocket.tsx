@@ -55,12 +55,16 @@ const usePortForward = (url) => {
         setWs(prevWs => ({ ...prevWs, [url]: socket }));
 
         // @ts-ignore
-        const igConnection = wrapWebSocket(socket, {});
-        setTimeout(() => {
-          setIsConnected(prevState => ({ ...prevState, [url]: true }));
-          console.log(`IG for ${url} is`, igConnection);
-          setIg(prevIg => ({ ...prevIg, [url]: igConnection }));
-        }, 1000);
+        const igConnection = wrapWebSocket(socket, {
+          onReady: () =>{
+            setIsConnected(prevState => ({ ...prevState, [url]: true }));
+            console.log(`IG for ${url} is`, igConnection);
+            setIg(prevIg => ({ ...prevIg, [url]: igConnection }));
+          },
+          onError: (error) => {
+            console.error(`IG for ${url} error`, error);
+          }
+        });
       })();
     });
   }, [url]);

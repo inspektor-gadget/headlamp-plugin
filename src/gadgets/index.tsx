@@ -28,7 +28,7 @@ function NodeSelection() {
   const [bufferedGadgetData, setBufferedGadgetData] = React.useState([]);
   const [isDataLoading, setIsDataLoading] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-
+  
   React.useEffect(() => {
     if(bufferedGadgetData.length > 0) {
       setGadgetData(bufferedGadgetData);
@@ -77,8 +77,13 @@ function NodeSelection() {
     <Grid container justifyContent="space-between" spacing="2">
           <Grid item>Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}</Grid>
           <Grid item>
-            <Button onClick={() => setGadgetRunningStatus((prevVal) => !prevVal)} variant="outlined">
-              {!gadgetRunningStatus ? 'Start' : 'Stop'}
+            <Button onClick={() => {
+              if(!gadgetRunningStatus) {
+                setGadgetData([]);
+                setBufferedGadgetData([]);
+              }
+              setGadgetRunningStatus((prevVal) => !prevVal)}} variant="outlined" disabled={loading}>
+              { loading ? 'Processing' : !gadgetRunningStatus ? 'Start' : 'Stop'}
             </Button>
           </Grid>
         </Grid>
@@ -88,7 +93,6 @@ function NodeSelection() {
         columns
       }
       data={gadgetData}
-      loading={loading}
   />
   </SectionBox>
   }
@@ -144,12 +148,14 @@ function GenericGadgetRenderer(props: {
   const { podSelected, setGadgetConfig, dataColumns, setDataColumns, gadgetRunningStatus, filters, setPodStreamsConnected, areAllPodStreamsConnected, setBufferedGadgetData, bufferedGadgetData, setLoading } = props;
   const location  = useLocation();
   const { ig, isConnected } = usePortForward(`api/v1/namespaces/gadget/pods/${podSelected}/portforward?ports=8080`);
+  const gadgetRef = React.useRef(null);
+  const gadgetRunningStatusRef = React.useRef(gadgetRunningStatus);
   React.useEffect(() => {
     if(isConnected && ig) {
       setPodStreamsConnected((prevVal) => prevVal + 1);
       ig.getGadgetInfo({
         version: 1,
-        imageName: location.state.name
+        imageName: `${location.state.name}:v0.32.0`
     }, (info) => {
         console.info(info);
         setGadgetConfig(info);
@@ -161,9 +167,10 @@ function GenericGadgetRenderer(props: {
   
   function gadgetStartStopHandler() {
     setLoading(true);
-    ig.runGadget({
+    console.log("filters are ", filters)
+    gadgetRef.current = ig.runGadget({
       version: 1,
-      imageName: location.state.name,
+      imageName: `${location.state.name}:v0.32.0`,
       paramValues: {
           ...filters
       },
@@ -171,47 +178,133 @@ function GenericGadgetRenderer(props: {
       onGadgetInfo: (gi) => {
         //setDataColumns(gi);
        },
-      onData: (dsID, data) => {  
-        setLoading(false);
-        let columns = dataColumns;
-        if(columns.length == 0 && dataColumns.length == 0) {
-          columns = Object.keys(data);
-          // remove the column called k8s and add containerName, namespace, node, podName
-          columns = columns.filter((column) => column !== 'k8s');
-          // add the new columns in mid
-          columns = [...columns.slice(0, 1), 'containerName', 'namespace', 'node', 'podName', ...columns.slice(1)];
-          setDataColumns(columns);
+       onReady: () => {
+        if(!gadgetRunningStatusRef.current) {
+          gadgetRef.current.stop();
         }
-        if(columns.length > 0) {
-          const payload = data;
-          const massagedData = {};
-          columns.forEach((column) => {
-            if(column === 'containerName') {
-              massagedData[column] = payload.k8s[column];
-            } else if(column === 'namespace' || column === 'node' || column === 'podName') {
-              massagedData[column] = payload.k8s[column];
-            } else {
-              massagedData[column] = JSON.stringify(payload[column]);
+       },
+       onDone: () => {
+          console.log('stopping the gadget')
+        console.log("gadget running ", gadgetRef.current)
+        // gadgetRef.current.stop();
+        setLoading(false);
+       },
+      onData: (dsID, data) => {  
+        if(_.isArray(data)) {
+          console.log("data received is array");
+          console.log("data received is ", data);
+          data.forEach((d) => {
+            if(!gadgetRunningStatusRef.current) {
+              return;
             }
-          })
-        _.debounce(() => setBufferedGadgetData((prevData) => {
-          if(prevData.length > MAX_DATA_SIZE) {
-            return prevData
+            setLoading(false);
+            console.log("gadget running status for collection of data ",gadgetRunningStatusRef.current)
+            if(!gadgetRunningStatusRef.current) {
+              return;
+            }
+            let columns = dataColumns;
+            if(columns.length == 0 && dataColumns.length == 0) {
+              columns = Object.keys(d);
+              // remove the column called k8s and add containerName, namespace, node, podName
+              columns = columns.filter((column) => column !== 'k8s');
+              // add the new columns in mid
+              columns = [...columns.slice(0, 1), 'containerName', 'namespace', 'node', 'podName', ...columns.slice(1)];
+              setDataColumns(columns);
+            }
+            if(columns.length > 0) {
+              const payload = d;
+              const massagedData = {};
+              columns.forEach((column) => {
+                if(column === 'containerName') {
+                  massagedData[column] = payload.k8s[column];
+                } else if(column === 'namespace' || column === 'node' || column === 'podName') {
+                  
+                  //let routeName = column === 'namespace' ? 'namespace' : column === 'node' ? 'node' : 'pod';
+                
+                  massagedData[column] = payload.k8s[column];
+                } else {
+                  massagedData[column] = JSON.stringify(payload[column]);
+                }
+              })
+            _.debounce(() => setBufferedGadgetData((prevData) => {
+              if(prevData.length > MAX_DATA_SIZE) {
+                return prevData
+              }
+              const newBufferedData = [...prevData, massagedData];
+              // If the buffer exceeds MAX_DATA_SIZE, remove the first element
+              // if (newBufferedData.length > MAX_DATA_SIZE) {
+              //   newBufferedData.shift(); // Remove the first (oldest) element
+              // }
+              return newBufferedData;
+            }), 3000)();
+            } })
+
+          } else {
+            if(!gadgetRunningStatusRef.current) {
+              return;
+            }
+            setLoading(false);
+            console.log("gadget running status for collection of data ",gadgetRunningStatusRef.current)
+            if(!gadgetRunningStatusRef.current) {
+              return;
+            }
+            let columns = dataColumns;
+            if(columns.length == 0 && dataColumns.length == 0) {
+              columns = Object.keys(data);
+              // remove the column called k8s and add containerName, namespace, node, podName
+              columns = columns.filter((column) => column !== 'k8s');
+              // add the new columns in mid
+              columns = [...columns.slice(0, 1), 'containerName', 'namespace', 'node', 'podName', ...columns.slice(1)];
+              setDataColumns(columns);
+            }
+            if(columns.length > 0) {
+              const payload = data;
+              const massagedData = {};
+              columns.forEach((column) => {
+                if(column === 'containerName') {
+                  massagedData[column] = payload.k8s[column];
+                } else if(column === 'namespace' || column === 'node' || column === 'podName') {
+                  let routeName = column === 'namespace' ? 'namespace' : column === 'node' ? 'node' : 'pod';
+                  console.log("payload column ",payload.k8s[column])
+                  console.log("routeName   is ", routeName)
+                  massagedData[column] = payload.k8s[column]
+                } else {
+                  massagedData[column] = JSON.stringify(payload[column]);
+                }
+              })
+            _.debounce(() => setBufferedGadgetData((prevData) => {
+              if(prevData.length > MAX_DATA_SIZE) {
+                return prevData
+              }
+              const newBufferedData = [...prevData, massagedData];
+              // If the buffer exceeds MAX_DATA_SIZE, remove the first element
+              // if (newBufferedData.length > MAX_DATA_SIZE) {
+              //   newBufferedData.shift(); // Remove the first (oldest) element
+              // }
+              return newBufferedData;
+            }), 3000)();
+            }
           }
-          const newBufferedData = [...prevData, massagedData];
-          // If the buffer exceeds MAX_DATA_SIZE, remove the first element
-          // if (newBufferedData.length > MAX_DATA_SIZE) {
-          //   newBufferedData.shift(); // Remove the first (oldest) element
-          // }
-          return newBufferedData;
-        }), 3000)();
-        } }
+       }
   }, (err) => {
       console.error(err);
   })
+
+  // if(!gadgetRunningStatus) {
+    
+  // } else {
+  //   setLoading(false);
+  // }
+  
+    // if(!gadgetRunningStatus) {
+      
+    // } else {
+    //   setLoading(false);
+    // }
   }
 
   React.useEffect(() => {
+    gadgetRunningStatusRef.current = gadgetRunningStatus;
     if (areAllPodStreamsConnected) {
       gadgetStartStopHandler();
     }
