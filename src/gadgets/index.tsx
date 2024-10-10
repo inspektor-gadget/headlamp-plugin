@@ -18,23 +18,16 @@ function NodeSelection() {
   const [nodesSelected, setNodesSelected] = React.useState([]);
   const [isNodesSelectedContinueClicked, setIsNodesSelectedContinueClicked] = React.useState(false);
   const [podsSelected, setPodsSelected] = React.useState([]);
-  const [gadgetData, setGadgetData] = React.useState([]);
+  const [gadgetData, setGadgetData] = React.useState({
+  });
   const [gadgetRunningStatus, setGadgetRunningStatus] = React.useState(false);
   const [dataColumns, setDataColumns] = React.useState([]);
   const [gadgetConfig, setGadgetConfig] = React.useState(null);
   const [filters, setFilters] = React.useState({});
-  const location  = useLocation();
   const [podStreamsConnected, setPodStreamsConnected] = React.useState(0);
-  const [bufferedGadgetData, setBufferedGadgetData] = React.useState([]);
-  const [isDataLoading, setIsDataLoading] = React.useState(false);
+  const [dataSources, setDataSources] = React.useState([]);
+  const [bufferedGadgetData, setBufferedGadgetData] = React.useState({});
   const [loading, setLoading] = React.useState(false);
-  
-  React.useEffect(() => {
-    if(bufferedGadgetData.length > 0) {
-      setGadgetData(bufferedGadgetData);
-    }
-  }, [bufferedGadgetData])
-
   const columns = React.useMemo(() => {
     return dataColumns.map((column) => {
       return {
@@ -58,48 +51,31 @@ function NodeSelection() {
     areAllPodStreamsConnected={areAllPodStreamsConnected}
     podStreamsConnected={podStreamsConnected}
     setBufferedGadgetData={setBufferedGadgetData}
-    bufferedGadgetData={bufferedGadgetData}
     setLoading={setLoading}
+    setDataSources={setDataSources}
     />)}
-
-{ areAllPodStreamsConnected && <SectionBox title={location.state.category} backLink={true}>
-       <GadgetFilters config={gadgetConfig} isConnected={podStreamsConnected} setFilters={setFilters} filters={filters} onApplyFilters={() => {
-        console.log("apply filters called")
-        setGadgetData([]);
-
-        // first send a stop action to stop this gadget and then start it again
-        if(gadgetRunningStatus) {
-          setGadgetRunningStatus(false);
-        }
-        setGadgetRunningStatus(true);
-       }}/>
-    <Box m={2}>
-    <Grid container justifyContent="space-between" spacing="2">
-          <Grid item>Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}</Grid>
-          <Grid item>
-            <Button onClick={() => {
-              if(!gadgetRunningStatus) {
-                setGadgetData([]);
-                setBufferedGadgetData([]);
-              }
-              setGadgetRunningStatus((prevVal) => !prevVal)}} variant="outlined" disabled={loading}>
-              { loading ? 'Processing' : !gadgetRunningStatus ? 'Start' : 'Stop'}
-            </Button>
-          </Grid>
-        </Grid>
-    </Box>
-    <Table
-      columns={
-        columns
-      }
-      data={gadgetData}
-  />
-  </SectionBox>
-  }
+    {
+      dataSources.map((dataSource, index) => <GadgetWithDataSource
+        areAllPodStreamsConnected={areAllPodStreamsConnected}
+        podStreamsConnected={podStreamsConnected}
+        setGadgetData={setGadgetData}
+        setBufferedGadgetData={setBufferedGadgetData}
+        setGadgetRunningStatus={setGadgetRunningStatus}
+        gadgetRunningStatus={gadgetRunningStatus}
+        setFilters={setFilters}
+        filters={filters}
+        loading={loading}
+        gadgetConfig={gadgetConfig}
+        dataSourceID={dataSource?.id || index}
+        gadgetData={gadgetData}
+        columns={columns}
+        bufferedGadgetData={bufferedGadgetData}
+      />) 
+    }
     </>
   }
     
-    return <SectionBox title="Select a node you want to run the gadget on" backLink={true}>
+    return <><SectionBox title="Select a node you want to run the gadget on" backLink={true}>
     {
       <>
       { !nodes && <Loader title=''/> }
@@ -128,7 +104,76 @@ function NodeSelection() {
       setIsNodesSelectedContinueClicked(true);
     }}>Continue</Button>
     </SectionBox>
-    
+    </>
+}
+
+function GadgetWithDataSource(props: {
+  areAllPodStreamsConnected: any;
+  podStreamsConnected: any;
+  setGadgetData: any;
+  setBufferedGadgetData: any;
+  setGadgetRunningStatus: any;
+  gadgetRunningStatus: any;
+  setFilters: any;
+  filters: any;
+  loading: any;
+  gadgetConfig: any;
+  dataSourceID: any;
+  gadgetData: any;
+  columns: any;
+  bufferedGadgetData: any;
+}) {
+  const { areAllPodStreamsConnected, podStreamsConnected, setGadgetData, setBufferedGadgetData, setGadgetRunningStatus, gadgetRunningStatus, setFilters, filters, loading, gadgetConfig, dataSourceID, gadgetData, columns, bufferedGadgetData } = props;
+  React.useEffect(() => {
+    if(bufferedGadgetData[dataSourceID]?.length > 0) {
+      setGadgetData(bufferedGadgetData);
+    }
+  }, [bufferedGadgetData[dataSourceID]])
+  const location  = useLocation();
+    return (areAllPodStreamsConnected && <SectionBox title={location.state.category} backLink={true}>
+    <GadgetFilters config={gadgetConfig} isConnected={podStreamsConnected} setFilters={setFilters} filters={filters} onApplyFilters={() => {
+     setGadgetData((prevData) => {
+        prevData[dataSourceID] = [];
+        setBufferedGadgetData({...prevData})
+        setGadgetData({...prevData});
+     });
+
+     // first send a stop action to stop this gadget and then start it again
+     if(gadgetRunningStatus) {
+       setGadgetRunningStatus(false);
+     }
+     setGadgetRunningStatus(true);
+    }}/>
+ <Box m={2}>
+ <Grid container justifyContent="space-between" spacing="2">
+       <Grid item>Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}</Grid>
+       <Grid item>
+         <Button onClick={() => {
+           if(!gadgetRunningStatus) {
+            setGadgetData((prevData) => {
+              prevData[dataSourceID] = [];
+              setGadgetData({...prevData});
+           });
+           setBufferedGadgetData((prevData) => {
+            prevData[dataSourceID] = [];
+            setBufferedGadgetData({...prevData});
+         });
+           }
+           setGadgetRunningStatus((prevVal) => !prevVal)}} variant="outlined" disabled={loading}>
+           { loading ? 'Processing' : !gadgetRunningStatus ? 'Start' : 'Stop'}
+         </Button>
+       </Grid>
+     </Grid>
+ </Box>
+ <Table
+   columns={
+     columns
+   }
+   data={gadgetData ? gadgetData[dataSourceID] : []}
+   loading={loading}
+/>
+</SectionBox>
+    )
 }
 
 function GenericGadgetRenderer(props: {
@@ -142,23 +187,25 @@ function GenericGadgetRenderer(props: {
   areAllPodStreamsConnected: any;
   podStreamsConnected: any;
   setBufferedGadgetData: any;
-  bufferedGadgetData: any;
   setLoading: any;
+  setDataSources: any;
 }) {
-  const { podSelected, setGadgetConfig, dataColumns, setDataColumns, gadgetRunningStatus, filters, setPodStreamsConnected, areAllPodStreamsConnected, setBufferedGadgetData, bufferedGadgetData, setLoading } = props;
+  const { podSelected, setGadgetConfig, dataColumns, setDataColumns, gadgetRunningStatus, filters, setPodStreamsConnected, areAllPodStreamsConnected, setBufferedGadgetData, setLoading, setDataSources } = props;
   const location  = useLocation();
   const { ig, isConnected } = usePortForward(`api/v1/namespaces/gadget/pods/${podSelected}/portforward?ports=8080`);
   const gadgetRef = React.useRef(null);
   const gadgetRunningStatusRef = React.useRef(gadgetRunningStatus);
+
   React.useEffect(() => {
     if(isConnected && ig) {
       setPodStreamsConnected((prevVal) => prevVal + 1);
       ig.getGadgetInfo({
         version: 1,
-        imageName: `${location.state.name}:v0.32.0`
+        imageName: `${location.state?.name}:v0.32.0`
     }, (info) => {
-        console.info(info);
+      console.log('gadget info', info);
         setGadgetConfig(info);
+        setDataSources(info.dataSources);
     }, (err) => {
         console.error(err);
     })
@@ -167,7 +214,17 @@ function GenericGadgetRenderer(props: {
   
   function gadgetStartStopHandler() {
     setLoading(true);
-    console.log("filters are ", filters)
+    console.log('gadget payload', {
+      version: 1,
+      imageName: `${location.state.name}:v0.32.0`,
+      paramValues: {
+          ...filters
+      },
+  })
+  if(!gadgetRunningStatusRef.current) {
+    gadgetRef.current.stop();
+    return;
+  }
     gadgetRef.current = ig.runGadget({
       version: 1,
       imageName: `${location.state.name}:v0.32.0`,
@@ -175,8 +232,8 @@ function GenericGadgetRenderer(props: {
           ...filters
       },
   }, {
-      onGadgetInfo: (gi) => {
-        //setDataColumns(gi);
+      onGadgetInfo: (gi) => {  
+         
        },
        onReady: () => {
         if(!gadgetRunningStatusRef.current) {
@@ -184,21 +241,16 @@ function GenericGadgetRenderer(props: {
         }
        },
        onDone: () => {
-          console.log('stopping the gadget')
-        console.log("gadget running ", gadgetRef.current)
-        // gadgetRef.current.stop();
         setLoading(false);
        },
       onData: (dsID, data) => {  
+        console.log('data', data);
         if(_.isArray(data)) {
-          console.log("data received is array");
-          console.log("data received is ", data);
           data.forEach((d) => {
             if(!gadgetRunningStatusRef.current) {
               return;
             }
             setLoading(false);
-            console.log("gadget running status for collection of data ",gadgetRunningStatusRef.current)
             if(!gadgetRunningStatusRef.current) {
               return;
             }
@@ -218,25 +270,23 @@ function GenericGadgetRenderer(props: {
                 if(column === 'containerName') {
                   massagedData[column] = payload.k8s[column];
                 } else if(column === 'namespace' || column === 'node' || column === 'podName') {
-                  
-                  //let routeName = column === 'namespace' ? 'namespace' : column === 'node' ? 'node' : 'pod';
-                
-                  massagedData[column] = payload.k8s[column];
+                  if((column === 'namespace' || column === 'node') && payload.k8s[column]) {
+                    massagedData[column] = <Link routeName={column} params={{name: payload.k8s[column]}}>{payload.k8s[column]}</Link>
+                  } else if(column === 'podName' && payload.k8s[column] && payload.k8s['namespace']) {
+                    massagedData[column] = <Link routeName='pod' params={{name: payload.k8s[column], namespace: payload.k8s['namespace']}}>{payload.k8s[column]}</Link>
+                  } else {
+                    massagedData[column] = payload.k8s[column]
+                  }
                 } else {
                   massagedData[column] = JSON.stringify(payload[column]);
                 }
               })
+              
             _.debounce(() => setBufferedGadgetData((prevData) => {
-              if(prevData.length > MAX_DATA_SIZE) {
-                return prevData
-              }
-              const newBufferedData = [...prevData, massagedData];
-              // If the buffer exceeds MAX_DATA_SIZE, remove the first element
-              // if (newBufferedData.length > MAX_DATA_SIZE) {
-              //   newBufferedData.shift(); // Remove the first (oldest) element
-              // }
+              const newBufferedData = {...prevData};
+              newBufferedData[dsID] = [...newBufferedData[dsID], massagedData];
               return newBufferedData;
-            }), 3000)();
+            }), 1000)();
             } })
 
           } else {
@@ -244,7 +294,7 @@ function GenericGadgetRenderer(props: {
               return;
             }
             setLoading(false);
-            console.log("gadget running status for collection of data ",gadgetRunningStatusRef.current)
+            //console.log("gadget running status for collection of data ",gadgetRunningStatusRef.current)
             if(!gadgetRunningStatusRef.current) {
               return;
             }
@@ -264,43 +314,28 @@ function GenericGadgetRenderer(props: {
                 if(column === 'containerName') {
                   massagedData[column] = payload.k8s[column];
                 } else if(column === 'namespace' || column === 'node' || column === 'podName') {
-                  let routeName = column === 'namespace' ? 'namespace' : column === 'node' ? 'node' : 'pod';
-                  console.log("payload column ",payload.k8s[column])
-                  console.log("routeName   is ", routeName)
-                  massagedData[column] = payload.k8s[column]
+                  if((column === 'namespace' || column === 'node') && payload.k8s[column]) {
+                    massagedData[column] = <Link routeName={column} params={{name: payload.k8s[column]}}>{payload.k8s[column]}</Link>
+                  } else if(column === 'podName' && payload.k8s[column] && payload.k8s['namespace']) {
+                    massagedData[column] = <Link routeName='pod' params={{name: payload.k8s[column], namespace: payload.k8s['namespace']}}>{payload.k8s[column]}</Link>
+                  } else {
+                    massagedData[column] = payload.k8s[column]
+                  }
                 } else {
                   massagedData[column] = JSON.stringify(payload[column]);
                 }
               })
-            _.debounce(() => setBufferedGadgetData((prevData) => {
-              if(prevData.length > MAX_DATA_SIZE) {
-                return prevData
-              }
-              const newBufferedData = [...prevData, massagedData];
-              // If the buffer exceeds MAX_DATA_SIZE, remove the first element
-              // if (newBufferedData.length > MAX_DATA_SIZE) {
-              //   newBufferedData.shift(); // Remove the first (oldest) element
-              // }
-              return newBufferedData;
-            }), 3000)();
+              _.debounce(() => setBufferedGadgetData((prevData) => {
+                const newBufferedData = {...prevData};
+                newBufferedData[dsID] = [...newBufferedData[dsID], massagedData];
+                return newBufferedData;
+              }), 1000)();
             }
           }
        }
   }, (err) => {
       console.error(err);
   })
-
-  // if(!gadgetRunningStatus) {
-    
-  // } else {
-  //   setLoading(false);
-  // }
-  
-    // if(!gadgetRunningStatus) {
-      
-    // } else {
-    //   setLoading(false);
-    // }
   }
 
   React.useEffect(() => {

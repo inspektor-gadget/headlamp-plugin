@@ -52,6 +52,11 @@ export const DefaultGadgets = [
         category: 'mount',
         description: 'The trace mount gadget is used to monitor mount and umount syscalls'
     },{
+        name:'trace_capabilities',
+        type: 'trace',
+        category: 'capabilities',
+        description: 'The trace_capabilities gadget allows us to see what capability security checks are triggered by applications running in a container'
+    },{
         name: 'profile_blockio',
         type: 'profile',
         category: 'blockio',
@@ -61,5 +66,34 @@ export const DefaultGadgets = [
         type: 'trace',
         category: 'oomkill',
         description: 'The trace oomkill gadget traces out of memory kills'
+    }, {
+        name: 'trace_tcp',
+        type: 'trace',
+        category: 'trace',
+        description: 'The trace_tcp gadget tracks tcp connect, accept and close'
+    },
+    {
+        name: 'trace_tcpdrop',
+        type: 'trace',
+        category: 'tcpdrop',
+        description: 'The trace_tcpdrop gadget tracks TCP kernel-dropped packets/segments'
+    },
+    {
+        name: 'trace_tcpretrans',
+        type: 'trace',
+        category: 'tcpretrans',
+        description: 'The trace_tcpretrans gadget tracks TCP retransmissions'
+    },
+    {
+        name: 'trace_lsm',
+        type: 'trace',
+        category: 'lsm',
+        description: 'A strace for LSM tracepoints'
+    }, 
+    {
+        name: 'trace_bind',
+        type: 'trace',
+        category: 'bind',
+        description: 'The trace_bind gadget is used to stream socket binding syscalls'
     }
 ]
