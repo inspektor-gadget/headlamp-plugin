@@ -5,6 +5,17 @@ import { stream } from '@kinvolk/headlamp-plugin/lib/ApiProxy';
 // @ts-ignore
 const go = new window.Go();
 
+let igPromise;
+
+async function getIG() {
+  if (!igPromise) {
+    igPromise = WebAssembly.instantiateStreaming(fetch("/plugins/headlamp-ig/main.wasm"), go.importObject).then((result) => {
+      go.run(result.instance);
+    });
+  }
+  return igPromise;
+}
+
 const usePortForward = (url) => {
   const [isConnected, setIsConnected] = useState({});
   const streamRef = useRef({});
@@ -39,8 +50,7 @@ const usePortForward = (url) => {
     if (!url) return;
 
     // @ts-ignore
-    WebAssembly.instantiateStreaming(fetch("/plugins/headlamp-ig/main.wasm"), go.importObject).then((result) => {
-      go.run(result.instance);
+    getIG().then((result) => {
       (async function() {
         let additionalProtocols = [
           'v4.channel.k8s.io',
