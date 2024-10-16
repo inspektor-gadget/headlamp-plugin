@@ -2,7 +2,7 @@ import { DateLabel, Link, Loader, SectionBox, Table } from '@kinvolk/headlamp-pl
 import { Grid, Button, Box, Select, FormControlLabel, Checkbox } from '@mui/material';
 import React from 'react';
 import _ from 'lodash';
-import { isIGPod, pubSub } from './helper';
+import { getProperty, isIGPod, pubSub } from './helper';
 import { useLocation } from 'react-router';
 import GadgetFilters from './gadgetFilters';
 import usePortForward from './igSocket';
@@ -21,25 +21,14 @@ function NodeSelection() {
   const [gadgetData, setGadgetData] = React.useState({
   });
   const [gadgetRunningStatus, setGadgetRunningStatus] = React.useState(false);
-  const [dataColumns, setDataColumns] = React.useState([]);
+  const [dataColumns, setDataColumns] = React.useState({});
   const [gadgetConfig, setGadgetConfig] = React.useState(null);
   const [filters, setFilters] = React.useState({});
   const [podStreamsConnected, setPodStreamsConnected] = React.useState(0);
   const [dataSources, setDataSources] = React.useState([]);
   const [bufferedGadgetData, setBufferedGadgetData] = React.useState({});
   const [loading, setLoading] = React.useState(false);
-  const columns = React.useMemo(() => {
-    return dataColumns.map((column) => {
-      return {
-        header: column,
-        accessorFn: (data) => {
-          if(column == 'timestamp') {
-            return <DateLabel date={data[column]} />
-          }
-          return data[column]}
-      }
-    })
-  }, [dataColumns])
+
   const areAllPodStreamsConnected = podStreamsConnected === podsSelected.length;
 
   if(podsSelected.length > 0) {
@@ -55,7 +44,9 @@ function NodeSelection() {
     setDataSources={setDataSources}
     />)}
     {
-      dataSources.map((dataSource, index) => <GadgetWithDataSource
+      dataSources.map((dataSource, index) => {
+        const dataSourceID = dataSource?.id || index;
+      return (<GadgetWithDataSource
         areAllPodStreamsConnected={areAllPodStreamsConnected}
         podStreamsConnected={podStreamsConnected}
         setGadgetData={setGadgetData}
@@ -66,11 +57,12 @@ function NodeSelection() {
         filters={filters}
         loading={loading}
         gadgetConfig={gadgetConfig}
-        dataSourceID={dataSource?.id || index}
+        dataSourceID={dataSourceID}
         gadgetData={gadgetData}
-        columns={columns}
+        columns={dataColumns[dataSourceID]}
         bufferedGadgetData={bufferedGadgetData}
-      />) 
+      />)
+    }) 
     }
     </>
   }
@@ -124,6 +116,18 @@ function GadgetWithDataSource(props: {
   bufferedGadgetData: any;
 }) {
   const { areAllPodStreamsConnected, podStreamsConnected, setGadgetData, setBufferedGadgetData, setGadgetRunningStatus, gadgetRunningStatus, setFilters, filters, loading, gadgetConfig, dataSourceID, gadgetData, columns, bufferedGadgetData } = props;
+    const fields = React.useMemo(() => {
+    return columns.map((column) => {
+      return {
+        header: column,
+        accessorFn: (data) => {
+          if(column == 'timestamp') {
+            return <DateLabel date={data[column]} />
+          }
+          return data[column]}
+      }
+    })
+  }, [columns])
   React.useEffect(() => {
     if(bufferedGadgetData[dataSourceID]?.length > 0) {
       setGadgetData(bufferedGadgetData);
@@ -135,7 +139,7 @@ function GadgetWithDataSource(props: {
      setGadgetData((prevData) => {
         prevData[dataSourceID] = [];
         setBufferedGadgetData({...prevData})
-        setGadgetData({...prevData});
+        return {...prevData}
      });
 
      // first send a stop action to stop this gadget and then start it again
@@ -152,11 +156,11 @@ function GadgetWithDataSource(props: {
            if(!gadgetRunningStatus) {
             setGadgetData((prevData) => {
               prevData[dataSourceID] = [];
-              setGadgetData({...prevData});
+              return {...prevData}
            });
            setBufferedGadgetData((prevData) => {
             prevData[dataSourceID] = [];
-            setBufferedGadgetData({...prevData});
+            return {...prevData}
          });
            }
            setGadgetRunningStatus((prevVal) => !prevVal)}} variant="outlined" disabled={loading}>
@@ -167,7 +171,7 @@ function GadgetWithDataSource(props: {
  </Box>
  <Table
    columns={
-     columns
+     fields
    }
    data={gadgetData ? gadgetData[dataSourceID] : []}
    loading={loading}
@@ -201,22 +205,60 @@ function GenericGadgetRenderer(props: {
       setPodStreamsConnected((prevVal) => prevVal + 1);
       ig.getGadgetInfo({
         version: 1,
-        imageName: `${location.state?.name}:v0.32.0`
+        imageName: `${location.state?.name}:v0.33.0`
     }, (info) => {
-      console.log('gadget info', info);
+      let fields = {};
+      info.dataSources.forEach((dataSource, index) => {
+        fields[dataSource.id || index] = dataSource.fields.filter((field) => (field.flags & 4) == 0).map((field) => field.fullName).filter((field) => field !== 'k8s');
+      });
         setGadgetConfig(info);
         setDataSources(info.dataSources);
+        setDataColumns({...fields})
     }, (err) => {
         console.error(err);
     })
     }
   }, [isConnected, ig])
   
+  function handleGadgetData(data, dsID) {
+    if(!gadgetRunningStatusRef.current) {
+      return;
+    }
+    setLoading(false);
+    if(!gadgetRunningStatusRef.current) {
+      return;
+    }
+    let columns = dataColumns[dsID];
+    if(columns.length > 0) {
+      const payload = data;
+      const massagedData = {};
+      columns.forEach((column) => {
+        const value = getProperty(payload, column);
+        if(column === 'k8s.containerName') {
+          massagedData[column] = value;
+        } else if(column === 'k8s.namespace' || column === 'k8s.node' || column === 'k8s.podName') {
+          if((column === 'k8s.namespace' || column === 'k8s.node')) {
+            massagedData[column] = <Link routeName={column} params={{name: value}}>{value}</Link>
+          } else if(column === 'k8s.podName' && payload.k8s['namespace']) {
+            massagedData[column] = <Link routeName='pod' params={{name: value, namespace: payload.k8s['namespace']}}>{value}</Link>
+          } 
+        } else {
+          massagedData[column] = JSON.stringify(value).replace(/['"]+/g, '');
+        }
+      })
+      
+    _.debounce(() => setBufferedGadgetData((prevData) => {
+      const newBufferedData = {...prevData};
+      newBufferedData[dsID] = [...newBufferedData[dsID], massagedData];
+      return newBufferedData;
+    }), 1000)();
+    } 
+  }
   function gadgetStartStopHandler() {
     setLoading(true);
     console.log('gadget payload', {
       version: 1,
-      imageName: `${location.state.name}:v0.32.0`,
+      imageName: `${location.state.name}:v0.33.0`,
       paramValues: {
           ...filters
       },
@@ -227,7 +269,7 @@ function GenericGadgetRenderer(props: {
   }
     gadgetRef.current = ig.runGadget({
       version: 1,
-      imageName: `${location.state.name}:v0.32.0`,
+      imageName: `${location.state.name}:v0.33.0`,
       paramValues: {
           ...filters
       },
@@ -243,98 +285,22 @@ function GenericGadgetRenderer(props: {
        onDone: () => {
         setLoading(false);
        },
+       onError: (error) => {
+        console.log("error is ", error)
+       },
+
       onData: (dsID, data) => {  
-        console.log('data', data);
         if(_.isArray(data)) {
           data.forEach((d) => {
-            if(!gadgetRunningStatusRef.current) {
-              return;
-            }
-            setLoading(false);
-            if(!gadgetRunningStatusRef.current) {
-              return;
-            }
-            let columns = dataColumns;
-            if(columns.length == 0 && dataColumns.length == 0) {
-              columns = Object.keys(d);
-              // remove the column called k8s and add containerName, namespace, node, podName
-              columns = columns.filter((column) => column !== 'k8s');
-              // add the new columns in mid
-              columns = [...columns.slice(0, 1), 'containerName', 'namespace', 'node', 'podName', ...columns.slice(1)];
-              setDataColumns(columns);
-            }
-            if(columns.length > 0) {
-              const payload = d;
-              const massagedData = {};
-              columns.forEach((column) => {
-                if(column === 'containerName') {
-                  massagedData[column] = payload.k8s[column];
-                } else if(column === 'namespace' || column === 'node' || column === 'podName') {
-                  if((column === 'namespace' || column === 'node') && payload.k8s[column]) {
-                    massagedData[column] = <Link routeName={column} params={{name: payload.k8s[column]}}>{payload.k8s[column]}</Link>
-                  } else if(column === 'podName' && payload.k8s[column] && payload.k8s['namespace']) {
-                    massagedData[column] = <Link routeName='pod' params={{name: payload.k8s[column], namespace: payload.k8s['namespace']}}>{payload.k8s[column]}</Link>
-                  } else {
-                    massagedData[column] = payload.k8s[column]
-                  }
-                } else {
-                  massagedData[column] = JSON.stringify(payload[column]);
-                }
-              })
-              
-            _.debounce(() => setBufferedGadgetData((prevData) => {
-              const newBufferedData = {...prevData};
-              newBufferedData[dsID] = [...newBufferedData[dsID], massagedData];
-              return newBufferedData;
-            }), 1000)();
-            } })
+            handleGadgetData(d, dsID);
+        })
 
           } else {
-            if(!gadgetRunningStatusRef.current) {
-              return;
-            }
-            setLoading(false);
-            //console.log("gadget running status for collection of data ",gadgetRunningStatusRef.current)
-            if(!gadgetRunningStatusRef.current) {
-              return;
-            }
-            let columns = dataColumns;
-            if(columns.length == 0 && dataColumns.length == 0) {
-              columns = Object.keys(data);
-              // remove the column called k8s and add containerName, namespace, node, podName
-              columns = columns.filter((column) => column !== 'k8s');
-              // add the new columns in mid
-              columns = [...columns.slice(0, 1), 'containerName', 'namespace', 'node', 'podName', ...columns.slice(1)];
-              setDataColumns(columns);
-            }
-            if(columns.length > 0) {
-              const payload = data;
-              const massagedData = {};
-              columns.forEach((column) => {
-                if(column === 'containerName') {
-                  massagedData[column] = payload.k8s[column];
-                } else if(column === 'namespace' || column === 'node' || column === 'podName') {
-                  if((column === 'namespace' || column === 'node') && payload.k8s[column]) {
-                    massagedData[column] = <Link routeName={column} params={{name: payload.k8s[column]}}>{payload.k8s[column]}</Link>
-                  } else if(column === 'podName' && payload.k8s[column] && payload.k8s['namespace']) {
-                    massagedData[column] = <Link routeName='pod' params={{name: payload.k8s[column], namespace: payload.k8s['namespace']}}>{payload.k8s[column]}</Link>
-                  } else {
-                    massagedData[column] = payload.k8s[column]
-                  }
-                } else {
-                  massagedData[column] = JSON.stringify(payload[column]);
-                }
-              })
-              _.debounce(() => setBufferedGadgetData((prevData) => {
-                const newBufferedData = {...prevData};
-                newBufferedData[dsID] = [...newBufferedData[dsID], massagedData];
-                return newBufferedData;
-              }), 1000)();
-            }
+            handleGadgetData(data, dsID);
           }
        }
   }, (err) => {
-      console.error(err);
+      console.log("got error",err);
   })
   }
 

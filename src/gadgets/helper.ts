@@ -121,3 +121,9 @@ export class JsonStreamParser {
     return hash;
   }
 }
+
+
+export function getProperty(obj, key) {
+  const keys = key.split('.');
+  return keys.reduce((acc, curr) => acc && acc[curr], obj);
+}

@@ -1,4 +1,4 @@
-import {  TextField, Switch, Grid, Paper, Box, FormControlLabel, Button, MenuItem, Select, InputLabel } from '@mui/material';
+import {  TextField, Switch, Grid, Paper, Box, FormControlLabel, Button, MenuItem, Select, InputLabel, Accordion, AccordionDetails } from '@mui/material';
 import { FILTERS_TYPE } from "./filter_types";
 import { SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
 import K8s  from '@kinvolk/headlamp-plugin/lib/K8s';
@@ -17,7 +17,7 @@ export default function GadgetFilters(props: {config: any, setFilters: (func?: (
             const uniqueConfig = removeDuplicates(config.params);
             FilterComponents = uniqueConfig?.map((param, index) => {
                 const filter = FILTERS_TYPE[param.typeHint];
-                
+                console.log(filter)
                 if(param?.valueHint?.includes('pod')) {
                     return <PodsInputFilter setFilters={setFilters} key={param.key + index} param={param}/>
                 }
@@ -88,7 +88,8 @@ export default function GadgetFilters(props: {config: any, setFilters: (func?: (
     }, [config, config?.params])
     
     return config && FilterComponents?.length > 0 && <SectionBox title={"Filters"}>
-        <Paper>
+        <Accordion>
+            <AccordionDetails>
          <Box p={2}>
         <Grid container spacing={2} alignItems="center">{FilterComponents}</Grid>
         <Box textAlign="right">
@@ -99,7 +100,8 @@ export default function GadgetFilters(props: {config: any, setFilters: (func?: (
             </Button>
         </Box>
         </Box>
-        </Paper>
+        </AccordionDetails>
+        </Accordion>
         </SectionBox>;
 }
 
