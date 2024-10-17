@@ -15,4 +15,7 @@ export const FILTERS_TYPE = {
     'bool': {
         type: 'checkbox',
     },
+    '[]string': {
+        type: 'string',
+    }
 }

@@ -1,7 +1,7 @@
-import {  TextField, Switch, Grid, Paper, Box, FormControlLabel, Button, MenuItem, Select, InputLabel, Accordion, AccordionDetails } from '@mui/material';
+import {  TextField, Switch, Grid, Paper, Box, FormControlLabel, Button, MenuItem, Select, InputLabel, Accordion, AccordionDetails, InputAdornment, Tooltip, AccordionSummary } from '@mui/material';
 import { FILTERS_TYPE } from "./filter_types";
-import { SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
 import K8s  from '@kinvolk/headlamp-plugin/lib/K8s';
+import { Icon } from '@iconify/react';
 import { removeDuplicates } from './helper';
 import React from 'react';
 
@@ -16,6 +16,26 @@ export default function GadgetFilters(props: {config: any, setFilters: (func?: (
         if(config && config.params) {
             const uniqueConfig = removeDuplicates(config.params);
             FilterComponents = uniqueConfig?.map((param, index) => {
+                if(!param.typeHint && !param.valueHint) {
+                    return <Grid item md={6}>
+                        <TextField key={param.key + index} label={param.title || param.key}  variant="outlined" 
+                        fullWidth
+                    onChange={(e) => {
+                        setFilters((prevVal) => {
+                            return {
+                                ...prevVal,
+                                [param.prefix + param.key]: e.target.value
+                            }
+                        })
+                    }}
+                    InputProps={{
+                        endAdornment: <InputAdornment position="end">
+                            <Tooltip title={param.description}>
+                                <Icon icon="mdi:info"/>
+                            </Tooltip></InputAdornment>,
+                    }}
+                    /></Grid>
+                }
                 const filter = FILTERS_TYPE[param.typeHint];
                 console.log(filter)
                 if(param?.valueHint?.includes('pod')) {
@@ -32,7 +52,7 @@ export default function GadgetFilters(props: {config: any, setFilters: (func?: (
                     console.log(param.key)
                     console.log(param.defaultValue, Boolean(param.defaultValue))
     
-                    return <Grid item md={3} key={param.key + index}> 
+                    return <Grid item md={6} key={param.key + index}> 
                     <FormControlLabel control={<Switch defaultChecked={param.defaultValue === 'true'} onChange={(e) => {
                         setFilters((prevVal) => {
                             return {
@@ -47,7 +67,7 @@ export default function GadgetFilters(props: {config: any, setFilters: (func?: (
                 }
     
                 if(filter.type === 'number') {
-                    return <Grid item md={3} key={param.key + index}>
+                    return <Grid item md={6} key={param.key + index}>
                     <TextField type={'number'} defaultValue={param.defaultValue} onChange={(e) => {
                         setFilters((prevVal) => {
                             return {
@@ -66,7 +86,7 @@ export default function GadgetFilters(props: {config: any, setFilters: (func?: (
                 }
     
                 if(filter.type === 'string') {
-                    return <Grid item md={3} key={param.key + index}>
+                    return <Grid item md={6} key={param.key + index}>
                     <TextField defaultValue={param.defaultValue} onChange={(e) => {
                         setFilters((prevVal) => {
                             return {
@@ -78,6 +98,12 @@ export default function GadgetFilters(props: {config: any, setFilters: (func?: (
                      label={param.title || param.key}
                      fullWidth
                      variant="outlined"
+                     InputProps={{
+                        endAdornment: <InputAdornment position="end">
+                            <Tooltip title={param.description}>
+                                <Icon icon="mdi:info"/>
+                            </Tooltip></InputAdornment>,
+                    }}
                     />
                     </Grid>
                 }
@@ -87,8 +113,14 @@ export default function GadgetFilters(props: {config: any, setFilters: (func?: (
         }
     }, [config, config?.params])
     
-    return config && FilterComponents?.length > 0 && <SectionBox title={"Filters"}>
-        <Accordion>
+    return config && FilterComponents?.length > 0 &&  <Accordion>
+         <AccordionSummary
+          expandIcon={<Icon icon="mdi:arrow-down" />}
+          aria-controls="panel1-content"
+          id="panel1-header"
+        >
+          Params
+        </AccordionSummary>
             <AccordionDetails>
          <Box p={2}>
         <Grid container spacing={2} alignItems="center">{FilterComponents}</Grid>
@@ -102,7 +134,6 @@ export default function GadgetFilters(props: {config: any, setFilters: (func?: (
         </Box>
         </AccordionDetails>
         </Accordion>
-        </SectionBox>;
 }
 
 
@@ -117,7 +148,7 @@ function PodsInputFilter(props: {
         return null;
     }
 
-    return <Grid item md={3} key={key}>
+    return <Grid item md={6} key={key}>
         <InputLabel id="pods-label">
             Pods
         </InputLabel>
@@ -153,7 +184,7 @@ function NamespaceFilter(props: {
     if(error || !namespaces) {
         return null;
     }
-    return <Grid item md={3}>
+    return <Grid item md={6}>
         <InputLabel id="namespace-label">
             Namespace
         </InputLabel>

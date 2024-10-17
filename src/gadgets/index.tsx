@@ -7,9 +7,13 @@ import { useLocation } from 'react-router';
 import GadgetFilters from './gadgetFilters';
 import usePortForward from './igSocket';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+
 import './wasm.js'
 
 const MAX_DATA_SIZE = 500; // Set the maximum limit for total data
+const IS_METRIC = 'isMetric';
+const HEADLAMP_KEY = 'headlamp_key';
+const HEADLAMP_VALUE = 'headlamp_value';
 
 function NodeSelection() {
   const [nodes] = K8s.ResourceClasses.Node.useList();
@@ -117,7 +121,7 @@ function GadgetWithDataSource(props: {
 }) {
   const { areAllPodStreamsConnected, podStreamsConnected, setGadgetData, setBufferedGadgetData, setGadgetRunningStatus, gadgetRunningStatus, setFilters, filters, loading, gadgetConfig, dataSourceID, gadgetData, columns, bufferedGadgetData } = props;
     const fields = React.useMemo(() => {
-    return columns.map((column) => {
+    return columns?.map((column) => {
       return {
         header: column,
         accessorFn: (data) => {
@@ -169,16 +173,27 @@ function GadgetWithDataSource(props: {
        </Grid>
      </Grid>
  </Box>
- <Table
+ {fields?.find(field => field.header === (IS_METRIC)) ? <MetricChart data={gadgetData} fields={fields}/> :  fields && <Table
    columns={
      fields
    }
    data={gadgetData ? gadgetData[dataSourceID] : []}
    loading={loading}
-/>
+/>}
 </SectionBox>
     )
 }
+
+function MetricChart(props: {
+  data: any;
+  fields: any;
+}) {
+  const { data, fields } = props;
+  const key = fields.find(field => field?.header?.includes(HEADLAMP_KEY))?.header.replace(`${HEADLAMP_KEY}_`, '');
+  const value = fields.find(field => field?.header?.includes(HEADLAMP_VALUE))?.header.replace(`${HEADLAMP_VALUE}_`, '');  
+  return <div>Metric data here</div>
+}
+
 
 function GenericGadgetRenderer(props: {
   podSelected: any;
@@ -205,12 +220,30 @@ function GenericGadgetRenderer(props: {
       setPodStreamsConnected((prevVal) => prevVal + 1);
       ig.getGadgetInfo({
         version: 1,
-        imageName: `${location.state?.name}:v0.33.0`
+        imageName: `${location.state?.name}:v0.32.0`
     }, (info) => {
       let fields = {};
       info.dataSources.forEach((dataSource, index) => {
-        fields[dataSource.id || index] = dataSource.fields.filter((field) => (field.flags & 4) == 0).map((field) => field.fullName).filter((field) => field !== 'k8s');
+        const annotations = dataSource.annotations;
+        const isMetricAnnotationAvailable = annotations && Object.keys(annotations).find((annotationKey) => {
+          if(annotationKey === 'metrics.print') {
+            return annotations[annotationKey] === 'true';
+          }
+          return false
+        })
+        if(isMetricAnnotationAvailable) {
+          let fieldsFromDataSource = dataSource.fields.filter((field) => (field.flags & 4) == 0).map((field) => field.fullName).filter((field) => field !== 'k8s')
+          let key = dataSource.fields.find((field) => field.tags.includes('role:key'))?.fullName
+          fieldsFromDataSource.push(`${HEADLAMP_KEY}_${key}`)
+          let value = dataSource.fields.find((field) => !field.tags.includes('role:key'))?.fullName
+          fieldsFromDataSource.push(`${HEADLAMP_VALUE}_${value}`)
+          fieldsFromDataSource.push(IS_METRIC);
+          fields[dataSource.id || index] = fieldsFromDataSource;
+        } else {
+          fields[dataSource.id || index] = dataSource.fields.filter((field) => (field.flags & 4) == 0).map((field) => field.fullName).filter((field) => field !== 'k8s');  
+        }
       });
+      console.log("fields are ", fields)
         setGadgetConfig(info);
         setDataSources(info.dataSources);
         setDataColumns({...fields})
@@ -228,24 +261,33 @@ function GenericGadgetRenderer(props: {
     if(!gadgetRunningStatusRef.current) {
       return;
     }
+    let massagedData = {};
     let columns = dataColumns[dsID];
     if(columns.length > 0) {
-      const payload = data;
-      const massagedData = {};
-      columns.forEach((column) => {
-        const value = getProperty(payload, column);
-        if(column === 'k8s.containerName') {
-          massagedData[column] = value;
-        } else if(column === 'k8s.namespace' || column === 'k8s.node' || column === 'k8s.podName') {
-          if((column === 'k8s.namespace' || column === 'k8s.node')) {
-            massagedData[column] = <Link routeName={column} params={{name: value}}>{value}</Link>
-          } else if(column === 'k8s.podName' && payload.k8s['namespace']) {
-            massagedData[column] = <Link routeName='pod' params={{name: value, namespace: payload.k8s['namespace']}}>{value}</Link>
-          } 
-        } else {
-          massagedData[column] = JSON.stringify(value).replace(/['"]+/g, '');
-        }
-      })
+      if(columns.includes(IS_METRIC)) {
+        massagedData = data;
+      } else {
+        const payload = data;
+        columns.forEach((column) => {
+          if(column === IS_METRIC || column.includes(HEADLAMP_KEY) || column.includes(HEADLAMP_VALUE)) {
+            return;
+          }
+          const value = getProperty(payload, column);
+          if(column === 'k8s.containerName') {
+            massagedData[column] = value;
+          } else if(column === 'k8s.namespace' || column === 'k8s.node' || column === 'k8s.podName') {
+            if((column === 'k8s.namespace' || column === 'k8s.node')) {
+              massagedData[column] = <Link routeName={column} params={{name: value}}>{value}</Link>
+            } else if(column === 'k8s.podName' && payload.k8s['namespace']) {
+              massagedData[column] = <Link routeName='pod' params={{name: value, namespace: payload.k8s['namespace']}}>{value}</Link>
+            } 
+          } else {
+            // remove quotes if any from string
+            massagedData[column] = JSON.stringify(value).replace(/['"]+/g, '');
+          }
+        })
+      }
+      
       
     _.debounce(() => setBufferedGadgetData((prevData) => {
       const newBufferedData = {...prevData};
@@ -258,7 +300,7 @@ function GenericGadgetRenderer(props: {
     setLoading(true);
     console.log('gadget payload', {
       version: 1,
-      imageName: `${location.state.name}:v0.33.0`,
+      imageName: `${location.state.name}:v0.32.0`,
       paramValues: {
           ...filters
       },
@@ -269,7 +311,7 @@ function GenericGadgetRenderer(props: {
   }
     gadgetRef.current = ig.runGadget({
       version: 1,
-      imageName: `${location.state.name}:v0.33.0`,
+      imageName: `${location.state.name}:v0.32.0`,
       paramValues: {
           ...filters
       },
@@ -289,14 +331,14 @@ function GenericGadgetRenderer(props: {
         console.log("error is ", error)
        },
 
-      onData: (dsID, data) => {  
-        if(_.isArray(data)) {
-          data.forEach((d) => {
+      onData: (dsID, dataFromGadget) => {  
+        if(_.isArray(dataFromGadget)) {
+          dataFromGadget.forEach((d) => {
             handleGadgetData(d, dsID);
         })
 
           } else {
-            handleGadgetData(data, dsID);
+            handleGadgetData(dataFromGadget, dsID);
           }
        }
   }, (err) => {
