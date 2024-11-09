@@ -1,14 +1,14 @@
+import { Link,SectionBox, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import React from 'react';
 import { useState } from 'react';
-import { SectionBox, Table, Link } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { DefaultGadgets } from './default_gadgets';
 
 export default function GadgetList() {
   const [gadgets, setGadgets] = useState(null);
-  
+
   React.useEffect(() => {
     setGadgets(DefaultGadgets);
-  },[])
+  }, []);
 
   return (
     <>
@@ -17,37 +17,17 @@ export default function GadgetList() {
           columns={[
             {
               header: 'Name',
-              accessorFn: gadget =>
-                gadget.category == '' ? (
-                  <Link
-                    routeName="/gadgets/:gadget"
-                    params={{
-                      gadget: gadget.name,
-                    }}
-                    state={gadget}
-                  >
-                    {gadget.name}
-                  </Link>
-                ) : (
-                  <Link
-                    routeName="/gadgets/:gadget/:category"
-                    params={{
-                      gadget: gadget.name,
-                      category: gadget.category,
-                    }}
-                    state={gadget}
-                  >
-                    {gadget.name}
-                  </Link>
-                ),
-            },
-            {
-              header: 'Type',
-              accessorFn: gadget => gadget.type,
-            },
-            {
-              header: 'Category',
-              accessorFn: gadget => gadget.category,
+              accessorFn: gadget => (
+                <Link
+                  routeName="/gadgets/:imageName"
+                  params={{
+                    imageName: gadget.name,
+                  }}
+                  state={gadget}
+                >
+                  {gadget.name}
+                </Link>
+              ),
             },
             {
               header: 'Description',
@@ -59,9 +39,7 @@ export default function GadgetList() {
             },
           ]}
           loading={gadgets === null}
-          data={
-            gadgets
-          }
+          data={gadgets}
         />
       </SectionBox>
     </>

@@ -1,6 +1,7 @@
 import { registerRoute, registerSidebarEntry } from '@kinvolk/headlamp-plugin/lib';
-import GadgetList from './gadgets/list';
 import Gadget from './gadgets';
+import { BackgroundRunning } from './gadgets/backgroundgadgets';
+import GadgetList from './gadgets/list';
 
 registerSidebarEntry({
   name: 'gadgets',
@@ -18,16 +19,31 @@ registerRoute({
   name: 'gadgets',
 });
 
-registerRoute({
-  path: '/gadgets/:gadget',
-  component: Gadget,
-  exact: true,
-  sidebar: 'gadgets',
-  name: 'gadgets',
+registerSidebarEntry({
+  name: 'background',
+  url: '/gadgets/background',
+  parent: 'gadgets',
+  label: 'Background Running',
 });
 
 registerRoute({
-  path: '/gadgets/:gadget/:category',
+  path: '/gadgets/background',
+  component: BackgroundRunning,
+  exact: true,
+  sidebar: 'background',
+  name: 'background',
+});
+
+registerRoute({
+  path: '/gadgets/background/:instance/:version/:imageName',
+  component: Gadget,
+  exact: true,
+  sidebar: 'background',
+  name: 'background',
+});
+
+registerRoute({
+  path: '/gadgets/:imageName',
   component: Gadget,
   exact: true,
   sidebar: 'gadgets',

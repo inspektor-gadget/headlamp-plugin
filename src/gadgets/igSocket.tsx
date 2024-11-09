@@ -1,6 +1,6 @@
 import './wasm.js';
-import { useEffect, useRef, useState } from 'react';
 import { stream } from '@kinvolk/headlamp-plugin/lib/ApiProxy';
+import { useEffect, useRef, useState } from 'react';
 
 // @ts-ignore
 const go = new window.Go();
@@ -9,23 +9,26 @@ let igPromise;
 
 async function getIG() {
   if (!igPromise) {
-    igPromise = WebAssembly.instantiateStreaming(fetch("/plugins/headlamp-ig/main.wasm"), go.importObject).then((result) => {
+    igPromise = WebAssembly.instantiateStreaming(
+      fetch('/plugins/headlamp-ig/main.wasm'),
+      go.importObject
+    ).then(result => {
       go.run(result.instance);
     });
   }
   return igPromise;
 }
 
-const usePortForward = (url) => {
+const usePortForward = url => {
   const [isConnected, setIsConnected] = useState({});
   const streamRef = useRef({});
   const [ws, setWs] = useState({});
   const [ig, setIg] = useState({});
-  
+
   async function prepareSocket(url) {
-    return new Promise((resolve) => {
-      let intervalID = setInterval(() => {
-        let socket = streamRef.current[url]?.getSocket();
+    return new Promise(resolve => {
+      const intervalID = setInterval(() => {
+        const socket = streamRef.current[url]?.getSocket();
 
         if (socket) {
           clearInterval(intervalID);
@@ -34,7 +37,7 @@ const usePortForward = (url) => {
       }, 0);
     });
   }
-  
+
   useEffect(() => {
     return () => {
       Object.values(ws).forEach(socket => {
@@ -50,9 +53,10 @@ const usePortForward = (url) => {
     if (!url) return;
 
     // @ts-ignore
-    getIG().then((result) => {
-      (async function() {
-        let additionalProtocols = [
+    getIG().then(result => {
+      console.log('IG is', result);
+      (async function () {
+        const additionalProtocols = [
           'v4.channel.k8s.io',
           'v3.channel.k8s.io',
           'v2.channel.k8s.io',
@@ -61,21 +65,27 @@ const usePortForward = (url) => {
         streamRef.current[url] = await stream(url, () => {}, { additionalProtocols });
         console.log(`Stream for ${url} is`, streamRef.current[url]);
 
-        let socket = await prepareSocket(url);
+        const socket = await prepareSocket(url);
         setWs(prevWs => ({ ...prevWs, [url]: socket }));
+        console.log(`Socket for ${url} is`, socket);
 
         // @ts-ignore
         const igConnection = wrapWebSocket(socket, {
-          onReady: () =>{
+          onReady: () => {
             setIsConnected(prevState => ({ ...prevState, [url]: true }));
             console.log(`IG for ${url} is`, igConnection);
             setIg(prevIg => ({ ...prevIg, [url]: igConnection }));
           },
-          onError: (error) => {
+          onError: error => {
             console.error(`IG for ${url} error`, error);
-          }
+          },
         });
       })();
+
+      return () => {
+        streamRef.current[url].cancel();
+        delete streamRef.current[url];
+      };
     });
   }, [url]);
 
