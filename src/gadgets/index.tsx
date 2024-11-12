@@ -23,7 +23,6 @@ function prepareGadgetInstance(version, instance, imageName) {
 
 function GadgetRenderer() {
   const { version, instance, imageName } = useParams();
-  console.log('version, instance, imageName', version, instance, imageName);
   const [podsSelected, setPodsSelected] = React.useState([]);
   const [gadgetData, setGadgetData] = React.useState({});
   const [gadgetRunningStatus, setGadgetRunningStatus] = React.useState(false);
@@ -37,12 +36,18 @@ function GadgetRenderer() {
   const [isGadgetInfoFetched, setIsGadgetInfoFetched] = React.useState(false);
   const areAllPodStreamsConnected = podStreamsConnected === podsSelected.length;
   const gadgetInstance = prepareGadgetInstance(version, instance, imageName);
+  const [open, setOpen] = React.useState(true);
+  const [nodesSelected, setNodesSelected] = React.useState([]);
 
   return (
     <>
       <NodeSelection
         setPodStreamsConnected={setPodStreamsConnected}
         setPodsSelected={setPodsSelected}
+        open={open}
+        setOpen={setOpen}
+        nodesSelected={nodesSelected}
+        setNodesSelected={setNodesSelected}
       />
       {(!areAllPodStreamsConnected && gadgetInstance && podsSelected.length > 0) ||
         (areAllPodStreamsConnected && !isGadgetInfoFetched && podsSelected.length > 0 && (
@@ -66,6 +71,7 @@ function GadgetRenderer() {
         <GenericGadgetRenderer
           gadgetInstance={gadgetInstance}
           podsSelected={podsSelected}
+          node={podSelected?.spec.nodeName}
           podSelected={podSelected.jsonData.metadata.name}
           setGadgetConfig={setGadgetConfig}
           dataColumns={dataColumns}
@@ -101,6 +107,7 @@ function GadgetRenderer() {
             bufferedGadgetData={bufferedGadgetData}
             renderCreateBackgroundGadget
             gadgetInstance={gadgetInstance}
+            setOpen={setOpen}
           />
         );
       })}

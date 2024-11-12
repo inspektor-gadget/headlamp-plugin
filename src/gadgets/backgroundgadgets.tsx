@@ -1,4 +1,4 @@
-import { Link,SectionBox, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Link, SectionBox, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import { Box } from '@mui/material';
 import React from 'react';

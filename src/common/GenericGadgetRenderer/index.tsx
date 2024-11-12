@@ -22,6 +22,7 @@ export default function GenericGadgetRenderer(props: {
   gadgetInstance: any;
   setIsGadgetInfoFetched: any;
   setGadgetData: any;
+  node: any;
 }) {
   const {
     podStreamsConnected,
@@ -39,6 +40,7 @@ export default function GenericGadgetRenderer(props: {
     gadgetInstance,
     setIsGadgetInfoFetched,
     setGadgetData,
+    node,
   } = props;
   const { ig, isConnected } = usePortForward(
     `api/v1/namespaces/gadget/pods/${podSelected}/portforward?ports=8080`
@@ -153,12 +155,11 @@ export default function GenericGadgetRenderer(props: {
       }
 
       _.debounce(() => {
-        console.log('got metric data', dataColumns[dsID]);
         if (dataColumns[dsID]?.includes(IS_METRIC)) {
           setGadgetData(prevData => {
             return {
               ...prevData,
-              [dsID]: massagedData,
+              [dsID]: { [node]: massagedData },
             };
           });
           return;

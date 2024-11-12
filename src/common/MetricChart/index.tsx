@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { HEADLAMP_KEY, HEADLAMP_VALUE } from '../helpers';
+import { HEADLAMP_VALUE } from '../helpers';
 
 function prepareChartData(data, value) {
   if (data && data[value] && _.isArray(data[value])) {
@@ -26,8 +26,8 @@ function prepareChartData(data, value) {
   return [];
 }
 
-export function MetricChart(props: { data: any; fields: any }) {
-  const { data, fields } = props;
+export function MetricChart(props: { data: any; fields: any; node: any }) {
+  const { data, fields, node } = props;
   const [chartData, setChartData] = React.useState([]);
   const value = fields
     .find(field => field?.header?.includes(HEADLAMP_VALUE))
@@ -42,7 +42,7 @@ export function MetricChart(props: { data: any; fields: any }) {
   return (
     chartData &&
     chartData.length > 0 && (
-      <SectionBox title="Metric Chart">
+      <SectionBox title={`Metric Chart for node ${node}`}>
         <Box width="60vw" height="30vh">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart

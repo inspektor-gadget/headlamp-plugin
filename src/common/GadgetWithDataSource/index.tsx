@@ -1,10 +1,9 @@
 import { DateLabel, SectionBox, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
-import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Box, Button, Grid } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import React from 'react';
-import { useHistory, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { GadgetConnectionForBackgroundRunningProcess } from '../../gadgets/conn';
 import GadgetFilters from '../../gadgets/gadgetFilters';
 import { IS_METRIC } from '../helpers';
@@ -27,6 +26,7 @@ export function GadgetWithDataSource(props: {
   bufferedGadgetData: any;
   renderCreateBackgroundGadget: boolean;
   gadgetInstance: any;
+  setOpen: any;
 }) {
   const {
     podStreamsConnected,
@@ -45,16 +45,14 @@ export function GadgetWithDataSource(props: {
     podsSelected,
     renderCreateBackgroundGadget,
     gadgetInstance,
+    setOpen,
   } = props;
-  console.log('gadget data is ', gadgetData);
   const { enqueueSnackbar } = useSnackbar();
   const [gadgetConn, setGadgetConn] = React.useState(null);
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const { imageName } = useParams();
-  const history = useHistory();
   const areAllPodStreamsConnected = podStreamsConnected === podsSelected.length;
-  const cluster = getCluster();
   const fields = React.useMemo(() => {
     return columns?.map(column => {
       return {
@@ -75,7 +73,35 @@ export function GadgetWithDataSource(props: {
   }, [bufferedGadgetData[dataSourceID]]);
   return (
     areAllPodStreamsConnected && (
-      <SectionBox title={imageName}>
+      <SectionBox
+        backLink
+        title={
+          <Box display="flex" alignItems="center">
+            <Box>
+              <h2>{imageName}</h2>
+            </Box>
+            <Box ml={1}>
+              <Button
+                sx={theme => ({
+                  color: theme.palette.clusterChooser.button.color,
+                  background: theme.palette.clusterChooser.button.background,
+                  '&:hover': {
+                    background: theme.palette.clusterChooser.button.hover.background,
+                  },
+                  maxWidth: '20em',
+                  textTransform: 'none',
+                  padding: '6px 22px',
+                })}
+                onClick={() => {
+                  setOpen(true);
+                }}
+              >
+                Configure Nodes
+              </Button>
+            </Box>
+          </Box>
+        }
+      >
         {!gadgetInstance && (
           <GadgetFilters
             config={gadgetConfig}
@@ -138,26 +164,40 @@ export function GadgetWithDataSource(props: {
             <Grid item>
               {gadgetInstance && (
                 <Button
-                  disabled={podsSelected.length === 0}
+                  sx={theme => ({
+                    color: theme.palette.clusterChooser.button.color,
+                    background: theme.palette.clusterChooser.button.background,
+                    '&:hover': {
+                      background: theme.palette.clusterChooser.button.hover.background,
+                    },
+                    maxWidth: '20em',
+                    textTransform: 'none',
+                    padding: '6px 22px',
+                  })}
+                  disabled={podsSelected.length === 0 || gadgetRunningStatus}
                   onClick={() => {
                     if (gadgetRunningStatus) {
                       // delete the gadget instance
-                      gadgetConn.deleteGadgetInstance(gadgetInstance.id, () => {
-                        enqueueSnackbar('Background instance deleted', { variant: 'success' });
-                        if (cluster) {
-                          history.replace(`/c/${cluster}/gadgets/background`);
-                        }
-                      });
                     }
                     setGadgetRunningStatus(prevVal => !prevVal);
                   }}
                   variant="outlined"
                 >
-                  {loading ? 'Processing' : !gadgetRunningStatus ? 'Attach' : 'Delete'}
+                  {loading ? 'Processing' : !gadgetRunningStatus ? 'Attach' : 'Attached'}
                 </Button>
               )}
               {!gadgetInstance && (
                 <Button
+                  sx={theme => ({
+                    color: theme.palette.clusterChooser.button.color,
+                    background: theme.palette.clusterChooser.button.background,
+                    '&:hover': {
+                      background: theme.palette.clusterChooser.button.hover.background,
+                    },
+                    maxWidth: '20em',
+                    textTransform: 'none',
+                    padding: '6px 22px',
+                  })}
                   disabled={podsSelected.length === 0}
                   onClick={() => {
                     if (!gadgetRunningStatus) {
@@ -180,17 +220,28 @@ export function GadgetWithDataSource(props: {
             </Grid>
           </Grid>
         </Box>
-        {fields?.find(field => field.header === IS_METRIC) ? (
-          <MetricChart data={gadgetData ? gadgetData[dataSourceID] : []} fields={fields} />
-        ) : (
-          fields && (
-            <Table
-              columns={fields}
-              data={gadgetData ? gadgetData[dataSourceID] : []}
-              loading={loading}
-            />
-          )
-        )}
+        {fields?.find(field => field.header === IS_METRIC)
+          ? podsSelected.map(pod => {
+              const node = pod?.spec.nodeName;
+              if (!node || !gadgetData[dataSourceID]) {
+                return null;
+              }
+              return (
+                <MetricChart
+                  data={gadgetData ? gadgetData[dataSourceID][node] : []}
+                  fields={fields}
+                  key={pod.jsonData.metadata.name}
+                  node={node}
+                />
+              );
+            })
+          : fields && (
+              <Table
+                columns={fields}
+                data={gadgetData ? gadgetData[dataSourceID] : []}
+                loading={loading}
+              />
+            )}
       </SectionBox>
     )
   );

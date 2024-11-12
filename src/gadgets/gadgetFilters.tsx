@@ -184,6 +184,16 @@ export default function GadgetFilters(props: {
             </Grid>
             <Box textAlign="right">
               <Button
+                sx={theme => ({
+                  color: theme.palette.clusterChooser.button.color,
+                  background: theme.palette.clusterChooser.button.background,
+                  '&:hover': {
+                    background: theme.palette.clusterChooser.button.hover.background,
+                  },
+                  maxWidth: '20em',
+                  textTransform: 'none',
+                  padding: '6px 22px',
+                })}
                 onClick={() => {
                   props.onApplyFilters();
                 }}
@@ -253,7 +263,7 @@ function NamespaceFilter(props: {
   allNamespace: any[];
   pod: any[];
 }) {
-  const { param, setFilters, key, allNamespace, pod } = props;
+  const { param, setFilters, allNamespace, pod } = props;
   const [namespaces, error] = K8s.ResourceClasses.Namespace.useList();
   const [selectedNamespace, setSelectedNamespace] = React.useState('');
   console.log('pods is ', pod);

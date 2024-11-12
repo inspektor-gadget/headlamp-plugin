@@ -1,4 +1,4 @@
-import { Link,SectionBox, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Link, SectionBox, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import React from 'react';
 import { useState } from 'react';
 import { DefaultGadgets } from './default_gadgets';
