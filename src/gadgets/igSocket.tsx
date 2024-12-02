@@ -1,5 +1,6 @@
 import './wasm.js';
 import { stream } from '@kinvolk/headlamp-plugin/lib/ApiProxy';
+import pako from 'pako';
 import { useEffect, useRef, useState } from 'react';
 
 // @ts-ignore
@@ -9,12 +10,28 @@ let igPromise;
 
 async function getIG() {
   if (!igPromise) {
-    igPromise = WebAssembly.instantiateStreaming(
-      fetch('/plugins/headlamp-ig/main.wasm'),
-      go.importObject
-    ).then(result => {
-      go.run(result.instance);
-    });
+    const response = await fetch('/plugins/headlamp-ig/main.wasm.gz');
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    // Step 2: Read the file as ArrayBuffer
+    const gzippedData = await response.arrayBuffer();
+
+    // Step 3: Decompress the gzipped data using pako
+    const decompressedData = pako.inflate(gzippedData);
+
+    // Step 4: Create a Response object from the decompressed data (for WebAssembly)
+    const wasmResponse = new Response(decompressedData);
+
+    // Step 5: Instantiate the WASM module using the Response object
+    igPromise = wasmResponse
+      .arrayBuffer()
+      .then(buffer => WebAssembly.instantiate(buffer, go.importObject))
+      .then(result => {
+        go.run(result.instance);
+        return result; // Return the instantiated result
+      });
   }
   return igPromise;
 }
@@ -63,17 +80,14 @@ const usePortForward = url => {
           'channel.k8s.io',
         ];
         streamRef.current[url] = await stream(url, () => {}, { additionalProtocols });
-        console.log(`Stream for ${url} is`, streamRef.current[url]);
 
         const socket = await prepareSocket(url);
         setWs(prevWs => ({ ...prevWs, [url]: socket }));
-        console.log(`Socket for ${url} is`, socket);
 
         // @ts-ignore
         const igConnection = wrapWebSocket(socket, {
           onReady: () => {
             setIsConnected(prevState => ({ ...prevState, [url]: true }));
-            console.log(`IG for ${url} is`, igConnection);
             setIg(prevIg => ({ ...prevIg, [url]: igConnection }));
           },
           onError: error => {

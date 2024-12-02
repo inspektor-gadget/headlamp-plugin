@@ -38,7 +38,7 @@ export function MetricChart(props: { data: any; fields: any; node: any }) {
       setChartData(prepareChartData(data, value));
     }
   }, [data]);
-  console.log('chart data is ', chartData);
+
   return (
     chartData &&
     chartData.length > 0 && (

@@ -6,13 +6,13 @@ import {
   AccordionSummary,
   Box,
   Button,
+  Checkbox,
   FormControlLabel,
   Grid,
   InputAdornment,
   InputLabel,
   MenuItem,
   Select,
-  Switch,
   TextField,
   Tooltip,
 } from '@mui/material';
@@ -24,18 +24,15 @@ let FilterComponents = [];
 export default function GadgetFilters(props: {
   config: any;
   setFilters: (func?: (val: any) => any) => void;
-  isConnected: boolean;
   filters: any;
   onApplyFilters: () => void;
 }) {
-  const { config, setFilters, isConnected } = props;
-  if (!isConnected) {
-    return null;
-  }
+  const { config, setFilters } = props;
 
   React.useMemo(() => {
     if (config && config.params) {
       const uniqueConfig = removeDuplicates(config.params);
+      // sort config.params such that all checkbox are last values
       FilterComponents = uniqueConfig?.map((param, index) => {
         if (!param.typeHint && !param.valueHint) {
           return (
@@ -89,7 +86,7 @@ export default function GadgetFilters(props: {
             <Grid item md={6} key={param.key + index}>
               <FormControlLabel
                 control={
-                  <Switch
+                  <Checkbox
                     defaultChecked={param.defaultValue === 'true'}
                     onChange={e => {
                       setFilters(prevVal => {
@@ -127,6 +124,38 @@ export default function GadgetFilters(props: {
                 fullWidth
                 variant="outlined"
               />
+            </Grid>
+          );
+        }
+
+        if (param.possibleValues) {
+          return (
+            <Grid item md={6} key={param.key + index}>
+              <InputLabel id={param.key + index}>{param.title}</InputLabel>
+              <Select
+                fullWidth
+                labelId={param.key}
+                label={param.title || param.key}
+                select
+                defaultValue={param.defaultValue}
+                variant="outlined"
+                onChange={e => {
+                  setFilters(prevVal => {
+                    return {
+                      ...prevVal,
+                      [param.prefix + param.key]: e.target.value,
+                    };
+                  });
+                }}
+              >
+                {param.possibleValues.map(value => {
+                  return (
+                    <MenuItem key={value} value={value}>
+                      {value}
+                    </MenuItem>
+                  );
+                })}
+              </Select>
             </Grid>
           );
         }
@@ -193,6 +222,7 @@ export default function GadgetFilters(props: {
                   maxWidth: '20em',
                   textTransform: 'none',
                   padding: '6px 22px',
+                  margin: '10px 0',
                 })}
                 onClick={() => {
                   props.onApplyFilters();
@@ -216,7 +246,6 @@ function PodsInputFilter(props: {
   const [pods, error] = K8s.ResourceClasses.Pod.useList({ namespace: props.selectedNamespace });
   const { podFilter, setFilters, selectedNamespace } = props;
   const { prefix, key } = podFilter;
-  console.log('pods', podFilter);
 
   if (!prefix || !key || !selectedNamespace) {
     return null;
@@ -239,7 +268,7 @@ function PodsInputFilter(props: {
           setFilters(prevVal => {
             return {
               ...prevVal,
-              [param.prefix + param.key]: e.target.value,
+              [prefix + key]: e.target.value,
             };
           });
         }}
@@ -266,7 +295,6 @@ function NamespaceFilter(props: {
   const { param, setFilters, allNamespace, pod } = props;
   const [namespaces, error] = K8s.ResourceClasses.Namespace.useList();
   const [selectedNamespace, setSelectedNamespace] = React.useState('');
-  console.log('pods is ', pod);
   if (error || !namespaces) {
     return null;
   }
@@ -311,7 +339,7 @@ function NamespaceFilter(props: {
           {allNamespace?.map(param => {
             return (
               <MenuItem key={param.key} value={param.key}>
-                {param.key}
+                All Namespaces
               </MenuItem>
             );
           })}

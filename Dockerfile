@@ -26,7 +26,7 @@ RUN echo "Building plugin $PLUGIN..."; \
 
 RUN echo "Extracting plugin $PLUGIN..."; \
     cd /headlamp-plugins/$PLUGIN; npx --no-install headlamp-plugin extract . /headlamp-plugins/build/${PLUGIN} \
-    && cp /headlamp-plugins/$PLUGIN/main.wasm /headlamp-plugins/build/${PLUGIN}/
+    && cp /headlamp-plugins/$PLUGIN/main.wasm.gz /headlamp-plugins/build/${PLUGIN}/
 
 FROM alpine:3.20.3@sha256:beefdbd8a1da6d2915566fde36db9db0b524eb737fc57cd1367effd16dc0d06d
 
