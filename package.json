@@ -4,7 +4,7 @@
   "description": "Your Headlamp plugin",
   "scripts": {
     "start": "headlamp-plugin start",
-    "build": "headlamp-plugin build",
+    "build": "headlamp-plugin build && npx shx cp main.wasm.gz dist/main.wasm.gz",
     "format": "headlamp-plugin format",
     "lint": "headlamp-plugin lint",
     "lint-fix": "headlamp-plugin lint --fix",
@@ -30,12 +30,14 @@
     ]
   },
   "devDependencies": {
-    "@kinvolk/headlamp-plugin": "^0.8.0"
+    "@kinvolk/headlamp-plugin": "^0.9.2"
   },
   "dependencies": {
     "@devexpress/dx-react-chart-material-ui": "^4.0.5",
     "chart.js": "^4.4.0",
+    "pako": "^2.1.0",
     "react-chartjs-2": "^5.2.0",
-    "react-json-pretty": "^2.2.0"
+    "react-json-pretty": "^2.2.0",
+    "recharts": "^2.13.3"
   }
 }

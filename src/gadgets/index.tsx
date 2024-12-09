@@ -1,483 +1,380 @@
-import { useLocation, useParams } from 'react-router';
-import { K8s } from '@kinvolk/headlamp-plugin/lib';
-import React from 'react';
-import { useEffect, useState } from 'react';
-import { JsonStreamParser, isIGPod, pubSub } from './helper';
-import { makeStyles } from '@mui/styles';
-import Accordion from '@mui/material/Accordion';
-import AccordionDetails from '@mui/material/AccordionDetails';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import { Button, Paper, Grid, Checkbox, Box } from '@mui/material';
-import JSONPretty from 'react-json-pretty';
-import 'react-json-pretty/themes/monikai.css';
-import {
-  SectionBox,
-  SectionHeader,
-  SimpleTable,
-  Loader,
-  DateLabel,
-  Link,
-} from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import './wasm.js';
 import { Icon } from '@iconify/react';
+import { Loader, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import { Box, IconButton, Tab, Tabs } from '@mui/material';
 import _ from 'lodash';
-import { prepareFilters } from './filters';
-import { BarChart } from './barChart';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useParams } from 'react-router';
+import { GadgetWithDataSource } from '../common/GadgetWithDataSource';
+import GenericGadgetRenderer from '../common/GenericGadgetRenderer';
+import { HEADLAMP_KEY, HEADLAMP_VALUE, IS_METRIC } from '../common/helpers';
+import { NodeSelection } from '../common/NodeSelection';
+import { BackgroundRunning } from './backgroundgadgets';
+import { GadgetConnectionForBackgroundRunningProcess } from './conn';
 
-function GenericGadgetRenderer(props: {
-  name: string;
-  category: string;
-  gadget: any;
-  columns: {
-    label: string;
-    getter: (...args) => any;
-  }[];
-  gadgetID: string;
-  isDataAccessTypeObject?: boolean;
-}) {
-  const { name, category, gadget, columns, gadgetID } = props;
-  console.log('columns are ', columns);
-  const { params, operatorParamsCollection } = gadget;
-  const decoder = new TextDecoder('utf-8');
-  const [entries, setEntries] = useState([]);
-  const [pods, error] = K8s.ResourceClasses.Pod.useList();
-  const [nodes, nodesError] = K8s.ResourceClasses.Node.useList();
-  const [namespaces, namespaceError] = K8s.ResourceClasses.Namespace.useList();
-  const [igPod, setIGPod] = useState(null);
-  const [loading, setLoading] = React.useState(false);
-  const execRef = React.useRef(null);
-  const [filters, setFilters] = React.useState({});
-  const [applyFilters, setApplyFilters] = React.useState(false);
-  const [gadgetRunningStatus, setGadgetRunningStatus] = React.useState(false);
-  const [gadgetPayload, setGadgetPayload] = React.useState(null);
-  const [isBackgroundRunning, setIsBackgroundRunning] = React.useState(gadgetPayload);
-  const gadgetListID = 'gadget-list';
-  const [nodeToWorkOn, setNodeToWorkOn] = React.useState(null);
-  const handleChange = event => {
-    setIsBackgroundRunning(event.target.checked);
+// Create a context for sharing gadget-related state
+const GadgetContext = createContext(null);
+
+// Custom hook to manage gadget state
+function useGadgetState() {
+  const [podsSelected, setPodsSelected] = useState([]);
+  const [gadgetData, setGadgetData] = useState({});
+  const [gadgetRunningStatus, setGadgetRunningStatus] = useState(false);
+  const [dataColumns, setDataColumns] = useState({});
+  const [gadgetConfig, setGadgetConfig] = useState(null);
+  const [filters, setFilters] = useState({});
+  const [podStreamsConnected, setPodStreamsConnected] = useState(0);
+  const [dataSources, setDataSources] = useState([]);
+  const [bufferedGadgetData, setBufferedGadgetData] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [isGadgetInfoFetched, setIsGadgetInfoFetched] = useState(false);
+  const [open, setOpen] = useState(true);
+  const [nodesSelected, setNodesSelected] = useState([]);
+  const [gadgetConn, setGadgetConn] = useState(null);
+  const [isRunningInBackground, setIsRunningInBackground] = useState(false);
+  const [dynamicTabs, setDynamicTabs] = useState([]);
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
+
+  // Method to add a new dynamic tab
+  const addDynamicTab = row => {
+    // Check if tab with this ID already exists
+    const existingTabIndex = dynamicTabs.findIndex(tab => tab.id === row.id);
+
+    if (existingTabIndex === -1) {
+      // Add new tab if it doesn't exist
+      setDynamicTabs(prevTabs => [
+        ...prevTabs,
+        {
+          id: row.id,
+          label: row.id,
+          content: row,
+        },
+      ]);
+      // Set the newly added tab as active
+      setActiveTabIndex(dynamicTabs.length);
+    } else {
+      // If tab exists, just set it as active
+      setActiveTabIndex(existingTabIndex + 2); // +2 to account for initial two tabs
+    }
   };
 
-  async function prepareSocket() {
-    return new Promise((resolve, reject) => {
-      let intervalID = setInterval(() => {
-        let socket = execRef.current.getSocket();
-        console.log('socket is ready');
+  // Method to remove a dynamic tab
+  const removeDynamicTab = indexToRemove => {
+    setDynamicTabs(prevTabs => prevTabs.filter((_, index) => index !== indexToRemove));
+    // Adjust active tab if needed
+    setActiveTabIndex(prev =>
+      prev > indexToRemove + 2 ? prev - 1 : prev === indexToRemove + 2 ? 1 : prev
+    );
+  };
 
-        if (socket) {
-          clearInterval(intervalID);
-          resolve(socket);
-        }
-      }, 0);
-    });
-  }
+  const prepareGadgetInfo = info => {
+    setIsGadgetInfoFetched(true);
+    const fields = {};
+    info.dataSources.forEach((dataSource, index) => {
+      const annotations = dataSource.annotations;
+      const isMetricAnnotationAvailable =
+        annotations &&
+        Object.keys(annotations).find(
+          annotationKey =>
+            annotationKey === 'metrics.print' && annotations[annotationKey] === 'true'
+        );
 
-  function runGadgetWithActionAndPayload(socket, action, payload, extraParams = {}) {
-    if(!socket) {
-      return
-    }
-    console.log('action and payload', action, payload);
-    socket.send('\0' + JSON.stringify({ action, payload, ...extraParams }) + '\n');
-  }
+      if (isMetricAnnotationAvailable) {
+        const fieldsFromDataSource = dataSource.fields
+          .filter(field => (field.flags & 4) === 0)
+          .map(field => field.fullName)
+          .filter(field => field !== 'k8s');
 
+        const key = dataSource.fields.find(field => field.tags.includes('role:key'))?.fullName;
+        const value = dataSource.fields.find(field => !field.tags.includes('role:key'))?.fullName;
 
-  useEffect(() => {
-    if (!pods || !nodeToWorkOn) {
-      return;
-    }
-    const igPods = pods?.filter(isIGPod);
-    const igPod = igPods?.find(pod => pod.spec.nodeName === nodeToWorkOn.metadata.name);
-    if (!igPod) {
-      return;
-    }
-    setIGPod(igPod);
-  }, [nodeToWorkOn]);
-
-  useEffect(() => {
-    if (!igPod) {
-      return;
-    }
-
-    if (execRef.current) {
-      return;
-    }
-
-    if (applyFilters) {
-      execRef.current.close();
-    }
-
-    let socket;
-    (async function() {
-      execRef.current = await igPod.exec('gadget', () => {}, {
-        command: ['/usr/bin/socat', '/run/gadgetstreamingservice.socket', '-'],
-        tty: false,
-        stdin: true,
-        stdout: true,
-        stderr: false,
-      });
-      socket = await prepareSocket();
-
-      socket.addEventListener('message', event => {
-        const items = new Uint8Array(event.data);
-        const text = decoder.decode(items.slice(1));
-  
-        if (new Uint8Array(items)[0] !== 1) {
-          return;
-        }
-  
-        const parser = new JsonStreamParser();
-        parser.feed(text);
-      });
-  
-      socket.addEventListener('open', () =>
-        runGadgetWithActionAndPayload(socket, 'list', {}, { id: gadgetListID })
-      );
-    })();
-   
-
-    
-
-    return () => {
-      execRef.current.cancel();
-    };
-  }, [igPod]);
-
-  React.useEffect(() => {
-    pubSub.subscribe(gadgetID, (data: any) => {
-      setLoading(false);
-
-      if (name === 'block-io' && category === 'profile') {
-        const unit = data.payload.unit || '';
-        const intervals = data.payload?.intervals;
-        const labels = intervals.map(interval => `${interval.start}-${interval.end} ${unit}`);
-        setEntries({
-          labels: labels,
-          datasets: [
-            {
-              label: 'count',
-              data: intervals.map(interval => interval.count),
-              borderColor: 'rgb(53, 162, 235)',
-              backgroundColor: 'rgba(53, 162, 235, 0.5)',
-            },
-          ],
-        });
-      } else if (name === 'tcprtt' && category === 'profile') {
-        const intervals = data.payload?.histograms[0]?.intervals;
-        const unit = data.payload?.histograms[0]?.unit || '';
-        const labels = intervals.map(interval => `${interval.start}-${interval.end} ${unit}`);
-        setEntries({
-          labels: labels,
-          datasets: [
-            {
-              label: 'count',
-              data: intervals.map(interval => interval.count),
-              borderColor: 'rgb(255, 99, 132)',
-              backgroundColor: 'rgba(255, 99, 132, 0.5)',
-            },
-          ],
-        });
+        fieldsFromDataSource.push(`${HEADLAMP_KEY}_${key}`);
+        fieldsFromDataSource.push(`${HEADLAMP_VALUE}_${value}`);
+        fieldsFromDataSource.push(IS_METRIC);
+        fields[dataSource.id || index] = fieldsFromDataSource;
       } else {
-        let dataToUse = data;
-        if (dataToUse.payload) {
-          dataToUse = data['payload'];
-        }
-        if (!Array.isArray(dataToUse)) {
-          setEntries(prev => (prev === null ? [dataToUse] : [...prev, dataToUse]));
-        } else {
-          setEntries(prev => (prev === null ? [...dataToUse] : [...prev, ...dataToUse]));
-        }
+        fields[dataSource.id || index] = dataSource.fields
+          .filter(field => (field.flags & 4) === 0)
+          .map(field => field.fullName)
+          .filter(field => field !== 'k8s');
       }
     });
 
-    pubSub.subscribe(gadgetListID, (data: any) => {
-      const { persistentGadgets } = data.payload;
-      persistentGadgets?.forEach(item => {
-        {
-          const { tags } = item;
-          if (tags.includes(gadgetID)) {
-            setGadgetPayload(item);
-            setIsBackgroundRunning(true);
-            setLoading(true);
-            setGadgetRunningStatus(true);
-          }
-        }
-      });
-    });
-  }, []);
+    setGadgetConfig(info);
+    setDataSources(info.dataSources);
+    setDataColumns({ ...fields });
+  };
 
-  React.useEffect(() => {
-    if (gadgetPayload) {
-      pubSub.subscribe(gadgetPayload.id, data => {
-        setLoading(false);
-        if (name === 'block-io' && category === 'profile') {
-          const unit = data.payload.unit || '';
-          const intervals = data.payload?.intervals;
-          const labels = intervals.map(interval => `${interval.start}-${interval.end} ${unit}`);
-          setEntries({
-            labels: labels,
-            datasets: [
-              {
-                label: 'count',
-                data: intervals.map(interval => interval.count),
-                borderColor: 'rgb(53, 162, 235)',
-                backgroundColor: 'rgba(53, 162, 235, 0.5)',
-              },
-            ],
-          });
-        } else if (name === 'tcprtt' && category === 'profile') {
-          const intervals = data.payload?.histograms[0]?.intervals;
-          const unit = data.payload?.histograms[0]?.unit || '';
-          const labels = intervals.map(interval => `${interval.start}-${interval.end} ${unit}`);
-          setEntries({
-            labels: labels,
-            datasets: [
-              {
-                label: 'count',
-                data: intervals.map(interval => interval.count),
-                borderColor: 'rgb(255, 99, 132)',
-                backgroundColor: 'rgba(255, 99, 132, 0.5)',
-              },
-            ],
-          });
-        } else {
-          let dataToUse = data;
-          if (dataToUse.payload) {
-            dataToUse = data['payload'];
-          }
-          if (!Array.isArray(dataToUse)) {
-            setEntries(prev => (prev === null ? [dataToUse] : [...prev, dataToUse]));
-          } else {
-            setEntries(prev => (prev === null ? [...dataToUse] : [...prev, ...dataToUse]));
-          }
-        }
-      });
-    }
-  }, [gadgetPayload]);
+  return {
+    podsSelected,
+    setPodsSelected,
+    gadgetData,
+    setGadgetData,
+    gadgetRunningStatus,
+    setGadgetRunningStatus,
+    dataColumns,
+    setDataColumns,
+    gadgetConfig,
+    setGadgetConfig,
+    filters,
+    setFilters,
+    podStreamsConnected,
+    setPodStreamsConnected,
+    dataSources,
+    setDataSources,
+    bufferedGadgetData,
+    setBufferedGadgetData,
+    loading,
+    setLoading,
+    isGadgetInfoFetched,
+    setIsGadgetInfoFetched,
+    open,
+    setOpen,
+    nodesSelected,
+    setNodesSelected,
+    gadgetConn,
+    setGadgetConn,
+    isRunningInBackground,
+    setIsRunningInBackground,
+    prepareGadgetInfo,
+    dynamicTabs,
+    setDynamicTabs,
+    activeTabIndex,
+    setActiveTabIndex,
+    addDynamicTab,
+    removeDynamicTab,
+  };
+}
 
-  useEffect(() => {
-    const preparedFilters = prepareFilters(params, operatorParamsCollection, pods, namespaces);
-    setFilters({ ...preparedFilters });
-  }, [operatorParamsCollection, pods, namespaces]);
-
-  useEffect(() => {}, [isBackgroundRunning]);
-
-  function gadgetStartStopHandler(action) {
-    if (!action) {
-      setLoading(true);
-    }
-    console.log('action is', action);
-    const socket = execRef.current.getSocket();
-    if (!action) {
-      // stop the gadget
-      setGadgetRunningStatus(true);
-      let massagedFilters = {};
-
-      Object.keys(filters).forEach(key => {
-        massagedFilters[key] = filters[key].value;
-      });
-
-      runGadgetWithActionAndPayload(socket, 'start', {
-        gadgetName: name,
-        gadgetCategory: category,
-        id: gadgetPayload ? gadgetPayload.id : gadgetID,
-        params: { ...massagedFilters },
-        background: isBackgroundRunning,
-      });
-    } else {
-      if (gadgetPayload && !isBackgroundRunning) {
-        runGadgetWithActionAndPayload(socket, 'stop', {
-          gadgetName: name,
-          gadgetCategory: category,
-          id: gadgetPayload ? gadgetPayload.id : gadgetID,
-        });
-
-        runGadgetWithActionAndPayload(socket, 'delete', {
-          name,
-          category,
-          id: gadgetPayload ? gadgetPayload.id : gadgetID,
-        });
-      } else {
-        runGadgetWithActionAndPayload(socket, 'stop', {
-          gadgetName: name,
-          id: gadgetPayload ? gadgetPayload.id : gadgetID,
-          gadgetCategory: category,
-        });
-      }
-      setGadgetRunningStatus(false);
-    }
+function prepareGadgetInstance(version, instance, imageName) {
+  if (_.isEmpty(version) || _.isEmpty(instance) || _.isEmpty(imageName)) {
+    return null;
   }
+  return {
+    id: instance,
+    gadgetConfig: {
+      imageName,
+      version,
+    },
+  };
+}
 
-  if (!nodes) {
-    return <Loader />;
-  }
+function GadgetRendererWithTabs() {
+  let { version, instance, imageName } = useParams<{
+    version: string;
+    instance: string;
+    imageName: string;
+  }>();
+  imageName = decodeURIComponent(imageName);
+  const gadgetState = useGadgetState();
+  const [nodes] = K8s.ResourceClasses.Node.useList();
+  const [pods] = K8s.ResourceClasses.Pod.useList();
 
-  if (nodesError) {
-    return <div>Uhooooh..... Error fetching nodes {nodesError}</div>;
-  }
-  if (!nodeToWorkOn) {
+  const gadgetInstance = prepareGadgetInstance(version, instance, imageName);
+
+  const { dynamicTabs, activeTabIndex, setActiveTabIndex, addDynamicTab, removeDynamicTab } =
+    gadgetState;
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTabIndex(newValue);
+    // reset gadget data on tab change
+    console.log('resetting gadget data');
+    gadgetState.setGadgetData({});
+    gadgetState.setBufferedGadgetData({});
+  };
+
+  if (gadgetInstance) {
     return (
-      <SectionBox
-        title={name}
-        backLink={true}
-        style={{
-          margin: '1rem 0rem',
-        }}
-      >
-        <SectionHeader title="Select node to run this gadget on" />
-        <Grid container spacing="2">
-          {nodes?.map(node => {
-            return (
-              <Grid item md={8}>
-                <Button
-                  onClick={() => setNodeToWorkOn(node)}
-                  variant="outlined"
-                  style={{
-                    width: '100%',
-                    margin: '0.1rem 0rem',
-                  }}
-                >
-                  {node.metadata.name}
-                </Button>
-              </Grid>
-            );
-          })}
-        </Grid>
-      </SectionBox>
+      <GadgetContext.Provider value={{ ...gadgetState, gadgetInstance }}>
+        <GadgetRenderer
+          nodes={nodes}
+          pods={pods}
+          onGadgetInstanceCreation={() => {}}
+          onInstanceDelete={() => {}}
+        />
+      </GadgetContext.Provider>
     );
   }
 
   return (
-    <SectionBox
-      title={name}
-      backLink={true}
-      style={{
-        margin: '1rem 0rem',
-      }}
-    >
-      {Object.keys(filters).length !== 0 && (
-        <Accordion
-          square
-          component={Paper}
-          style={{
-            margin: '1rem 0rem',
-          }}
-        >
-          <AccordionSummary
-            expandIcon={<Icon icon={'mdi:chevron-down'} />}
-            aria-controls=""
-            id="gadget-filters"
+    <GadgetContext.Provider value={{ ...gadgetState, gadgetInstance }}>
+      <SectionBox backLink>
+        <Box sx={{ width: '100%', typography: 'body1' }}>
+          <Tabs
+            value={activeTabIndex}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
           >
-            <SectionHeader title="Filters" />
-          </AccordionSummary>
+            <Tab label="Create" />
+            <Tab label="Running Instances" />
+            {dynamicTabs.map((tab, index) => (
+              <Tab
+                key={tab.id}
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {tab.label}
+                    <IconButton
+                      size="small"
+                      onClick={e => {
+                        e.stopPropagation();
+                        removeDynamicTab(index);
+                      }}
+                      sx={{ ml: 1 }}
+                    >
+                      <Icon icon="mdi:close" />
+                    </IconButton>
+                  </Box>
+                }
+              />
+            ))}
+          </Tabs>
 
-          <AccordionDetails>
-            {
-              <Grid container spacing="2">
-                {Object.keys(filters)?.map(key => {
-                  const FilterComponent = filters[key].component;
-                  return (
-                    <Grid item md={4}>
-                      <FilterComponent key={Math.random() + key} />
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            }
-          </AccordionDetails>
-        </Accordion>
-      )}
-      <Box mb={2}>
-        <Grid container justifyContent="space-between" spacing="2">
-          <Grid item>Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}</Grid>
-          {category === 'profile' && (
-            <Grid item>
-              Run In the Background
-              <Checkbox checked={isBackgroundRunning} onChange={handleChange} />
-            </Grid>
+          {activeTabIndex === 0 && (
+            <GadgetRenderer
+              nodes={nodes}
+              pods={pods}
+              onGadgetInstanceCreation={function (success) {
+                addDynamicTab(success.gadgetInstance);
+                setActiveTabIndex(dynamicTabs.length + 2);
+              }}
+              onInstanceDelete={() => {}}
+            />
           )}
-          <Grid item>
-            <Button onClick={() => gadgetStartStopHandler(gadgetRunningStatus)} variant="outlined">
-              {!gadgetRunningStatus ? 'Start' : 'Stop'}
-            </Button>
-          </Grid>
-        </Grid>
-      </Box>
-      {!loading ? (
-        (name === 'block-io' && category === 'profile') ||
-        (name === 'tcprtt' && category === 'profile') ? (
-          <BarChart
-            data={entries}
-            title={
-              name === 'block-io'
-                ? 'Block I/O distribution'
-                : name === 'tcprtt'
-                ? 'tcp round trip time'
-                : ''
-            }
-          />
-        ) : (
-          <SimpleTable columns={columns} data={entries} />
-        )
-      ) : (
-        <Loader />
-      )}
-    </SectionBox>
+          {activeTabIndex === 1 && (
+            <Box mt={2}>
+              <BackgroundRunning
+                imageName={imageName}
+                callback={row => {
+                  addDynamicTab(row);
+                  setActiveTabIndex(dynamicTabs.length + 2);
+                }}
+                hideTitle
+              />
+            </Box>
+          )}
+          {dynamicTabs.map(
+            (tab, index) =>
+              activeTabIndex === index + 2 && (
+                <Box key={tab.id} p={3}>
+                  <GadgetRenderer
+                    nodes={nodes}
+                    pods={pods}
+                    instance={{
+                      id: tab.id,
+                      gadgetConfig: {
+                        ...tab.content.gadgetConfig,
+                      },
+                    }}
+                    onGadgetInstanceCreation={() => {}}
+                    onInstanceDelete={gadgetInstance => {
+                      // get index of this tab and remove it
+                      const index = dynamicTabs.findIndex(tab => tab.id === gadgetInstance.id);
+                      removeDynamicTab(index);
+                      setActiveTabIndex(1);
+                    }}
+                  />
+                </Box>
+              )
+          )}
+        </Box>
+      </SectionBox>
+    </GadgetContext.Provider>
   );
 }
 
-const useJsonPrettyStyle = makeStyles({
-  root: {
-    '& .__json-pretty__': {
-      background: 'none',
-    },
-  },
-});
-export default function Gadget() {
-  const location = useLocation();
-  const classes = useJsonPrettyStyle();
-  const { gadget, category } = useParams<{ gadget: string; category: string }>();
-  const gadgetObj = location.state;
-  let columns = [];
-  if (gadgetObj.columnsDefinition) {
-    let gadgetColumnKeys = Object.keys(gadgetObj.columnsDefinition);
-    for (let i = 0; i < Object.keys(gadgetObj.columnsDefinition).length; i++) {
-      const col = gadgetObj.columnsDefinition[gadgetColumnKeys[i]];
-      if (col.name.includes('.')) {
-        continue;
-      }
-      columns.push({
-        label: col.name,
-        getter: e => {
-          if (_.isObject(e[col.name])) {
-            //@ts-ignore
-            return <JSONPretty data={e[col.name]} className={classes.root} />;
-          }
-          if (col.name === 'namespace' || col.name === 'pod' || col.name === 'node') {
-            return (
-              <Link
-                routeName={col.name}
-                params={{ name: e[col.name] || 'default', namespace: e['namespace'] || 'default' }}
-              >
-                {col.name === 'namespace' ? e[col.name] || 'default' : e[col.name]}
-              </Link>
-            );
-          }
-          if (col.name === 'timestamp') {
-            return <DateLabel date={e[col.name]} />;
-          }
-          return e[col.name];
-        },
-        hide: !col.visible,
-      });
+function GadgetRenderer({
+  nodes,
+  pods,
+  instance = null,
+  onGadgetInstanceCreation,
+  onInstanceDelete,
+}) {
+  const {
+    podsSelected,
+    setPodsSelected,
+    podStreamsConnected,
+    setPodStreamsConnected,
+    isGadgetInfoFetched,
+    setIsGadgetInfoFetched,
+    open,
+    setOpen,
+    nodesSelected,
+    setNodesSelected,
+    dataSources,
+    prepareGadgetInfo,
+    gadgetInstance,
+    dataColumns,
+    gadgetConn,
+    setGadgetConn,
+    ...otherState
+  } = useContext(GadgetContext);
+  useEffect(() => {
+    otherState.setGadgetRunningStatus(false);
+    if (podStreamsConnected > podsSelected.length) {
+      setPodStreamsConnected(podsSelected.length);
     }
-  }
+  }, [podsSelected]);
 
   return (
-    <GenericGadgetRenderer
-      name={gadget}
-      category={category}
-      gadgetID={`ig-gadget-${gadget}-${category}`}
-      isDataAccessTypeObject={true}
-      gadget={gadgetObj}
-      columns={columns}
-    />
+    <>
+      {nodes && pods && (
+        <GadgetConnectionForBackgroundRunningProcess
+          nodes={nodes}
+          pods={pods}
+          callback={setGadgetConn}
+          prepareGadgetInfo={prepareGadgetInfo}
+          setIsGadgetInfoFetched={setIsGadgetInfoFetched}
+        />
+      )}
+      <NodeSelection
+        setPodsSelected={setPodsSelected}
+        open={open}
+        setOpen={setOpen}
+        nodesSelected={nodesSelected}
+        setNodesSelected={setNodesSelected}
+        setPodStreamsConnected={setPodStreamsConnected}
+        gadgetConn={gadgetConn}
+        gadgetInstance={gadgetInstance || instance}
+        onInstanceDelete={onInstanceDelete}
+      />
+      {!isGadgetInfoFetched && (
+        <Box mt={2}>
+          <Loader title="gadget info loading" />
+        </Box>
+      )}
+      {podsSelected.map(podSelected => (
+        <GenericGadgetRenderer
+          {...otherState}
+          gadgetInstance={gadgetInstance || instance}
+          podsSelected={podsSelected}
+          node={podSelected?.spec.nodeName}
+          podSelected={podSelected?.jsonData.metadata.name}
+          dataColumns={dataColumns}
+          podStreamsConnected={podStreamsConnected}
+          setPodStreamsConnected={setPodStreamsConnected}
+        />
+      ))}
+      {dataSources.map((dataSource, index) => {
+        const dataSourceID = dataSource?.id || index;
+        return (
+          <GadgetWithDataSource
+            {...otherState}
+            podsSelected={podsSelected}
+            podStreamsConnected={podStreamsConnected}
+            dataSourceID={dataSourceID}
+            columns={dataColumns[dataSourceID]}
+            gadgetInstance={gadgetInstance || instance}
+            gadgetConn={gadgetConn}
+            onGadgetInstanceCreation={onGadgetInstanceCreation}
+          />
+        );
+      })}
+    </>
   );
+}
+
+export default function Gadget() {
+  return <GadgetRendererWithTabs />;
 }

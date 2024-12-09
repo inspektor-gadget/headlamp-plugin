@@ -1,173 +1,223 @@
+import { Link, Loader, SectionBox, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import {
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+} from '@mui/material';
 import React from 'react';
-import { JsonStreamParser, isIGPod, pubSub } from './helper';
 import { useState } from 'react';
-import { useEffect } from 'react';
-import { K8s } from '@kinvolk/headlamp-plugin/lib';
-import { SectionBox, SimpleTable, Link } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import { blackListGadgets } from './blacklist';
+import { IGNotFound } from '../common/NotFound';
+import { GadgetConnectionForBackgroundRunningProcess, isIGInstalled } from './conn';
+import { DefaultGadgets } from './default_gadgets';
 
 export default function GadgetList() {
-  const decoder = new TextDecoder('utf-8');
-  const [gadgets, setGadgets] = useState(null);
-  const [operators, setOperators] = useState(null);
-  const [pods, error] = K8s.ResourceClasses.Pod.useList();
-  const gadgetID = 'app-catalog';
-  const [igPod, setIGPod] = useState(null);
-  const execRef = React.useRef(null);
-
-  function runGadgetWithActionAndPayload(socket, action, payload, other) {
-    socket.send('\0' + JSON.stringify({ action, payload, ...other }) + '\n');
-  }
-
-  async function prepareSocket() {
-    return new Promise((resolve, reject) => {
-      let intervalID = setInterval(() => {
-        let socket = execRef.current.getSocket();
-        console.log('socket is ready');
-
-        if (socket) {
-          clearInterval(intervalID);
-          resolve(socket);
-        }
-      }, 0);
-    });
-  }
-
-  useEffect(() => {
-    if (!pods) {
-      return;
-    }
-    const igPod = pods?.find(isIGPod);
-    if (!igPod) {
-      return;
-    }
-    setIGPod(igPod);
-  }, [pods]);
-
-  useEffect(() => {
-    if (!igPod) {
-      return;
-    }
-
-    if (execRef.current) {
-      return;
-    }
-
-    let socket;
-
-    (async function () {
-      console.log('i am here');
-      execRef.current = await igPod.exec('gadget', () => {}, {
-        command: ['/usr/bin/socat', '/run/gadgetstreamingservice.socket', '-'],
-        tty: false,
-        stdin: true,
-        stdout: true,
-        stderr: false,
-      });
-
-      socket = await prepareSocket();
-      socket.addEventListener('message', event => {
-        const items = new Uint8Array(event.data);
-        const text = decoder.decode(items.slice(1));
-
-        if (new Uint8Array(items)[0] !== 1) {
-          return;
-        }
-
-        const parser = new JsonStreamParser();
-        parser.feed(text);
-      });
-      socket.addEventListener('open', () =>
-        runGadgetWithActionAndPayload(
-          socket,
-          'catalog',
-          {},
-          {
-            id: gadgetID,
-          }
-        )
-      );
-    })();
-
-    return () => {
-      socket?.removeEventListener('open', () =>
-        runGadgetWithActionAndPayload(
-          socket,
-          'catalog',
-          {},
-          {
-            id: gadgetID,
-          }
-        )
-      );
-      execRef.current.cancel();
-    };
-  }, [igPod]);
+  const [gadgets, setGadgets] = useState([]);
+  const [open, setOpen] = React.useState(false);
+  const [pods] = K8s.ResourceClasses.Pod.useList();
+  const [nodes] = K8s.ResourceClasses.Node.useList();
+  const [gadgetConn, setGadgetConn] = useState(null);
+  const isIGInstallationFound = isIGInstalled(pods);
 
   React.useEffect(() => {
-    pubSub.subscribe(gadgetID, (data: { payload: any }) => {
-      setGadgets(data.payload.Gadgets);
-      setOperators(data.payload.Operators);
-    });
+    const gadgetsFromLocalStorage = localStorage.getItem('headlamp_ig_gadgets');
+    const gadgetsArray = JSON.parse(gadgetsFromLocalStorage) || [];
+    setGadgets(DefaultGadgets.concat(gadgetsArray));
   }, []);
+
+  React.useEffect(() => {
+    if (gadgetConn) {
+      gadgetConn.listGadgetInstances(instances => {
+        if (!instances) {
+          return;
+        }
+        const instanceCountMap = instances.reduce((acc, instance) => {
+          acc[instance.gadgetConfig.imageName] = (acc[instance.gadgetConfig.imageName] || 0) + 1;
+          return acc;
+        }, {});
+
+        setGadgets(prevGadgets =>
+          prevGadgets.map(gadget => ({
+            ...gadget,
+            instanceCount: instanceCountMap[gadget.name] || 0,
+          }))
+        );
+      });
+    }
+  }, [gadgetConn]);
+
+  function GadgetForm() {
+    const [customGadgetConfig, setCustomGadgetConfig] = React.useState({});
+    return (
+      <Dialog open={open} onClose={() => setOpen(false)}>
+        <DialogTitle>Add Gadget</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" width="20vw">
+            <TextField
+              required
+              label="ImageName Or URL"
+              variant="outlined"
+              margin="normal"
+              fullWidth
+              onChange={e => {
+                setCustomGadgetConfig({ ...customGadgetConfig, name: e.target.value });
+              }}
+            />
+            <TextField
+              label="Description"
+              variant="outlined"
+              margin="normal"
+              fullWidth
+              onChange={e => {
+                setCustomGadgetConfig({ ...customGadgetConfig, description: e.target.value });
+              }}
+              required
+            />
+            <TextField
+              required
+              label="Origin"
+              variant="outlined"
+              margin="normal"
+              fullWidth
+              onChange={e => {
+                setCustomGadgetConfig({ ...customGadgetConfig, origin: e.target.value });
+              }}
+            />
+          </Box>
+          {(!customGadgetConfig.name ||
+            !customGadgetConfig.description ||
+            !customGadgetConfig.origin) && (
+            <Alert severity="error">Please Fill all the required fields</Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button
+            disabled={
+              !customGadgetConfig.name ||
+              !customGadgetConfig.description ||
+              !customGadgetConfig.origin
+            }
+            onClick={() => {
+              const gadgetsFromLocalStorage = localStorage.getItem('headlamp_ig_gadgets');
+              const gadgetsArray = gadgetsFromLocalStorage
+                ? JSON.parse(gadgetsFromLocalStorage)
+                : [];
+              customGadgetConfig.allowDelete = true;
+              gadgetsArray.push(customGadgetConfig);
+              localStorage.setItem('headlamp_ig_gadgets', JSON.stringify(gadgetsArray));
+              setGadgets([...gadgets].concat(customGadgetConfig));
+              setOpen(false);
+            }}
+          >
+            Add
+          </Button>
+          <Button disabled={!customGadgetConfig.name}>
+            {!customGadgetConfig.name ? (
+              'Run'
+            ) : (
+              <Link
+                routeName="/gadgets/:imageName"
+                params={{
+                  imageName: customGadgetConfig.name,
+                }}
+              >
+                Run
+              </Link>
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+
+  if (isIGInstallationFound === null) {
+    return <Loader />;
+  }
+
+  if (!isIGInstallationFound) {
+    return <IGNotFound />;
+  }
   return (
     <>
-      <SectionBox title="Gadgets">
-        <SimpleTable
+      {nodes && pods && (
+        <GadgetConnectionForBackgroundRunningProcess
+          nodes={nodes}
+          pods={pods}
+          callback={setGadgetConn}
+          prepareGadgetInfo={null}
+        />
+      )}
+      <GadgetForm />
+      <SectionBox
+        title={
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <h2>Gadgets </h2>
+            <Box mr={2}>
+              <Button
+                onClick={() => {
+                  setOpen(true);
+                }}
+                sx={theme => ({
+                  color: theme.palette.clusterChooser.button.color,
+                  background: theme.palette.clusterChooser.button.background,
+                  '&:hover': {
+                    background: theme.palette.clusterChooser.button.hover.background,
+                  },
+                  maxWidth: '20em',
+                  textTransform: 'none',
+                  padding: '6px 22px',
+                })}
+              >
+                Add Gadget
+              </Button>
+            </Box>
+          </Box>
+        }
+      >
+        <Table
           columns={[
             {
-              label: 'Name',
-              getter: gadget =>
-                gadget.category == '' ? (
-                  <Link
-                    routeName="/gadgets/:gadget"
-                    params={{
-                      gadget: gadget.name,
-                    }}
-                    state={gadget}
-                  >
-                    {gadget.name}
+              header: 'Name',
+              accessorFn: gadget => (
+                <Link
+                  routeName="/gadgets/:imageName"
+                  params={{
+                    imageName: gadget.name,
+                  }}
+                  state={gadget}
+                >
+                  {gadget.name}
+                </Link>
+              ),
+            },
+            {
+              header: 'Description',
+              accessorFn: gadget => gadget.description,
+            },
+            {
+              header: 'Origin',
+              accessorFn: () => 'Inspektor-Gadget',
+            },
+            {
+              header: 'Instances',
+              accessorFn: gadget =>
+                gadget.instanceCount > 0 ? (
+                  <Link routeName={`/gadgets/background`} search={`image=${gadget.name}`}>
+                    {gadget.instanceCount}
                   </Link>
                 ) : (
-                  <Link
-                    routeName="/gadgets/:gadget/:category"
-                    params={{
-                      gadget: gadget.name,
-                      category: gadget.category,
-                    }}
-                    state={gadget}
-                  >
-                    {gadget.name}
-                  </Link>
+                  0
                 ),
             },
-            {
-              label: 'Type',
-              getter: gadget => gadget.type,
-            },
-            {
-              label: 'Category',
-              getter: gadget => gadget.category,
-            },
-            {
-              label: 'Description',
-              getter: gadget => gadget.description,
-            },
-            {
-              label: 'Origin',
-              getter: () => 'Inspektor-Gadget',
-            },
           ]}
-          data={
-            gadgets
-              ? gadgets.filter(gadget => {
-                  if (blackListGadgets.includes(gadget?.name)) {
-                    return false;
-                  }
-                  return true;
-                })
-              : null
-          }
+          loading={gadgets === null}
+          data={gadgets}
         />
       </SectionBox>
     </>
