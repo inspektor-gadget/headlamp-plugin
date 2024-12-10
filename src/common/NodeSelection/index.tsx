@@ -1,23 +1,21 @@
-import { Icon } from '@iconify/react';
 import { ConfirmDialog, Loader, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import { getCluster, getClusterPrefixedPath } from '@kinvolk/headlamp-plugin/lib/Utils';
 import {
-  MenuProps as MUIMenuProps,
   Box,
-  IconButton,
-  InputLabel,
-  OutlinedInput,
-  Select,
   Checkbox,
   FormControl,
-  MenuItem,
+  InputLabel,
   ListItemText,
+  MenuItem,
+  MenuProps as MUIMenuProps,
+  OutlinedInput,
+  Select,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { useParams, useHistory, generatePath } from 'react-router-dom';
-import { DefaultGadgets } from '../../gadgets/default_gadgets';
+import { generatePath,useHistory, useParams } from 'react-router-dom';
 import { isIGPod } from '../../gadgets/helper';
-import { getCluster, getClusterPrefixedPath } from '@kinvolk/headlamp-plugin/lib/Utils';
+import { GadgetDescription } from '../GadgetDescription';
 
 // Improved type definitions
 interface Node {
@@ -60,25 +58,16 @@ interface NodeSelectionProps {
     deleteGadgetInstance: (id: string, callback: (success: any) => void) => void;
   };
   gadgetInstance: GadgetInstance;
-  onInstanceDelete: (gadgetInstance: GadgetInstance) => void;
 }
 
 export function NodeSelection(props: NodeSelectionProps) {
   const [nodes] = K8s.ResourceClasses.Node.useList() as [Node[]];
   const [pods] = K8s.ResourceClasses.Pod.useList() as [Pod[]];
   const [finalNodes, setFinalNodes] = useState<Node[]>(null);
-  const {
-    setPodsSelected,
-    nodesSelected,
-    setNodesSelected,
-    gadgetConn,
-    gadgetInstance,
-    onInstanceDelete,
-  } = props;
-  const { imageName, instance } = useParams<{ imageName: string; instance: string }>();
+  const { setPodsSelected, nodesSelected, setNodesSelected, gadgetConn, gadgetInstance } = props;
+  const { instance } = useParams<{ instance: string }>();
   const [loading, setLoading] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
-  const decodedImageName = decodeURIComponent(imageName || '');
   const history = useHistory();
   const cluster = getCluster();
 
@@ -93,8 +82,7 @@ export function NodeSelection(props: NodeSelectionProps) {
     if (gadgetInstance && gadgetConn) {
       setLoading(true);
       gadgetConn.listGadgetInstances(instances => {
-        const i = instances?.find(instance => instance.id === instance);
-
+        const i = instances?.find(ins => gadgetInstance.id === ins.id);
         if (!i?.nodes) {
           setFinalNodes(nodes);
           setLoading(false);
@@ -165,18 +153,6 @@ export function NodeSelection(props: NodeSelectionProps) {
     },
   };
 
-  function prepareGadgetDescription() {
-    // also search in local storage if we have a gadget with this name if yes give it's description
-    const localGadgets = JSON.parse(localStorage.getItem('headlamp_ig_gadgets') || '[]');
-    const localGadget = localGadgets.find(
-      (gadget: { name: string }) => gadget.name === decodedImageName
-    );
-    if (localGadget) {
-      return localGadget.description;
-    }
-    return DefaultGadgets.find(gadget => gadget.name === decodedImageName)?.description || '';
-  }
-
   return (
     <>
       <ConfirmDialog
@@ -194,7 +170,6 @@ export function NodeSelection(props: NodeSelectionProps) {
               );
               return;
             }
-            onInstanceDelete(gadgetInstance);
           });
         }}
         handleClose={() => {
@@ -204,29 +179,12 @@ export function NodeSelection(props: NodeSelectionProps) {
       <SectionBox
         title={
           <>
-            <Box display="flex" alignItems="center">
-              <Box ml={2} height="3.5rem">
-                <h2>{decodedImageName}</h2>
-              </Box>
-              {gadgetInstance && (
-                <Box
-                  mt={2}
-                  onClick={() => {
-                    setDeleteDialog(true);
-                  }}
-                >
-                  <IconButton>
-                    <Icon icon="mdi:bin" />
-                  </IconButton>
-                </Box>
-              )}
-            </Box>
-            <Box ml={2} mb={2}>
-              {prepareGadgetDescription()}
-            </Box>
+            {instance && (
+              <GadgetDescription onInstanceDelete={() => {}} instance={gadgetInstance} />
+            )}
           </>
         }
-        backLink={instance}
+        backLink={Boolean(gadgetInstance)}
       >
         {gadgetInstance ? (
           <Box>Select a node you want to get result from</Box>

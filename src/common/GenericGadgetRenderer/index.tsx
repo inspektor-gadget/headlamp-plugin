@@ -48,7 +48,6 @@ export default function GenericGadgetRenderer({
   const gadgetRunningStatusRef = useRef(gadgetRunningStatus);
   const { imageName } = useParams<{ imageName: string }>();
   const decodedImageName = decodeURIComponent(imageName || '');
-
   const processDataColumn = useCallback((payload: any, column: string) => {
     if (column === IS_METRIC || column.includes(HEADLAMP_KEY) || column.includes(HEADLAMP_VALUE)) {
       return null;
@@ -80,6 +79,7 @@ export default function GenericGadgetRenderer({
   }, []);
 
   function handleGadgetData(data: any, dsID: string) {
+    console.log('data is', data);
     if (!gadgetRunningStatusRef.current && !gadgetInstance) return;
 
     setLoading(false);

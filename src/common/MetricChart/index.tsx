@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { HEADLAMP_VALUE } from '../helpers';
+import { HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE } from '../helpers';
 
 function prepareChartData(data, value) {
   if (data && data[value] && _.isArray(data[value])) {
@@ -32,7 +32,10 @@ export function MetricChart(props: { data: any; fields: any; node: any }) {
   const value = fields
     .find(field => field?.header?.includes(HEADLAMP_VALUE))
     ?.header.replace(`${HEADLAMP_VALUE}_`, '');
-
+  console.log('fields is ', fields);
+  const unit = fields
+    .find(field => field?.header.includes(HEADLAMP_METRIC_UNIT))
+    ?.header.replace(`${HEADLAMP_METRIC_UNIT}_`, '');
   React.useEffect(() => {
     if (data) {
       setChartData(prepareChartData(data, value));
@@ -65,7 +68,7 @@ export function MetricChart(props: { data: any; fields: any; node: any }) {
               <XAxis
                 dataKey="name"
                 label={{
-                  value: 'Scale',
+                  value: unit || 'Scale',
                   position: 'insideBottom',
                   offset: -10,
                   fill: '#666',
