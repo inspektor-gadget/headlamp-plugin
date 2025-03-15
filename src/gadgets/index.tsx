@@ -2,8 +2,8 @@ import './wasm.js';
 import { Icon } from '@iconify/react';
 import { Loader, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
-import { Box, IconButton, Tab, Tabs } from '@mui/material';
-import { useContext, useEffect } from 'react';
+import { Box, IconButton, Tab, Tabs, Modal, Paper, Typography } from '@mui/material';
+import { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { GadgetContext, useGadgetState } from '../common/GadgetContext';
 import { GadgetDescription } from '../common/GadgetDescription';
@@ -12,7 +12,9 @@ import GenericGadgetRenderer from '../common/GenericGadgetRenderer';
 import { prepareGadgetInstance } from '../common/helpers';
 import { NodeSelection } from '../common/NodeSelection';
 import { BackgroundRunning } from './backgroundgadgets';
-import { GadgetConnectionForBackgroundRunningProcess } from './conn';
+import {  useGadgetConn } from './conn';
+import { GadgetCardEmbedWrapper, GadgetGrid } from './gadgetGrid';
+import { fetchInspektorGadgetFromArtifactHub } from '../api/artifacthub';
 
 function GadgetRendererWithTabs() {
   let { version, instance, imageName } = useParams<{
@@ -24,41 +26,99 @@ function GadgetRendererWithTabs() {
   const gadgetState = useGadgetState();
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
-
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const gadgetInstance = prepareGadgetInstance(version, instance, imageName);
+  const [gadgets, setGadgets] = useState([]);
+  const [selectedGadget, setSelectedGadget] = useState(null);
+  const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
+
+  useEffect(() => {
+    fetchInspektorGadgetFromArtifactHub().then(data => setGadgets([...data])); // Wrap single item in array if needed
+  }, []);
 
   const { dynamicTabs, activeTabIndex, setActiveTabIndex, addDynamicTab, removeDynamicTab } =
     gadgetState;
+    
+  // Ensure we default to the "Running Instances" tab (index 0) when there are no dynamic tabs
+  useEffect(() => {
+    if (dynamicTabs.length === 0 && activeTabIndex > 0) {
+      setActiveTabIndex(0);
+    }
+  }, [dynamicTabs, activeTabIndex, setActiveTabIndex]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTabIndex(newValue);
+    gadgetState.setIsGadgetInfoFetched(false);
     // reset gadget data on tab change
     gadgetState.setGadgetData({});
     gadgetState.setBufferedGadgetData({});
   };
 
+  const handleRemoveTab = (index) => {
+    removeDynamicTab(index);
+    
+    // If we're removing the currently active tab,
+    // we need to set activeTabIndex to a valid tab
+    if (activeTabIndex === index + 1) {
+      // If there are tabs to the left, go there
+      if (index > 0) {
+        setActiveTabIndex(index);
+      } else if (dynamicTabs.length > 1) {
+        // If there are tabs to the right, go there
+        setActiveTabIndex(1);
+      } else {
+        // Otherwise go to "Running Instances" tab
+        setActiveTabIndex(0);
+      }
+    } else if (activeTabIndex > index + 1) {
+      // If the removed tab is to the left of active tab,
+      // we need to adjust the active index
+      setActiveTabIndex(activeTabIndex - 1);
+    }
+  };
+
   if (gadgetInstance) {
     return (
       <GadgetContext.Provider value={{ ...gadgetState, gadgetInstance }}>
-        <GadgetRenderer nodes={nodes} pods={pods} onGadgetInstanceCreation={() => {}} />
+        <GadgetRenderer nodes={nodes} pods={pods} onGadgetInstanceCreation={() => {}} imageName={''} />
       </GadgetContext.Provider>
     );
   }
 
   return (
     <GadgetContext.Provider value={{ ...gadgetState, gadgetInstance }}>
-      <SectionBox backLink>
+      <SectionBox title={
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box>
+          <Typography variant="h5" sx={{ ml: 4 }}>
+            Gadgets
+          </Typography>
+          </Box>
+          <Box>
+          <IconButton
+            size="medium"
+            onClick={() => setOpenConfirmDialog(true)}
+            sx={{ ml: 0.2 }}
+          >
+            <Icon icon="mdi:plus" />
+          </IconButton>
+          </Box>
+        </Box>
+      }>
         <Box sx={{ width: '100%', typography: 'body1' }}>
           <GadgetDescription
             onInstanceDelete={gadgetInstance => {
               // get index of this tab and remove it
               const index = dynamicTabs.findIndex(tab => tab.id === gadgetInstance.id);
-              removeDynamicTab(index);
-              setActiveTabIndex(1);
+              if (index !== -1) {
+                handleRemoveTab(index);
+              }
             }}
             instance={
-              // its there if the dynamic tab is loaded on scree
-              activeTabIndex > 1 ? dynamicTabs[activeTabIndex - 2] : null
+              // its there if the dynamic tab is loaded on screen
+              activeTabIndex > 0 && activeTabIndex <= dynamicTabs.length 
+                ? dynamicTabs[activeTabIndex - 1] 
+                : null
             }
           />
           <Box mb={1}>
@@ -68,8 +128,7 @@ function GadgetRendererWithTabs() {
               variant="scrollable"
               scrollButtons="auto"
             >
-              <Tab label="Create" />
-              <Tab label="Running Instances" />
+              <Tab label="Embedded Gadgets" />
               {dynamicTabs.map((tab, index) => (
                 <Tab
                   key={tab.id}
@@ -80,7 +139,7 @@ function GadgetRendererWithTabs() {
                         size="small"
                         onClick={e => {
                           e.stopPropagation();
-                          removeDynamicTab(index);
+                          handleRemoveTab(index);
                         }}
                         sx={{ ml: 1 }}
                       >
@@ -94,44 +153,117 @@ function GadgetRendererWithTabs() {
           </Box>
 
           {activeTabIndex === 0 && (
-            <GadgetRenderer
-              nodes={nodes}
-              pods={pods}
-              onGadgetInstanceCreation={function (success) {
-                addDynamicTab(success.gadgetInstance);
-                setActiveTabIndex(dynamicTabs.length + 2);
-              }}
-            />
-          )}
-          {activeTabIndex === 1 && (
             <Box mt={2}>
+              <Modal 
+                open={openConfirmDialog} 
+                onClose={() => setOpenConfirmDialog(false)}
+              >
+                <Paper
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '95%',
+                    maxHeight: '90vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    bgcolor: 'background.paper',
+                    overflow: 'hidden', // Change to hidden to prevent double scrollbars
+                    p: 3,  // Add padding for the content
+                    borderRadius: 1, // Optional: add rounded corners
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="h6" sx={{ flexGrow: 1 }}>
+                      Add Gadget
+                    </Typography>
+                    <IconButton onClick={() => setOpenConfirmDialog(false)} size="small">
+                      <Icon icon="mdi:close" />
+                    </IconButton>
+                  </Box>
+                  
+                  <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
+                    <GadgetGrid 
+                      gadgets={gadgets} 
+                      enableEmbed={true} 
+                      onViewSelect={() => {
+                        // setOpen(true);
+                      }}
+                      callbackRunGadget={(row) => {
+                        // if this row.id exist in dynamicTabs, then setActiveTabIndex to that index
+                        const index = dynamicTabs.findIndex(tab => tab.id === row.id);
+                        if (index !== -1) {
+                          setActiveTabIndex(index + 1);
+                          return;
+                        }
+                        addDynamicTab(row);
+                        setActiveTabIndex(dynamicTabs.length + 1);
+                        setOpenConfirmDialog(false);
+                      }}
+                      onEmbedClick={(row) => {
+                        setSelectedGadget(row);
+                        setEmbedDialogOpen(true);
+                      }}
+                    />
+                    {embedDialogOpen && <GadgetCardEmbedWrapper gadget={selectedGadget} embedDialogOpen={embedDialogOpen} onClose={() => setEmbedDialogOpen(false)} />}
+  
+                  </Box>
+                </Paper>
+              </Modal>
               <BackgroundRunning
                 imageName={imageName}
+                embedDialogOpen={embedDialogOpen}
                 callback={row => {
+                  // if this row.id exist in dynamicTabs, then setActiveTabIndex to that index
+                  const index = dynamicTabs.findIndex(tab => tab.id === row.id);
+                  if (index !== -1) {
+                    setActiveTabIndex(index + 1);
+                    return;
+                  }
                   addDynamicTab(row);
-                  setActiveTabIndex(dynamicTabs.length + 2);
+                  setActiveTabIndex(dynamicTabs.length + 1);
                 }}
                 hideTitle
+                callbackAddGadget={() => setOpenConfirmDialog(true)}
               />
             </Box>
           )}
           {dynamicTabs.map(
-            (tab, index) =>
-              activeTabIndex === index + 2 && (
+            (tab, index) => {
+              // check if this id is already in localStorage
+              const localGadgets = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
+              // check by searching for the id
+              // const localGadget = localGadgets.find((gadget) => gadget.id === tab.id);
+              // or if the tab has property isForeground set to true
+              // if so, then it's a local gadget
+              
+              let instance = null;
+              let isInstantRun = false;
+              if (!tab.content.isHeadless) {
+                instance = null;
+                isInstantRun = true;
+              } else {
+                instance = {
+                  id: tab.id,
+                  gadgetConfig: {
+                    ...tab.content.gadgetConfig,
+                  },
+                };
+              }
+              return activeTabIndex === index + 1 && (
                 <Box key={tab.id} p={3}>
                   <GadgetRenderer
                     nodes={nodes}
                     pods={pods}
-                    instance={{
-                      id: tab.id,
-                      gadgetConfig: {
-                        ...tab.content.gadgetConfig,
-                      },
-                    }}
+                    instance={instance}
                     onGadgetInstanceCreation={() => {}}
+                    imageName={tab.content.gadgetConfig.imageName}
+                    isInstantRun={isInstantRun}
                   />
                 </Box>
-              )
+              );
+            }
           )}
         </Box>
       </SectionBox>
@@ -139,62 +271,109 @@ function GadgetRendererWithTabs() {
   );
 }
 
-function GadgetRenderer({ nodes, pods, instance = null, onGadgetInstanceCreation }) {
+function GadgetRenderer({ nodes, pods, instance = null, onGadgetInstanceCreation, imageName, isInstantRun = false }) {
   const {
     podsSelected,
-    setPodsSelected,
     podStreamsConnected,
     setPodStreamsConnected,
     isGadgetInfoFetched,
     setIsGadgetInfoFetched,
-    open,
-    setOpen,
-    nodesSelected,
-    setNodesSelected,
     dataSources,
     prepareGadgetInfo,
     gadgetInstance,
     dataColumns,
     gadgetConn,
+    setPodsSelected,
+    nodesSelected,
+    setOpen,
+    setNodesSelected,
     setGadgetConn,
     ...otherState
   } = useContext(GadgetContext);
+  const [error, setError] = useState(null);
+  // Track whether we've made the gadget info request
+  const [infoRequested, setInfoRequested] = useState(false);
+  
+  // Effect for handling pod stream connections
   useEffect(() => {
-    otherState.setGadgetRunningStatus(false);
     if (podStreamsConnected > podsSelected.length) {
       setPodStreamsConnected(podsSelected.length);
+      otherState.setGadgetRunningStatus(false);
     }
-  }, [podsSelected]);
+  }, [podsSelected, podStreamsConnected]);
 
+  useEffect(() => {
+      otherState.setGadgetRunningStatus(false);
+  }, [JSON.stringify(gadgetInstance || {})])
+  const ig = useGadgetConn(nodes, pods);
+  const decodedImageName = instance?.gadgetConfig?.imageName 
+    ? decodeURIComponent(instance.gadgetConfig.imageName) 
+    : decodeURIComponent(imageName);
+
+  // Effect for fetching gadget info - only run once per instance
+  useEffect(() => {
+    // Only proceed if we have the connection and haven't requested info yet
+    if (ig && !infoRequested && decodedImageName) {
+      setInfoRequested(true);
+      
+      // Set connection only if it's different
+      if (gadgetConn !== ig) {
+        setGadgetConn(ig);
+      }
+      
+      // Request gadget info
+      ig.getGadgetInfo(
+        {
+          version: 1,
+          imageName: decodedImageName,
+        },
+        (info) => {
+          prepareGadgetInfo(info);
+          setIsGadgetInfoFetched(true);
+          setError(null);
+        },
+        (err) => {
+          console.error('Failed to get gadget info:', err);
+          // Reset the flag so we can try again if needed
+          setError(err);
+          setIsGadgetInfoFetched(true);
+          setInfoRequested(false);
+        }
+      );
+    }
+  }, [
+    ig, 
+    decodedImageName, 
+    infoRequested,  
+    prepareGadgetInfo, 
+    gadgetConn
+  ]);
+  
   return (
     <>
-      {nodes && pods && (
-        <GadgetConnectionForBackgroundRunningProcess
-          nodes={nodes}
-          pods={pods}
-          callback={setGadgetConn}
-          prepareGadgetInfo={prepareGadgetInfo}
-          setIsGadgetInfoFetched={setIsGadgetInfoFetched}
-        />
-      )}
       <NodeSelection
         setPodsSelected={setPodsSelected}
         open={open}
         setOpen={setOpen}
-        nodesSelected={nodesSelected}
+        nodesSelected={nodesSelected || []}
         setNodesSelected={setNodesSelected}
         setPodStreamsConnected={setPodStreamsConnected}
         gadgetConn={gadgetConn}
         gadgetInstance={gadgetInstance || instance}
+        isInstantRun={isInstantRun}
       />
+      
       {!isGadgetInfoFetched && (
         <Box mt={2}>
-          <Loader title="gadget info loading" />
+          <Loader title="Gadget info loading" />
         </Box>
       )}
-      {podsSelected.map(podSelected => (
+      
+      {isGadgetInfoFetched && podsSelected.map(podSelected => (
         <GenericGadgetRenderer
+          key={podSelected?.jsonData.metadata.name}
           {...otherState}
+          filters={instance?.gadgetConfig?.paramValues}
           gadgetInstance={gadgetInstance || instance}
           podsSelected={podsSelected}
           node={podSelected?.spec.nodeName}
@@ -202,12 +381,15 @@ function GadgetRenderer({ nodes, pods, instance = null, onGadgetInstanceCreation
           dataColumns={dataColumns}
           podStreamsConnected={podStreamsConnected}
           setPodStreamsConnected={setPodStreamsConnected}
+          imageName={imageName}
         />
       ))}
-      {dataSources.map((dataSource, index) => {
+      
+      {error ? <Typography variant="body1" color="error">{error}</Typography> : (isGadgetInfoFetched && dataSources.map((dataSource, index) => {
         const dataSourceID = dataSource?.id || index;
         return (
           <GadgetWithDataSource
+            key={`data-source-${dataSourceID}`}
             {...otherState}
             podsSelected={podsSelected}
             podStreamsConnected={podStreamsConnected}
@@ -216,9 +398,11 @@ function GadgetRenderer({ nodes, pods, instance = null, onGadgetInstanceCreation
             gadgetInstance={gadgetInstance || instance}
             gadgetConn={gadgetConn}
             onGadgetInstanceCreation={onGadgetInstanceCreation}
+            isInstantRun={isInstantRun}
+            error={error}
           />
         );
-      })}
+      }))}
     </>
   );
 }

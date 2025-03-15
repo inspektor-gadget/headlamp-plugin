@@ -11,9 +11,10 @@ import {
   MenuProps as MUIMenuProps,
   OutlinedInput,
   Select,
+  Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { generatePath,useHistory, useParams } from 'react-router-dom';
+import { generatePath, useHistory, useParams } from 'react-router-dom';
 import { isIGPod } from '../../gadgets/helper';
 import { GadgetDescription } from '../GadgetDescription';
 
@@ -58,18 +59,41 @@ interface NodeSelectionProps {
     deleteGadgetInstance: (id: string, callback: (success: any) => void) => void;
   };
   gadgetInstance: GadgetInstance;
+  isInstantRun: boolean;
 }
 
 export function NodeSelection(props: NodeSelectionProps) {
   const [nodes] = K8s.ResourceClasses.Node.useList() as [Node[]];
   const [pods] = K8s.ResourceClasses.Pod.useList() as [Pod[]];
   const [finalNodes, setFinalNodes] = useState<Node[]>(null);
-  const { setPodsSelected, nodesSelected, setNodesSelected, gadgetConn, gadgetInstance } = props;
+  const { setPodsSelected, nodesSelected, setNodesSelected, gadgetConn, gadgetInstance, isInstantRun } = props;
   const { instance } = useParams<{ instance: string }>();
   const [loading, setLoading] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
+  const [selectionDisabled, setSelectionDisabled] = useState(false);
   const history = useHistory();
   const cluster = getCluster();
+
+  // Set all nodes when nodesSelected is empty and nodes are available
+  useEffect(() => {
+    if (nodes?.length > 0 && nodesSelected?.length === 0) {
+      const allNodeNames = nodes.map(node => node.metadata.name);
+      setNodesSelected(allNodeNames);
+      
+      // Also update pods based on all nodes
+      const allPodsForNodes = nodes.reduce<Pod[]>((acc, node) => {
+        const nodePods = pods.filter(
+          pod => pod.spec.nodeName === node.metadata.name && isIGPod(pod as any)
+        );
+        return [...acc, ...nodePods];
+      }, []);
+      
+      setPodsSelected(allPodsForNodes);
+      
+      // Disable selection when nodes are programmatically set
+      setSelectionDisabled(true);
+    }
+  }, [nodes, nodesSelected, pods]);
 
   useEffect(() => {
     // in case of no instance, set the final nodes to all nodes
@@ -88,6 +112,7 @@ export function NodeSelection(props: NodeSelectionProps) {
           setLoading(false);
           const nodeNames = nodes.map(node => node.metadata.name);
           setNodesSelected(nodeNames);
+          setSelectionDisabled(true); // Disable selection when all nodes are set
 
           const podsInterestedIn = nodes.reduce<Pod[]>((acc, node) => {
             const nodePods = pods.filter(
@@ -109,6 +134,9 @@ export function NodeSelection(props: NodeSelectionProps) {
           node => node.jsonData?.metadata.name || node.metadata.name
         );
         setNodesSelected(nodeNames);
+        
+        // If custom nodes are set (not all), we allow changing
+        setSelectionDisabled(false);
 
         const podsInterestedIn = finalNodesCollection.reduce<Pod[]>((acc, node) => {
           const nodeName = node.jsonData?.metadata.name || node.metadata.name;
@@ -121,7 +149,7 @@ export function NodeSelection(props: NodeSelectionProps) {
         setPodsSelected(podsInterestedIn);
       });
     }
-  }, [gadgetConn]);
+  }, [gadgetConn, nodes, pods]);
 
   if (finalNodes === null) {
     return <Loader title="" />;
@@ -131,6 +159,9 @@ export function NodeSelection(props: NodeSelectionProps) {
   }
 
   const handleChange = (event: { target: { value: string[] } }) => {
+    // Skip handling changes if selection is disabled
+    if (selectionDisabled && !isInstantRun) return;
+    
     const { value } = event.target;
     setNodesSelected(value);
 
@@ -161,7 +192,6 @@ export function NodeSelection(props: NodeSelectionProps) {
         description="Are you sure you want to delete the selected instances?"
         onConfirm={() => {
           gadgetConn.deleteGadgetInstance(gadgetInstance.id, () => {
-            console.log(`${getClusterPrefixedPath()}/gadgets/background`);
             if (instance) {
               history.replace(
                 `${generatePath(getClusterPrefixedPath(), {
@@ -179,7 +209,7 @@ export function NodeSelection(props: NodeSelectionProps) {
       <SectionBox
         title={
           <>
-            {instance && (
+            {gadgetInstance && (
               <GadgetDescription onInstanceDelete={() => {}} instance={gadgetInstance} />
             )}
           </>
@@ -189,7 +219,7 @@ export function NodeSelection(props: NodeSelectionProps) {
         {gadgetInstance ? (
           <Box>Select a node you want to get result from</Box>
         ) : (
-          <Box>Select a node you want to run the gadget on</Box>
+          <Box>{selectionDisabled && !isInstantRun ? 'Running on all nodes' : 'Select a node you want to run the gadget on'}</Box>
         )}
         <Box display="flex" my={2} width="100%">
           <FormControl fullWidth>
@@ -209,17 +239,32 @@ export function NodeSelection(props: NodeSelectionProps) {
               value={nodesSelected}
               onChange={handleChange}
               input={<OutlinedInput label="Nodes" />}
-              renderValue={selected => selected.join(', ')}
+              renderValue={(selected) => {
+                return selectionDisabled && !isInstantRun ? 'All nodes selected' : selected.join(', ');
+              }}
               MenuProps={MenuProps}
               fullWidth
+              disabled={selectionDisabled && !isInstantRun}
             >
               {finalNodes.map(node => (
-                <MenuItem key={node.metadata.uid} value={node.metadata.name}>
-                  <Checkbox checked={nodesSelected.indexOf(node.metadata.name) > -1} />
+                <MenuItem 
+                  key={node.metadata.uid} 
+                  value={node.metadata.name}
+                  disabled={selectionDisabled && !isInstantRun}
+                >
+                  <Checkbox 
+                    checked={nodesSelected.indexOf(node.metadata.name) > -1} 
+                    disabled={selectionDisabled && !isInstantRun}
+                  />
                   <ListItemText primary={node.metadata.name} />
                 </MenuItem>
               ))}
             </Select>
+            {selectionDisabled && !isInstantRun && (
+              <Typography variant="caption" color="textSecondary" style={{ marginTop: '4px' }}>
+                All nodes are automatically selected and cannot be changed
+              </Typography>
+            )}
           </FormControl>
         </Box>
       </SectionBox>

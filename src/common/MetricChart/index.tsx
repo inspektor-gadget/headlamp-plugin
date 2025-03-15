@@ -32,7 +32,6 @@ export function MetricChart(props: { data: any; fields: any; node: any }) {
   const value = fields
     .find(field => field?.header?.includes(HEADLAMP_VALUE))
     ?.header.replace(`${HEADLAMP_VALUE}_`, '');
-  console.log('fields is ', fields);
   const unit = fields
     .find(field => field?.header.includes(HEADLAMP_METRIC_UNIT))
     ?.header.replace(`${HEADLAMP_METRIC_UNIT}_`, '');

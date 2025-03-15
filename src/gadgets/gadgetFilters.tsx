@@ -1,11 +1,7 @@
 import { Icon } from '@iconify/react';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Box,
-  Button,
   Checkbox,
   FormControlLabel,
   Grid,
@@ -16,342 +12,319 @@ import {
   TextField,
   Tooltip,
 } from '@mui/material';
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { FILTERS_TYPE } from './filter_types';
 import { removeDuplicates } from './helper';
+import AnnotationFilter from './params/annotation';
+import SortingFilter from './params/sortingfilter';
+import CheckboxFilter from './params/bool';
+import FilterComponent from './params/filter';
+import SelectFilter from './params/select';
 
-let FilterComponents = [];
-export default function GadgetFilters(props: {
-  config: any;
-  setFilters: (func?: (val: any) => any) => void;
-  filters: any;
-  onApplyFilters: () => void;
-}) {
-  const { config, setFilters } = props;
-
-  React.useMemo(() => {
-    if (config && config.params) {
-      const uniqueConfig = removeDuplicates(config.params);
-      // sort config.params such that all checkbox are last values
-      FilterComponents = uniqueConfig?.map((param, index) => {
-        if (!param.typeHint && !param.valueHint) {
-          return (
-            <Grid item md={6}>
-              <TextField
-                key={param.key + index}
-                label={param.title || param.key}
-                variant="outlined"
-                fullWidth
-                onChange={e => {
-                  setFilters(prevVal => {
-                    return {
-                      ...prevVal,
-                      [param.prefix + param.key]: e.target.value,
-                    };
-                  });
-                }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Tooltip title={param.description}>
-                        <Icon icon="mdi:info" />
-                      </Tooltip>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-          );
-        }
-        const filter = FILTERS_TYPE[param.typeHint];
-        if (param.key === 'all-namespaces') {
-          return null;
-        }
-        if (param?.valueHint?.includes('namespace')) {
-          return (
-            <NamespaceFilter
-              setFilters={setFilters}
-              key={param.key + index}
-              param={param}
-              allNamespace={uniqueConfig.filter(param => param.key === 'all-namespaces')}
-              pod={uniqueConfig.filter(param => param.key === 'podname')}
-            />
-          );
-        }
-
-        if (!filter) return null;
-
-        if (filter.type === 'checkbox') {
-          return (
-            <Grid item md={6} key={param.key + index}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    defaultChecked={param.defaultValue === 'true'}
-                    onChange={e => {
-                      setFilters(prevVal => {
-                        return {
-                          ...prevVal,
-                          [param.prefix + param.key]: String(e.target.checked),
-                        };
-                      });
-                    }}
-                  />
-                }
-                label={param.title || param.key}
-              />
-            </Grid>
-          );
-        }
-
-        if (filter.type === 'number') {
-          return (
-            <Grid item md={6} key={param.key + index}>
-              <TextField
-                type={'number'}
-                defaultValue={param.defaultValue}
-                onChange={e => {
-                  setFilters(prevVal => {
-                    return {
-                      ...prevVal,
-                      [param.prefix + param.key]: e.target.value,
-                    };
-                  });
-                }}
-                min={filter.min}
-                max={filter.max}
-                label={param.title || param.key}
-                fullWidth
-                variant="outlined"
-              />
-            </Grid>
-          );
-        }
-
-        if (param.possibleValues) {
-          return (
-            <Grid item md={6} key={param.key + index}>
-              <InputLabel id={param.key + index}>{param.title}</InputLabel>
-              <Select
-                fullWidth
-                labelId={param.key}
-                label={param.title || param.key}
-                select
-                defaultValue={param.defaultValue}
-                variant="outlined"
-                onChange={e => {
-                  setFilters(prevVal => {
-                    return {
-                      ...prevVal,
-                      [param.prefix + param.key]: e.target.value,
-                    };
-                  });
-                }}
-              >
-                {param.possibleValues.map(value => {
-                  return (
-                    <MenuItem key={value} value={value}>
-                      {value}
-                    </MenuItem>
-                  );
-                })}
-              </Select>
-            </Grid>
-          );
-        }
-
-        if (filter.type === 'string') {
-          return (
-            <Grid item md={6} key={param.key + index}>
-              <TextField
-                defaultValue={param.defaultValue}
-                onChange={e => {
-                  setFilters(prevVal => {
-                    return {
-                      ...prevVal,
-                      [param.prefix + param.key]: e.target.value,
-                    };
-                  });
-                }}
-                label={param.title || param.key}
-                fullWidth
-                variant="outlined"
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Tooltip title={param.description}>
-                        <Icon icon="mdi:info" />
-                      </Tooltip>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-          );
-        }
-
-        return null;
-      });
-    }
-  }, [config, config?.params]);
-
-  return (
-    config &&
-    FilterComponents?.length > 0 && (
-      <Accordion>
-        <AccordionSummary
-          expandIcon={<Icon icon="mdi:arrow-down" />}
-          aria-controls="panel1-content"
-          id="panel1-header"
-        >
-          Params
-        </AccordionSummary>
-        <AccordionDetails>
-          <Box p={2}>
-            <Grid container spacing={2} alignItems="center">
-              {FilterComponents}
-            </Grid>
-            <Box textAlign="right">
-              <Button
-                sx={theme => ({
-                  color: theme.palette.clusterChooser.button.color,
-                  background: theme.palette.clusterChooser.button.background,
-                  '&:hover': {
-                    background: theme.palette.clusterChooser.button.hover.background,
-                  },
-                  maxWidth: '20em',
-                  textTransform: 'none',
-                  padding: '6px 22px',
-                  margin: '10px 0',
-                })}
-                onClick={() => {
-                  props.onApplyFilters();
-                }}
-              >
-                Apply Filters
-              </Button>
-            </Box>
-          </Box>
-        </AccordionDetails>
-      </Accordion>
-    )
-  );
+// Types for better type safety and documentation
+interface FilterParam {
+  key: string;
+  title?: string;
+  prefix: string;
+  typeHint?: string;
+  valueHint?: string;
+  description?: string;
+  defaultValue?: string;
+  possibleValues?: string[];
 }
 
-function PodsInputFilter(props: {
-  setFilters: (func?: (val: any) => any) => void;
-  selectedNamespace: string;
-  podFilter: any;
-}) {
-  const [pods, error] = K8s.ResourceClasses.Pod.useList({ namespace: props.selectedNamespace });
-  const { podFilter, setFilters, selectedNamespace } = props;
-  const { prefix, key } = podFilter;
+interface GadgetFiltersProps {
+  config: {
+    params?: FilterParam[];
+  };
+  setFilters: (func: (prev: Record<string, string>) => Record<string, string>) => void;
+  filters: Record<string, string>;
+  onApplyFilters: () => void;
+  namespace?: string;
+  pod?: string;
+}
 
-  if (!prefix || !key || !selectedNamespace) {
-    return null;
+// Separate component for filter input to reduce complexity
+const FilterInput: React.FC<{
+  param: FilterParam;
+  onChange: (key: string, value: string) => void;
+}> = React.memo(({ param, onChange }) => {
+  const handleChange = useCallback(
+    (value: string) => {
+      onChange(param.prefix + param.key, value);
+    },
+    [param.prefix, param.key, onChange]
+  );
+
+  const commonProps = {
+    label: param.title || param.key,
+    variant: "outlined" as const,
+    fullWidth: true,
+  };
+
+  const infoAdornment = param.description ? (
+    <InputAdornment position="end">
+      <Tooltip title={param.description}>
+        <Icon icon="mdi:info" />
+      </Tooltip>
+    </InputAdornment>
+  ) : null;
+
+  if (!param.typeHint && !param.valueHint) {
+    return (
+      <TextField
+        {...commonProps}
+        onChange={(e) => handleChange(e.target.value)}
+        InputProps={{ endAdornment: infoAdornment }}
+      />
+    );
   }
 
-  if (error || !pods) {
-    return null;
+  const filter = FILTERS_TYPE[param.typeHint];
+  if (!filter) return null;
+
+  switch (filter.type) {
+    case 'checkbox':
+      return (
+        <FormControlLabel
+          control={
+            <Checkbox
+              defaultChecked={param.defaultValue === 'true'}
+              onChange={(e) => handleChange(String(e.target.checked))}
+            />
+          }
+          label={param.title || param.key}
+        />
+      );
+    case 'number':
+      return (
+        <TextField
+          {...commonProps}
+          type="number"
+          defaultValue={param.defaultValue}
+          onChange={(e) => handleChange(e.target.value)}
+          inputProps={{ min: filter.min, max: filter.max }}
+        />
+      );
+    case 'string':
+      return (
+        <TextField
+          {...commonProps}
+          defaultValue={param.defaultValue}
+          onChange={(e) => handleChange(e.target.value)}
+          InputProps={{ endAdornment: infoAdornment }}
+        />
+      );
+    default:
+      return null;
   }
+});
+
+// Separate component for pods filter
+const PodsFilter: React.FC<{
+  namespace: string;
+  onChange: (key: string, value: string) => void;
+  filterConfig: FilterParam;
+}> = React.memo(({ namespace, onChange, filterConfig }) => {
+  const [pods, error] = K8s.ResourceClasses.Pod.useList({ namespace });
+
+  if (error || !pods || !namespace) return null;
 
   return (
-    <Grid item md={6} key={key}>
-      <InputLabel id="pods-label">Pods</InputLabel>
+    <Grid item md={6}>
+      <InputLabel>Pods</InputLabel>
       <Select
-        labelId="pods-label"
-        label="Pods"
-        select
         fullWidth
         variant="outlined"
-        onChange={e => {
-          setFilters(prevVal => {
-            return {
-              ...prevVal,
-              [prefix + key]: e.target.value,
-            };
-          });
-        }}
+        onChange={(e) => onChange(filterConfig.prefix + filterConfig.key, e.target.value as string)}
       >
-        {pods.map(pod => {
-          return (
-            <MenuItem key={pod.metadata.name} value={pod.metadata.name}>
-              {pod.metadata.name}
-            </MenuItem>
-          );
-        })}
+        {pods.map(pod => (
+          <MenuItem key={pod.metadata.name} value={pod.metadata.name}>
+            {pod.metadata.name}
+          </MenuItem>
+        ))}
       </Select>
     </Grid>
   );
-}
+});
 
-function NamespaceFilter(props: {
-  setFilters: (func?: (val: any) => any) => any;
-  key: string;
-  param: any;
-  allNamespace: any[];
-  pod: any[];
-}) {
-  const { param, setFilters, allNamespace, pod } = props;
-  const [namespaces, error] = K8s.ResourceClasses.Namespace.useList();
-  const [selectedNamespace, setSelectedNamespace] = React.useState('');
-  if (error || !namespaces) {
-    return null;
-  }
+// Main component
+export default function GadgetFilters({
+  config,
+  setFilters,
+  namespace: initialNamespace,
+  pod: initialPod,
+  filters
+}: GadgetFiltersProps) {
+  const [selectedNamespace, setSelectedNamespace] = React.useState(initialNamespace || '');
+
+  const handleFilterChange = useCallback((key: string, value: string) => {
+    if(!value) {
+      setFilters(prev => {
+        const newFilters = { ...prev };
+        delete newFilters[key];
+        return newFilters;
+      });
+      return;
+    }
+    setFilters(prev => ({ ...prev, [key]: value }));
+  }, [setFilters]);
+
+  const uniqueParams = useMemo(() => 
+    config?.params ? removeDuplicates(config.params) : [],
+    [config?.params]
+  );
+
+  const namespaceParam = useMemo(() => 
+    uniqueParams.find(p => p.valueHint?.includes('namespace')),
+    [uniqueParams]
+  );
+
+  const allNamespacesParam = useMemo(() => 
+    uniqueParams.find(p => p.key === 'all-namespaces'),
+    [uniqueParams]
+  );
+
+  const podParam = useMemo(() => 
+    uniqueParams.find(p => p.key === 'podname'),
+    [uniqueParams]
+  );
+
+  // Set initial values for namespace and pod if provided
+  React.useEffect(() => {
+    if (initialNamespace && initialPod && namespaceParam && allNamespacesParam && podParam) {
+      setSelectedNamespace(initialNamespace);
+      handleFilterChange(allNamespacesParam.prefix + allNamespacesParam.key, 'false');
+      handleFilterChange(namespaceParam.prefix + namespaceParam.key, initialNamespace);
+      handleFilterChange(podParam.prefix + podParam.key, initialPod);
+    }
+  }, [initialNamespace, initialPod, namespaceParam, allNamespacesParam, podParam]);
+
+  const filterComponents = useMemo(() => 
+    uniqueParams.map((param, index) => {
+      // Skip namespace-related params as they're handled separately
+      if (param.key === 'all-namespaces' || param?.valueHint?.includes('namespace')) {
+        return null;
+      }
+      if (param.key === 'annotation' || param.key === 'annotate') {
+        return (
+          <Grid item xs={12} key={param.key + index}>
+            <AnnotationFilter 
+              param={param} 
+              setFilters={setFilters} 
+              filters={filters} 
+              // @ts-ignore
+              dataSources={config.dataSources} 
+            />
+          </Grid>
+        );
+      }
+
+      if (param.key === 'sort' || param.key === 'sorting') {
+        return (
+          <Grid item xs={4} key={param.key + index}>
+          <SortingFilter
+            param={param}
+            config={{
+              get: () => config[param.prefix + param.key],
+              set: (value) => handleFilterChange(param.prefix + param.key, value)
+            }}
+            gadgetConfig={config}
+          />
+          </Grid>
+        );
+      }
+      if (param.typeHint === 'bool') {
+        return <Grid item xs={4}>
+          <CheckboxFilter param={param} config={{
+          get: () => config[param.prefix + param.key],
+          set: (value) => handleFilterChange(param.prefix + param.key, value)
+        }} /></Grid>;
+      }
+
+      if (param.key === 'filter' || param.typeHint === 'filter') {
+        return (
+          <Grid item xs={12} key={param.key + index}>
+          <FilterComponent
+            param={param}
+            config={{
+              get: () => filters[param.prefix + param.key],
+              set: (value) => handleFilterChange(param.prefix + param.key, value)
+            }}
+            gadgetConfig={config}
+          />
+          </Grid>
+        );
+      }
+
+      if (param.possibleValues && param.possibleValues.length > 0) {
+        return (
+          <Grid item md={6} key={param.key + index}>
+          <SelectFilter
+            param={param}
+            config={{
+              get: () => filters[param.prefix + param.key],
+              set: (value) => handleFilterChange(param.prefix + param.key, value)
+            }}
+          />
+          </Grid>
+        );
+      }
+
+      return (
+        <Grid item md={6} key={param.key + index}>
+          <FilterInput param={param} onChange={handleFilterChange} />
+        </Grid>
+      );
+    }),
+    [uniqueParams, handleFilterChange]
+  );
+
+  if (!config || !filterComponents.length) return null;
+
   return (
-    <>
-      {selectedNamespace && pod && selectedNamespace !== 'all-namespaces' && (
-        <PodsInputFilter
-          podFilter={pod[0]}
-          selectedNamespace={selectedNamespace}
-          setFilters={setFilters}
-        />
-      )}
-      <Grid item md={6}>
-        <InputLabel id="namespace-label">Namespace</InputLabel>
-        <Select
-          labelId="namespace-label"
-          label="Namespace"
-          select
-          fullWidth
-          variant="outlined"
-          onChange={e => {
-            setSelectedNamespace(e.target.value as string);
-            if (e.target.value === 'all-namespaces') {
-              setFilters(prevVal => {
-                return {
-                  ...prevVal,
-                  [allNamespace[0].prefix + allNamespace[0].key]: 'true',
-                };
-              });
-              return;
-            } else {
-              setFilters(prevVal => {
-                return {
-                  ...prevVal,
-                  [allNamespace[0].prefix + allNamespace[0].key]: 'false',
-                  [param.prefix + param.key]: e.target.value,
-                };
-              });
-            }
-          }}
-        >
-          {allNamespace?.map(param => {
-            return (
-              <MenuItem key={param.key} value={param.key}>
-                All Namespaces
-              </MenuItem>
-            );
-          })}
-          {namespaces.map(namespace => {
-            return (
-              <MenuItem key={namespace.metadata.name} value={namespace.metadata.name}>
-                {namespace.metadata.name}
-              </MenuItem>
-            );
-          })}
-        </Select>
+    <Box p={2}>
+      <Grid container spacing={2} alignItems="center">
+        {namespaceParam && !initialNamespace && (
+          <>
+            <Grid item md={6}>
+              <InputLabel>Namespace</InputLabel>
+              <Select
+                fullWidth
+                variant="outlined"
+                value={selectedNamespace}
+                onChange={(e) => {
+                  const newNamespace = e.target.value as string;
+                  setSelectedNamespace(newNamespace);
+                  if (newNamespace === 'all-namespaces') {
+                    handleFilterChange(allNamespacesParam.prefix + allNamespacesParam.key, 'true');
+                  } else {
+                    handleFilterChange(allNamespacesParam.prefix + allNamespacesParam.key, 'false');
+                    handleFilterChange(namespaceParam.prefix + namespaceParam.key, newNamespace);
+                  }
+                }}
+              >
+                {allNamespacesParam && (
+                  <MenuItem value="all-namespaces">All Namespaces</MenuItem>
+                )}
+                {K8s.ResourceClasses.Namespace.useList()[0]?.map(ns => (
+                  <MenuItem key={ns.metadata.name} value={ns.metadata.name}>
+                    {ns.metadata.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </Grid>
+            {!initialPod && selectedNamespace && podParam && selectedNamespace !== 'all-namespaces' && (
+              <PodsFilter
+                namespace={selectedNamespace}
+                onChange={handleFilterChange}
+                filterConfig={podParam}
+              />
+            )}
+          </>
+        )}
+        {filterComponents}
       </Grid>
-    </>
+    </Box>
   );
 }

@@ -1,109 +1,305 @@
 import './wasm.js';
 import { stream } from '@kinvolk/headlamp-plugin/lib/ApiProxy';
 import pako from 'pako';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
-// @ts-ignore
-const go = new window.Go();
+interface GadgetInfo {
+  name: string;
+  version: string;
+  description?: string;
+  // Add other gadget info properties as needed
+}
 
-let igPromise;
+interface GadgetParams {
+  version: number;
+  imageName: string;
+  // Add other common parameters as needed
+}
 
-async function getIG() {
+interface CreateGadgetParams extends GadgetParams {
+  // Additional parameters specific to creation
+  name?: string;
+  options?: Record<string, unknown>;
+}
+
+interface RunGadgetCallbacks {
+  onDone: () => void;
+  onError: (error: Error) => void;
+  onGadgetInfo: (info: GadgetInfo) => void;
+  onData: (dsID: string, data: unknown) => void;
+  onReady: () => void;
+}
+interface RunGadgetParams extends GadgetParams {
+  instanceId?: string;
+  options?: Record<string, unknown>;
+  paramValues: any;
+}
+
+// Type definitions
+export interface IGConnection {
+  getGadgetInfo: (params: any, onSuccess: (info: any) => void, onError: (error: Error) => void) => void;
+  createGadgetInstance: (params, onSuccess: (instance: any) => void, onError: (error: Error) => void) => void;
+  listGadgetInstances: (onSuccess: (instances: any[]) => void, onError: (error: Error) => void) => void;
+  deleteGadgetInstance: (id: string, onSuccess: () => void, onError: (error: Error) => void) => void;
+  attachGadgetInstance: ({...params}, {...RunGadgetCallbacks}) => void
+  runGadget: (
+    params: RunGadgetParams,
+    callbacks: RunGadgetCallbacks,
+    onSetupError: (error: Error) => void
+  ) => void;
+  // Add other IG methods as needed
+}
+
+interface PortForwardState {
+  ig: IGConnection | null;
+  isConnected: boolean;
+  error?: Error;
+}
+
+interface StreamRef {
+  cancel: () => void;
+  getSocket: () => WebSocket | null;
+}
+
+interface WebSocketWrapperOptions {
+  onReady: () => void;
+  onError: (error: Error) => void;
+  onClose: () => void;
+}
+
+// WebAssembly initialization
+let igPromise: Promise<WebAssembly.WebAssemblyInstantiatedSource> | null = null;
+const go = new (window as any).Go();
+
+/**
+ * Initializes and returns the WebAssembly instance
+ * Implements singleton pattern to ensure only one instance is created
+ */
+async function getIG(): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
   if (!igPromise) {
-    const response = await fetch('/plugins/headlamp-ig/main.wasm.gz');
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
+    try {
+      const response = await fetch('/plugins/headlamp-ig/main.wasm.gz');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch WASM: ${response.statusText}`);
+      }
+
+      const gzippedData = await response.arrayBuffer();
+      const decompressedData = pako.inflate(gzippedData);
+      const wasmResponse = new Response(decompressedData);
+      
+      igPromise = wasmResponse
+        .arrayBuffer()
+        .then(buffer => WebAssembly.instantiate(buffer, go.importObject))
+        .then(result => {
+          go.run(result.instance).then(() => {
+            // console.log('WebAssembly instance initialized successfully');
+            console.error('Something went wrong while running the WebAssembly instance');
+          }).catch((err) => {
+            console.error('Error running WebAssembly instance:', err);
+          });
+          return result;
+        })
+        .catch(error => {
+          igPromise = null;
+          throw error;
+        });
+    } catch (error) {
+      console.error('Failed to initialize WebAssembly:', error);
+      igPromise = null;
+      throw error;
     }
-
-    // Step 2: Read the file as ArrayBuffer
-    const gzippedData = await response.arrayBuffer();
-
-    // Step 3: Decompress the gzipped data using pako
-    const decompressedData = pako.inflate(gzippedData);
-
-    // Step 4: Create a Response object from the decompressed data (for WebAssembly)
-    const wasmResponse = new Response(decompressedData);
-
-    // Step 5: Instantiate the WASM module using the Response object
-    igPromise = wasmResponse
-      .arrayBuffer()
-      .then(buffer => WebAssembly.instantiate(buffer, go.importObject))
-      .then(result => {
-        go.run(result.instance);
-        return result; // Return the instantiated result
-      });
   }
   return igPromise;
 }
 
-const usePortForward = url => {
-  const [isConnected, setIsConnected] = useState({});
-  const streamRef = useRef({});
-  const [ws, setWs] = useState({});
-  const [ig, setIg] = useState({});
+/**
+ * Custom hook for handling port forwarding connections
+ * @param url - The URL to connect to, can be null if no connection is needed
+ * @returns PortForwardState object containing connection status and IG instance
+ */
+const usePortForward = (url: string | null): PortForwardState => {
+  // State for tracking connection status and IG instance
+  const [state, setState] = useState<PortForwardState>({
+    ig: null,
+    isConnected: false
+  });
+  
+  // Refs for tracking active connections and component mounted status
+  const streamRef = useRef<Record<string, StreamRef>>({});
+  const socketRef = useRef<Record<string, WebSocket>>({});
+  const mountedRef = useRef(true);
 
-  async function prepareSocket(url) {
-    return new Promise(resolve => {
-      const intervalID = setInterval(() => {
-        const socket = streamRef.current[url]?.getSocket();
+  /**
+   * Cleans up resources for a specific URL
+   */
+  const cleanup = useCallback((targetUrl: string) => {
+    // Close and cleanup WebSocket
+    if (socketRef.current[targetUrl]) {
+      socketRef.current[targetUrl].close();
+      delete socketRef.current[targetUrl];
+    }
+    
+    // Cancel and cleanup stream
+    if (streamRef.current[targetUrl]) {
+      streamRef.current[targetUrl].cancel();
+      delete streamRef.current[targetUrl];
+    }
+    
+    // Update state if component is still mounted
+    if (mountedRef.current) {
+      setState(prev => ({
+        ...prev,
+        isConnected: false,
+        ig: null,
+        error: undefined
+      }));
+    }
+  }, []);
 
+  /**
+   * Prepares WebSocket connection with timeout
+   */
+  const prepareSocket = useCallback(async (targetUrl: string): Promise<WebSocket> => {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error('Socket connection timeout after 10 seconds'));
+      }, 10000); // 10 second timeout
+
+      const checkSocket = () => {
+        const socket = streamRef.current[targetUrl]?.getSocket();
         if (socket) {
-          clearInterval(intervalID);
+          clearTimeout(timeoutId);
           resolve(socket);
+        } else if (mountedRef.current) {
+          setTimeout(checkSocket, 100);
+        } else {
+          clearTimeout(timeoutId);
+          reject(new Error('Component unmounted while waiting for socket'));
         }
-      }, 0);
+      };
+
+      checkSocket();
     });
-  }
+  }, []);
 
+  /**
+   * Handle component mounting/unmounting
+   */
   useEffect(() => {
+    mountedRef.current = true;
+    
     return () => {
-      Object.values(ws).forEach(socket => {
-        if (socket) {
-          // @ts-ignore
-          socket.close();
-        }
-      });
+      mountedRef.current = false;
+      // Cleanup all connections on unmount
+      Object.keys(socketRef.current).forEach(cleanup);
     };
-  }, [ws]);
+  }, [cleanup]);
 
+  /**
+   * Main connection effect
+   */
   useEffect(() => {
-    if (!url) return;
+    if (!url) {
+      // Reset state when url is null and cleanup any existing connections
+      setState({
+        ig: null,
+        isConnected: false,
+        error: undefined
+      });
+      Object.keys(socketRef.current).forEach(cleanup);
+      return;
+    }
 
-    // @ts-ignore
-    getIG().then(result => {
-      console.log('IG is', result);
-      (async function () {
+    let isCurrentRequest = true;
+
+    const initConnection = async () => {
+      try {
+        const result = await getIG();
+        
+        if (!isCurrentRequest || !mountedRef.current) {
+          return;
+        }
+
         const additionalProtocols = [
           'v4.channel.k8s.io',
           'v3.channel.k8s.io',
           'v2.channel.k8s.io',
           'channel.k8s.io',
         ];
+
+        // Initialize stream
         streamRef.current[url] = await stream(url, () => {}, { additionalProtocols });
-
+        
+        // Get socket with timeout
         const socket = await prepareSocket(url);
-        setWs(prevWs => ({ ...prevWs, [url]: socket }));
+        if (!isCurrentRequest || !mountedRef.current) {
+          socket.close();
+          return;
+        }
 
-        // @ts-ignore
-        const igConnection = wrapWebSocket(socket, {
+        socketRef.current[url] = socket;
+
+        // Initialize IG connection
+        const igConnection = (window as any).wrapWebSocket(socket, {
           onReady: () => {
-            setIsConnected(prevState => ({ ...prevState, [url]: true }));
-            setIg(prevIg => ({ ...prevIg, [url]: igConnection }));
+            if (isCurrentRequest && mountedRef.current) {
+              setState({
+                ig: igConnection,
+                isConnected: true,
+                error: undefined
+              });
+            }
           },
-          onError: error => {
-            console.error(`IG for ${url} error`, error);
+          onError: (error: Error) => {
+            console.error(`IG connection error for ${url}:`, error);
+            if (mountedRef.current) {
+              setState(prev => ({
+                ...prev,
+                error,
+                isConnected: false,
+                ig: null
+              }));
+            }
+            cleanup(url);
           },
+          onClose: () => {
+            if (mountedRef.current) {
+              setState(prev => ({
+                ...prev,
+                isConnected: false,
+                ig: null,
+                error: new Error('Connection closed')
+              }));
+              cleanup(url);
+            }
+          }
         });
-      })();
 
-      return () => {
-        streamRef.current[url].cancel();
-        delete streamRef.current[url];
-      };
-    });
-  }, [url]);
+      } catch (error) {
+        console.error('Failed to initialize connection:', error);
+        if (mountedRef.current) {
+          setState(prev => ({
+            ...prev,
+            error: error instanceof Error ? error : new Error(String(error)),
+            isConnected: false,
+            ig: null
+          }));
+        }
+        cleanup(url);
+      }
+    };
 
-  return { ig: ig[url], isConnected: isConnected[url] };
+    // Start connection
+    initConnection();
+
+    // Cleanup on url change or unmount
+    return () => {
+      isCurrentRequest = false;
+      cleanup(url);
+    };
+  }, [url, cleanup, prepareSocket]);
+
+  return state;
 };
 
 export default usePortForward;

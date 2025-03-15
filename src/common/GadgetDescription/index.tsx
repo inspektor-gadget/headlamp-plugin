@@ -3,24 +3,11 @@ import { ConfirmDialog } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { getCluster, getClusterPrefixedPath } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Box, IconButton } from '@mui/material';
 import { useContext, useState } from 'react';
-import { generatePath, useHistory, useParams } from 'react-router-dom';
-import { DefaultGadgets } from '../../gadgets/default_gadgets';
+import { generatePath, useHistory, useParams } from 'react-router';
 import { GadgetContext } from '../GadgetContext';
 import { prepareGadgetInstance } from '../helpers';
 
-function prepareGadgetDescription() {
-  // also search in local storage if we have a gadget with this name if yes give it's description
-  const localGadgets = JSON.parse(localStorage.getItem('headlamp_ig_gadgets') || '[]');
-  const { imageName } = useParams<{ imageName: string }>();
-  const decodedImageName = decodeURIComponent(imageName || '');
-  const localGadget = localGadgets.find(
-    (gadget: { name: string }) => gadget.name === decodedImageName
-  );
-  if (localGadget) {
-    return localGadget.description;
-  }
-  return DefaultGadgets.find(gadget => gadget.name === decodedImageName)?.description || '';
-}
+
 
 export function GadgetDescription({ onInstanceDelete, instance: gInstance }) {
   const { gadgetConn } = useContext(GadgetContext);
@@ -42,7 +29,6 @@ export function GadgetDescription({ onInstanceDelete, instance: gInstance }) {
         description="Are you sure you want to delete the selected instances?"
         onConfirm={() => {
           const id = gadgetInstance?.id || gInstance?.id;
-          console.log(id);
           if (id) {
             gadgetConn.deleteGadgetInstance(id, () => {
               if (instance) {
@@ -65,21 +51,6 @@ export function GadgetDescription({ onInstanceDelete, instance: gInstance }) {
         <Box ml={2} height="3.5rem">
           <h2>{decodedImageName}</h2>
         </Box>
-        {(gadgetInstance || gInstance) && (
-          <Box
-            mt={2}
-            onClick={() => {
-              setDeleteDialog(true);
-            }}
-          >
-            <IconButton>
-              <Icon icon="mdi:bin" />
-            </IconButton>
-          </Box>
-        )}
-      </Box>
-      <Box ml={2} mb={2}>
-        {prepareGadgetDescription()}
       </Box>
     </>
   );

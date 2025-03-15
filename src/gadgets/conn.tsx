@@ -1,68 +1,101 @@
 import React from 'react';
 import { useParams } from 'react-router';
 import { isIGPod } from './helper';
-import usePortForward from './igSocket';
+import usePortForward, { IGConnection } from './igSocket';
+import { GadgetContext } from '../common/GadgetContext';
 
-function gadgetConn(nodes, pods) {
-  const node = nodes[0];
-  const pod = pods.find(pod => {
-    return pod.jsonData.spec.nodeName === node.jsonData.metadata.name && isIGPod(pod.jsonData);
-  });
-  const { ig, isConnected } = usePortForward(
-    `api/v1/namespaces/gadget/pods/${pod?.jsonData.metadata.name}/portforward?ports=8080`
-  );
-  if (!isConnected) {
-    return null;
-  }
-  return ig;
+export function useGadgetConn(nodes: any | any[] | null, pods: any[] | null) {
+  // Always declare state hooks at the top level
+  const [portForwardUrl, setPortForwardUrl] = React.useState<string | null>(null);
+  // Update URL in effect to avoid conditional hook calls
+  React.useEffect(() => {
+    if (!nodes || !pods || nodes.length === 0) {
+      setPortForwardUrl(null);
+      return;
+    }
+    let pod
+    // if nodes is not array 
+    if (!Array.isArray(nodes)) {
+       pod = pods.find(pod => pod.jsonData.spec.nodeName === nodes && isIGPod(pod.jsonData));
+    } else {
+      pod = pods.find(pod => 
+        pod.jsonData.spec.nodeName === nodes[0]?.jsonData.metadata.name && 
+        isIGPod(pod.jsonData)
+      );
+    }
+    const url = pod && isIGInstalled(pods) 
+      ? `api/v1/namespaces/gadget/pods/${pod.jsonData.metadata.name}/portforward?ports=8080` 
+      : null;
+    setPortForwardUrl(url);
+  }, [nodes, pods]);
+
+  // Always call usePortForward with the state value
+  const { ig, isConnected } = usePortForward(portForwardUrl);
+  return isConnected ? ig : null;
 }
 
-export function isIGInstalled(pods) {
-  if (pods === null) {
-    return null;
+export function isIGInstalled(pods: any[] | null) {
+  if (!pods) {
+    return false;
   }
   return pods.some(pod => isIGPod(pod.jsonData));
 }
 
-export function GadgetConnectionForBackgroundRunningProcess(props: {
+// RunningGadgetsForResource.tsx
+interface Props {
   nodes: any[];
   pods: any[];
   callback: (ig: any) => void;
   prepareGadgetInfo: (info: any) => void;
   setIsGadgetInfoFetched?: (isGadgetInfoFetched: boolean) => void;
-}) {
-  const { nodes, pods, callback, prepareGadgetInfo, setIsGadgetInfoFetched } = props;
+}
+
+export function GadgetConnectionForBackgroundRunningProcess({
+  nodes,
+  pods,
+  callback,
+  prepareGadgetInfo,
+  setIsGadgetInfoFetched
+}: Props) {
+  // Always declare all hooks at the top level
+  const [decodedImageName, setDecodedImageName] = React.useState<string>('');
   const { imageName } = useParams<{ imageName: string }>();
-  const decodedImageName = decodeURIComponent(imageName);
-  let ig = gadgetConn(nodes, pods);
+  const ig = useGadgetConn(nodes, pods);
 
-  if (nodes && pods) {
-    ig = gadgetConn(nodes, pods);
-  }
-
+  // Handle URL decoding in effect
   React.useEffect(() => {
-    if (ig && prepareGadgetInfo) {
-      ig.getGadgetInfo(
-        {
-          version: 1,
-          imageName: `${decodedImageName}`,
-        },
-        info => {
-          prepareGadgetInfo(info);
-          setIsGadgetInfoFetched(true);
-        },
-        err => {
-          console.error(err);
-        }
-      );
+    if (imageName) {
+      setDecodedImageName(decodeURIComponent(imageName));
     }
-  }, [ig]);
+  }, [imageName]);
 
+  // Handle gadget info fetching
+  React.useEffect(() => {
+    if (!ig || !prepareGadgetInfo || !decodedImageName) {
+      return;
+    }
+
+    ig.getGadgetInfo(
+      {
+        version: 1,
+        imageName: decodedImageName,
+      },
+      (info: any) => {
+        prepareGadgetInfo(info);
+        setIsGadgetInfoFetched?.(true);
+      },
+      (err: Error) => {
+        console.error('Failed to get gadget info:', err);
+      }
+    );
+  }, [ig, decodedImageName, prepareGadgetInfo, setIsGadgetInfoFetched]);
+
+  // Handle callback
   React.useEffect(() => {
     if (ig) {
       callback(ig);
     }
-  }, [ig]);
+  }, [ig, callback]);
 
   return null;
 }
