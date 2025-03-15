@@ -67,12 +67,13 @@ export function NodeSelection(props: NodeSelectionProps) {
   const [pods] = K8s.ResourceClasses.Pod.useList() as [Pod[]];
   const [finalNodes, setFinalNodes] = useState<Node[]>(null);
   const { setPodsSelected, nodesSelected, setNodesSelected, gadgetConn, gadgetInstance, isInstantRun } = props;
-  const { instance } = useParams<{ instance: string }>();
+  const { id, imageName } = useParams<{ id: string, imageName: string }>();
   const [loading, setLoading] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [selectionDisabled, setSelectionDisabled] = useState(false);
   const history = useHistory();
   const cluster = getCluster();
+
 
   // Set all nodes when nodesSelected is empty and nodes are available
   useEffect(() => {
@@ -191,35 +192,17 @@ export function NodeSelection(props: NodeSelectionProps) {
         title="Delete Instances"
         description="Are you sure you want to delete the selected instances?"
         onConfirm={() => {
-          gadgetConn.deleteGadgetInstance(gadgetInstance.id, () => {
-            if (instance) {
-              history.replace(
-                `${generatePath(getClusterPrefixedPath(), {
-                  cluster: cluster,
-                })}/gadgets/background`
-              );
-              return;
-            }
-          });
+          
         }}
         handleClose={() => {
           setDeleteDialog(false);
         }}
       />
-      <SectionBox
-        title={
-          <>
-            {gadgetInstance && (
-              <GadgetDescription onInstanceDelete={() => {}} instance={gadgetInstance} />
-            )}
-          </>
-        }
-        backLink={Boolean(gadgetInstance)}
-      >
+     
         {gadgetInstance ? (
           <Box>Select a node you want to get result from</Box>
         ) : (
-          <Box>{selectionDisabled && !isInstantRun ? 'Running on all nodes' : 'Select a node you want to run the gadget on'}</Box>
+          <Box>{!isInstantRun ? 'Running on all nodes' : 'Select a node you want to run the gadget on'}</Box>
         )}
         <Box display="flex" my={2} width="100%">
           <FormControl fullWidth>
@@ -240,34 +223,33 @@ export function NodeSelection(props: NodeSelectionProps) {
               onChange={handleChange}
               input={<OutlinedInput label="Nodes" />}
               renderValue={(selected) => {
-                return selectionDisabled && !isInstantRun ? 'All nodes selected' : selected.join(', ');
+                return !isInstantRun ? 'All nodes selected' : selected.join(', ');
               }}
               MenuProps={MenuProps}
               fullWidth
-              disabled={selectionDisabled && !isInstantRun}
+              disabled={!isInstantRun}
             >
               {finalNodes.map(node => (
                 <MenuItem 
                   key={node.metadata.uid} 
                   value={node.metadata.name}
-                  disabled={selectionDisabled && !isInstantRun}
+                  disabled={!isInstantRun}
                 >
                   <Checkbox 
                     checked={nodesSelected.indexOf(node.metadata.name) > -1} 
-                    disabled={selectionDisabled && !isInstantRun}
+                    disabled={!isInstantRun}
                   />
                   <ListItemText primary={node.metadata.name} />
                 </MenuItem>
               ))}
             </Select>
-            {selectionDisabled && !isInstantRun && (
+            {!isInstantRun && (
               <Typography variant="caption" color="textSecondary" style={{ marginTop: '4px' }}>
                 All nodes are automatically selected and cannot be changed
               </Typography>
             )}
           </FormControl>
         </Box>
-      </SectionBox>
     </>
   );
 }

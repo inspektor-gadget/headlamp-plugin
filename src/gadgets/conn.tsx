@@ -36,7 +36,7 @@ export function useGadgetConn(nodes: any | any[] | null, pods: any[] | null) {
 
 export function isIGInstalled(pods: any[] | null) {
   if (!pods) {
-    return false;
+    return null;
   }
   return pods.some(pod => isIGPod(pod.jsonData));
 }

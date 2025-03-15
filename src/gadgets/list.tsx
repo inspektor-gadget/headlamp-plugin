@@ -15,7 +15,9 @@ export default function GadgetList() {
   const isIGInstallationFound = isIGInstalled(pods);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
 
-
+  if (pods === null) {
+    return <Loader />;
+  }
   if (isIGInstallationFound === null) {
     return <Loader />;
   }

@@ -13,6 +13,7 @@ import { EmptyContent, SectionBox } from '@kinvolk/headlamp-plugin/lib/component
 import { DetailsViewSectionProps } from '@kinvolk/headlamp-plugin/lib/components/DetailsViewSection/DetailsViewSection';
 import { useState } from 'react';
 import RunningGadgetsForResource from './gadgets/resourcegadgets';
+import { GadgetDetails } from './gadgets/gadgetDetails';
 
 
 addIcon('custom-icon:ig', {
@@ -38,8 +39,8 @@ registerRoute({
 });
 
 registerRoute({
-  path: '/gadgets/:imageName',
-  component: Gadget,
+  path: '/gadgets/:imageName/:id',
+  component: GadgetDetails,
   exact: true,
   sidebar: 'gadgets',
   name: 'gadgets',

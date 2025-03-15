@@ -25,11 +25,14 @@ import {
 } from '@mui/material';
 import { Icon } from '@iconify/react';
 import { Loader, Link as RouterLink } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import K8s, { cluster } from '@kinvolk/headlamp-plugin/lib/K8s';
 import { GadgetBackgroundInstanceForm } from '../common/gadgetbackgroundinstanceform';
 import { useEffect, useState } from 'react';
+import { useHistory, generatePath } from 'react-router-dom';
 import GadgetFilters from './gadgetFilters';
 import { useGadgetConn } from './conn';
+import { generateRandomString } from '../common/helpers';
+import { getClusterPrefixedPath, getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 
 // ... (keep existing imports)
 
@@ -210,6 +213,7 @@ export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resou
 
 
 const GadgetCard = ({ gadget, enableEmbed = false, callbackRunGadget, onEmbedClick, resource=null}) => {
+  const history = useHistory();
   return (<>
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 3 }}>
@@ -261,7 +265,7 @@ const GadgetCard = ({ gadget, enableEmbed = false, callbackRunGadget, onEmbedCli
 
         <Box mt="auto">
           <Box display="flex" justifyContent="flex-center" alignItems="center" gap={2}>
-            {enableEmbed && (
+            {/* {enableEmbed && (
               <Button
                 variant="outlined"
                 size="small"
@@ -272,26 +276,58 @@ const GadgetCard = ({ gadget, enableEmbed = false, callbackRunGadget, onEmbedCli
               >
                 Embed
               </Button>
-            )}
-            <Button onClick={() => {
-              // if we a resource called this then we know that this is meant to be embedded
-              if(resource) {
-                onEmbedClick(gadget);
-                return;
-              }
-              const row = {
-                id: 'random'+Math.random().toString(36).substr(2, 9)+gadget.display_name?.split(' ').join('_'),
-                isHeadless: false,
-                gadgetConfig: {
-                  imageName: gadget.display_name?.split(' ').join('_'),
-                  version: 1,
-                  paramValues: {}
+            )} */}
+            {
+              !resource ? <>
+                <Button onClick={() => {
+                  const row = {
+                    id: gadget.display_name?.split(' ').join('_') + '-custom-'+ generateRandomString(),
+                    isHeadless: false,
+                    name: gadget.display_name?.split(' ').join('_') + '-custom-'+ generateRandomString(),
+                    gadgetConfig: {
+                      imageName: gadget.display_name?.split(' ').join('_'),
+                      version: 1,
+                      paramValues: {}
+                    },
+                    description: gadget.description,
+                    cluster: getCluster(),
+                  }
+                  // callbackRunGadget(row);
+                  const runningInstances = JSON.parse(localStorage.getItem('headlamp_gadget_foreground_running_instances') || '[]');
+                  runningInstances.push(row);
+                  localStorage.setItem('headlamp_gadget_foreground_running_instances', JSON.stringify(runningInstances));
+                  history.push({
+                    pathname: generatePath(getClusterPrefixedPath(`/gadgets/${gadget.display_name?.split(' ').join('_')}/${row.id}`), { cluster: getCluster() as string }),
+                  })
+                }} variant="contained" size="small" endIcon={<Icon icon="mdi:plus" />}>
+                  Add
+                </Button>
+              </> : <Button onClick={() => {
+                // if we a resource called this then we know that this is meant to be embedded
+                if(resource) {
+                  onEmbedClick(gadget);
+                  return;
                 }
-              }
-              callbackRunGadget(row);
-              }} variant="contained" size="small" endIcon={<Icon icon="mdi:play" />}>
-              Run
-            </Button>
+                const row = {
+                  id: gadget.display_name?.split(' ').join('_') + '-custom-'+ generateRandomString(),
+                  isHeadless: false,
+                  name: gadget.display_name?.split(' ').join('_') + '-custom-'+ generateRandomString(),
+                  gadgetConfig: {
+                    imageName: gadget.display_name?.split(' ').join('_'),
+                    version: 1,
+                    paramValues: {}
+                  },
+                  description: gadget.description,
+                }
+                const runningInstances = JSON.parse(localStorage.getItem('headlamp_gadget_foreground_running_instances') || '[]');
+                runningInstances.push(row);
+                console.log('runningInstances', runningInstances);
+                localStorage.setItem('headlamp_gadget_foreground_running_instances', JSON.stringify(runningInstances));
+                callbackRunGadget(row);
+                }} variant="contained" size="small" endIcon={<Icon icon="mdi:play" />}>
+                Run
+              </Button>
+            }
           </Box>
         </Box>
       </CardContent>

@@ -20,6 +20,7 @@ import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import { Icon } from '@iconify/react';
 import { useGadgetConn } from '../gadgets/conn';
 import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
+import { generateRandomString } from './helpers';
 
 interface InstanceConfig {
   name: string;
@@ -65,6 +66,7 @@ function getNodeNameFromResource(resource: any) {
   }
   return '';
 }
+
 export function GadgetBackgroundInstanceForm({
   onClose,
   filters,
@@ -76,22 +78,36 @@ export function GadgetBackgroundInstanceForm({
   selectedView = 'Pod',
   config,
 }: BackgroundInstanceFormProps) {
-  const [instanceConfig, setInstanceConfig] = useState<InstanceConfig>({
-    name: '',
-    tags: [],
-    nodes: [],
-    runInBackground: false,
-  });
   const { enqueueSnackbar } = useSnackbar();
   const { imageName } = useParams<{ imageName: string }>();
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const ig = useGadgetConn(nodes, pods);
   const cluster = getCluster();
+  
+  // Generate default name using imageName with a random string
+  const getDefaultName = () => {
+    const imgName = image || imageName || 'gadget';
+    return `${imgName}-custom-${generateRandomString()}`;
+  };
+  
+  const [instanceConfig, setInstanceConfig] = useState<InstanceConfig>({
+    name: getDefaultName(),
+    tags: [],
+    nodes: [],
+    runInBackground: false,
+  });
     
   useEffect(() => {
     setInstanceConfig(prev => ({ ...prev, nodes: nodesSelected }));
   }, [nodesSelected]);
+  
+  // Update name if image changes
+  useEffect(() => {
+    if (!instanceConfig.name || instanceConfig.name === '') {
+      setInstanceConfig(prev => ({ ...prev, name: getDefaultName() }));
+    }
+  }, [image, imageName]);
 
   function handleNodesChange(event: React.ChangeEvent<{ value: unknown }>) {
     const value = event.target.value as string[];
@@ -241,8 +257,6 @@ export function GadgetBackgroundInstanceForm({
           </Tooltip>
           </Box>
         </Box>}
-        // show a info icon
-       
       />
       {/* @todo: Enable selecting a node when embeding an instance */}
       {/* {nodes && (showNodesSelector || !resource) && (

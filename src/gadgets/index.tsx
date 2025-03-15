@@ -1,16 +1,11 @@
 import './wasm.js';
 import { Icon } from '@iconify/react';
-import { Loader, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { ActionButton, Loader, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import { Box, IconButton, Tab, Tabs, Modal, Paper, Typography } from '@mui/material';
 import { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { GadgetContext, useGadgetState } from '../common/GadgetContext';
-import { GadgetDescription } from '../common/GadgetDescription';
-import { GadgetWithDataSource } from '../common/GadgetWithDataSource';
-import GenericGadgetRenderer from '../common/GenericGadgetRenderer';
-import { prepareGadgetInstance } from '../common/helpers';
-import { NodeSelection } from '../common/NodeSelection';
 import { BackgroundRunning } from './backgroundgadgets';
 import {  useGadgetConn } from './conn';
 import { GadgetCardEmbedWrapper, GadgetGrid } from './gadgetGrid';
@@ -24,10 +19,7 @@ function GadgetRendererWithTabs() {
   }>();
   imageName = decodeURIComponent(imageName);
   const gadgetState = useGadgetState();
-  const [nodes] = K8s.ResourceClasses.Node.useList();
-  const [pods] = K8s.ResourceClasses.Pod.useList();
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
-  const gadgetInstance = prepareGadgetInstance(version, instance, imageName);
   const [gadgets, setGadgets] = useState([]);
   const [selectedGadget, setSelectedGadget] = useState(null);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
@@ -77,16 +69,9 @@ function GadgetRendererWithTabs() {
     }
   };
 
-  if (gadgetInstance) {
-    return (
-      <GadgetContext.Provider value={{ ...gadgetState, gadgetInstance }}>
-        <GadgetRenderer nodes={nodes} pods={pods} onGadgetInstanceCreation={() => {}} imageName={''} />
-      </GadgetContext.Provider>
-    );
-  }
-
+  console.log("dynamicTabs", dynamicTabs);
   return (
-    <GadgetContext.Provider value={{ ...gadgetState, gadgetInstance }}>
+    <GadgetContext.Provider value={{ ...gadgetState }}>
       <SectionBox title={
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Box>
@@ -95,64 +80,19 @@ function GadgetRendererWithTabs() {
           </Typography>
           </Box>
           <Box>
-          <IconButton
-            size="medium"
-            onClick={() => setOpenConfirmDialog(true)}
-            sx={{ ml: 0.2 }}
-          >
-            <Icon icon="mdi:plus" />
-          </IconButton>
+         
+          <ActionButton
+        color="primary"
+        description={'Add Gadget'}
+        icon={'mdi:plus-circle'}
+        onClick={() => {
+          setOpenConfirmDialog(true)
+        }}
+      />
           </Box>
         </Box>
       }>
         <Box sx={{ width: '100%', typography: 'body1' }}>
-          <GadgetDescription
-            onInstanceDelete={gadgetInstance => {
-              // get index of this tab and remove it
-              const index = dynamicTabs.findIndex(tab => tab.id === gadgetInstance.id);
-              if (index !== -1) {
-                handleRemoveTab(index);
-              }
-            }}
-            instance={
-              // its there if the dynamic tab is loaded on screen
-              activeTabIndex > 0 && activeTabIndex <= dynamicTabs.length 
-                ? dynamicTabs[activeTabIndex - 1] 
-                : null
-            }
-          />
-          <Box mb={1}>
-            <Tabs
-              value={activeTabIndex}
-              onChange={handleTabChange}
-              variant="scrollable"
-              scrollButtons="auto"
-            >
-              <Tab label="Embedded Gadgets" />
-              {dynamicTabs.map((tab, index) => (
-                <Tab
-                  key={tab.id}
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      {tab.label}
-                      <IconButton
-                        size="small"
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleRemoveTab(index);
-                        }}
-                        sx={{ ml: 1 }}
-                      >
-                        <Icon icon="mdi:close" />
-                      </IconButton>
-                    </Box>
-                  }
-                />
-              ))}
-            </Tabs>
-          </Box>
-
-          {activeTabIndex === 0 && (
             <Box mt={2}>
               <Modal 
                 open={openConfirmDialog} 
@@ -191,6 +131,7 @@ function GadgetRendererWithTabs() {
                         // setOpen(true);
                       }}
                       callbackRunGadget={(row) => {
+                        console.log("row", row);
                         // if this row.id exist in dynamicTabs, then setActiveTabIndex to that index
                         const index = dynamicTabs.findIndex(tab => tab.id === row.id);
                         if (index !== -1) {
@@ -215,197 +156,27 @@ function GadgetRendererWithTabs() {
                 imageName={imageName}
                 embedDialogOpen={embedDialogOpen}
                 callback={row => {
-                  // if this row.id exist in dynamicTabs, then setActiveTabIndex to that index
-                  const index = dynamicTabs.findIndex(tab => tab.id === row.id);
-                  if (index !== -1) {
-                    setActiveTabIndex(index + 1);
-                    return;
-                  }
-                  addDynamicTab(row);
-                  setActiveTabIndex(dynamicTabs.length + 1);
+                  // // if this row.id exist in dynamicTabs, then setActiveTabIndex to that index
+                  // const index = dynamicTabs.findIndex(tab => tab.id === row.id);
+                  // if (index !== -1) {
+                  //   setActiveTabIndex(index + 1);
+                  //   return;
+                  // }
+                  // addDynamicTab(row);
+                  // setActiveTabIndex(dynamicTabs.length + 1);
                 }}
                 hideTitle
                 callbackAddGadget={() => setOpenConfirmDialog(true)}
               />
             </Box>
-          )}
-          {dynamicTabs.map(
-            (tab, index) => {
-              // check if this id is already in localStorage
-              const localGadgets = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
-              // check by searching for the id
-              // const localGadget = localGadgets.find((gadget) => gadget.id === tab.id);
-              // or if the tab has property isForeground set to true
-              // if so, then it's a local gadget
-              
-              let instance = null;
-              let isInstantRun = false;
-              if (!tab.content.isHeadless) {
-                instance = null;
-                isInstantRun = true;
-              } else {
-                instance = {
-                  id: tab.id,
-                  gadgetConfig: {
-                    ...tab.content.gadgetConfig,
-                  },
-                };
-              }
-              return activeTabIndex === index + 1 && (
-                <Box key={tab.id} p={3}>
-                  <GadgetRenderer
-                    nodes={nodes}
-                    pods={pods}
-                    instance={instance}
-                    onGadgetInstanceCreation={() => {}}
-                    imageName={tab.content.gadgetConfig.imageName}
-                    isInstantRun={isInstantRun}
-                  />
-                </Box>
-              );
-            }
-          )}
+         
         </Box>
       </SectionBox>
     </GadgetContext.Provider>
   );
 }
 
-function GadgetRenderer({ nodes, pods, instance = null, onGadgetInstanceCreation, imageName, isInstantRun = false }) {
-  const {
-    podsSelected,
-    podStreamsConnected,
-    setPodStreamsConnected,
-    isGadgetInfoFetched,
-    setIsGadgetInfoFetched,
-    dataSources,
-    prepareGadgetInfo,
-    gadgetInstance,
-    dataColumns,
-    gadgetConn,
-    setPodsSelected,
-    nodesSelected,
-    setOpen,
-    setNodesSelected,
-    setGadgetConn,
-    ...otherState
-  } = useContext(GadgetContext);
-  const [error, setError] = useState(null);
-  // Track whether we've made the gadget info request
-  const [infoRequested, setInfoRequested] = useState(false);
-  
-  // Effect for handling pod stream connections
-  useEffect(() => {
-    if (podStreamsConnected > podsSelected.length) {
-      setPodStreamsConnected(podsSelected.length);
-      otherState.setGadgetRunningStatus(false);
-    }
-  }, [podsSelected, podStreamsConnected]);
 
-  useEffect(() => {
-      otherState.setGadgetRunningStatus(false);
-  }, [JSON.stringify(gadgetInstance || {})])
-  const ig = useGadgetConn(nodes, pods);
-  const decodedImageName = instance?.gadgetConfig?.imageName 
-    ? decodeURIComponent(instance.gadgetConfig.imageName) 
-    : decodeURIComponent(imageName);
-
-  // Effect for fetching gadget info - only run once per instance
-  useEffect(() => {
-    // Only proceed if we have the connection and haven't requested info yet
-    if (ig && !infoRequested && decodedImageName) {
-      setInfoRequested(true);
-      
-      // Set connection only if it's different
-      if (gadgetConn !== ig) {
-        setGadgetConn(ig);
-      }
-      
-      // Request gadget info
-      ig.getGadgetInfo(
-        {
-          version: 1,
-          imageName: decodedImageName,
-        },
-        (info) => {
-          prepareGadgetInfo(info);
-          setIsGadgetInfoFetched(true);
-          setError(null);
-        },
-        (err) => {
-          console.error('Failed to get gadget info:', err);
-          // Reset the flag so we can try again if needed
-          setError(err);
-          setIsGadgetInfoFetched(true);
-          setInfoRequested(false);
-        }
-      );
-    }
-  }, [
-    ig, 
-    decodedImageName, 
-    infoRequested,  
-    prepareGadgetInfo, 
-    gadgetConn
-  ]);
-  
-  return (
-    <>
-      <NodeSelection
-        setPodsSelected={setPodsSelected}
-        open={open}
-        setOpen={setOpen}
-        nodesSelected={nodesSelected || []}
-        setNodesSelected={setNodesSelected}
-        setPodStreamsConnected={setPodStreamsConnected}
-        gadgetConn={gadgetConn}
-        gadgetInstance={gadgetInstance || instance}
-        isInstantRun={isInstantRun}
-      />
-      
-      {!isGadgetInfoFetched && (
-        <Box mt={2}>
-          <Loader title="Gadget info loading" />
-        </Box>
-      )}
-      
-      {isGadgetInfoFetched && podsSelected.map(podSelected => (
-        <GenericGadgetRenderer
-          key={podSelected?.jsonData.metadata.name}
-          {...otherState}
-          filters={instance?.gadgetConfig?.paramValues}
-          gadgetInstance={gadgetInstance || instance}
-          podsSelected={podsSelected}
-          node={podSelected?.spec.nodeName}
-          podSelected={podSelected?.jsonData.metadata.name}
-          dataColumns={dataColumns}
-          podStreamsConnected={podStreamsConnected}
-          setPodStreamsConnected={setPodStreamsConnected}
-          imageName={imageName}
-        />
-      ))}
-      
-      {error ? <Typography variant="body1" color="error">{error}</Typography> : (isGadgetInfoFetched && dataSources.map((dataSource, index) => {
-        const dataSourceID = dataSource?.id || index;
-        return (
-          <GadgetWithDataSource
-            key={`data-source-${dataSourceID}`}
-            {...otherState}
-            podsSelected={podsSelected}
-            podStreamsConnected={podStreamsConnected}
-            dataSourceID={dataSourceID}
-            columns={dataColumns[dataSourceID]}
-            gadgetInstance={gadgetInstance || instance}
-            gadgetConn={gadgetConn}
-            onGadgetInstanceCreation={onGadgetInstanceCreation}
-            isInstantRun={isInstantRun}
-            error={error}
-          />
-        );
-      }))}
-    </>
-  );
-}
 
 export default function Gadget() {
   return <GadgetRendererWithTabs />;

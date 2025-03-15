@@ -7,6 +7,7 @@ import {
 } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import { Box, Button, Checkbox } from '@mui/material';
+import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import React, { useEffect, useMemo, useState } from 'react';
 import { IGNotFound } from '../common/NotFound';
 import { isIGInstalled, useGadgetConn } from './conn';
@@ -20,14 +21,16 @@ export function BackgroundRunning({ imageName, callback, hideTitle = false, addG
   const [openConfirmDialog, setOpenConfirmDialog] = React.useState(false);
   const isIGInstallationFound = isIGInstalled(pods);
   const ig = useGadgetConn(nodes, pods);
-  // Process localStorage instances once
-  const processLocalStorageInstances = (localStorageInstances) => {
+  const cluster = getCluster();
+  console.log('pods:', pods);
+  console.log('isIGInstallationFound:', isIGInstallationFound);
+  // Process localStorage embedded instances
+  const processLocalStorageEmbeddedInstances = (localStorageInstances) => {
     if (!localStorageInstances) return [];
     return localStorageInstances.map(item => {
-      // Store the original localStorage index for easier identification when deleting
       return {
-        id: `${item.id}`, // More consistent ID format
-        name: item.gadgetConfig.imageName, // Add name for consistency with table columns
+        id: `${item.id}`,
+        name: item.name,
         gadgetConfig: {
           imageName: item.gadgetConfig.imageName,
           version: item.gadgetConfig.version,
@@ -38,25 +41,63 @@ export function BackgroundRunning({ imageName, callback, hideTitle = false, addG
         tags: item.tags || [],
         nodes: item.nodes || [],
         cluster: item.cluster,
+        isEmbedded: true // Mark these instances as embedded
+      };
+    });
+  };
+  
+  // Process localStorage running instances (not embedded)
+  const processLocalStorageRunningInstances = (runningInstances) => {
+    if (!runningInstances) return [];
+    return runningInstances.map(item => {
+      return {
+        id: `${item.id}`,
+        name: item.name || item.gadgetConfig?.imageName || 'Unnamed Gadget',
+        gadgetConfig: {
+          imageName: item.gadgetConfig?.imageName,
+          version: item.gadgetConfig?.version,
+          paramValues: item.gadgetConfig?.paramValues
+        },
+        kind: item.kind,
+        isHeadless: item.isHeadless,
+        tags: item.tags || [],
+        nodes: item.nodes || [],
+        cluster: item.cluster,
+        isEmbedded: false // Mark these instances as not embedded
       };
     });
   };
 
   // Load instances only once when ig is available
   useEffect(() => {
-     if (!ig) return;
+    if (!ig) return;
     
-    const localStorageInstances = JSON.parse(
+    // Get embedded instances from localStorage
+    const embeddedInstances = JSON.parse(
       localStorage.getItem('headlamp_embeded_resources') || '[]'
     );
     
-    const processedLocalStorageInstances = processLocalStorageInstances(localStorageInstances).filter((instance) => {
-      
+    // Get running instances from localStorage
+    const runningStorageInstances = JSON.parse(
+      localStorage.getItem('headlamp_gadget_foreground_running_instances') || '[]'
+    );
+    
+    // Process embedded instances
+    const processedEmbeddedInstances = processLocalStorageEmbeddedInstances(embeddedInstances).filter((instance) => {
       if (imageName !== 'undefined' && instance.gadgetConfig?.imageName !== imageName) {
         return false;
       }
       return true;
     });
+    
+    // Process running instances
+    const processedRunningInstances = processLocalStorageRunningInstances(runningStorageInstances).filter((instance) => {
+      if (imageName !== 'undefined' && instance.gadgetConfig?.imageName !== imageName) {
+        return false;
+      }
+      return true;
+    });
+    
     // Load remote instances
     ig.listGadgetInstances(instances => {
       let filteredInstances = instances || [];
@@ -67,21 +108,23 @@ export function BackgroundRunning({ imageName, callback, hideTitle = false, addG
         );
       }
       
-      // Add name property to remote instances if missing
-      const enhancedInstances = filteredInstances.map(instance => ({
-        ...instance,
-        name: instance.name || instance.gadgetConfig?.imageName || 'Unnamed Gadget'
-      }));
+      // // Add name property to remote instances if missing
+      // const enhancedInstances = filteredInstances.map(instance => ({
+      //   ...instance,
+      //   name: instance.name || instance.gadgetConfig?.imageName || 'Unnamed Gadget',
+      //   isEmbedded: false // Remote instances are not embedded
+      // }));
 
       const combinedInstances = [
-        ...processedLocalStorageInstances,
-        // ...filteredEnhancedInstances
+        ...processedEmbeddedInstances,
+        ...processedRunningInstances,
+        // ...enhancedInstances
       ];
       setRunningInstances(combinedInstances);
     }, err => {
       console.error('Error loading gadget instances:', err);
       // If error, at least show localStorage instances
-      setRunningInstances(processedLocalStorageInstances);
+      setRunningInstances([...processedEmbeddedInstances, ...processedRunningInstances]);
     });
   }, [ig, imageName, embedDialogOpen]);
 
@@ -141,46 +184,78 @@ export function BackgroundRunning({ imageName, callback, hideTitle = false, addG
   }, []);
 
   const handleDeleteInstances = () => {
-    // Get a copy of the current localStorage
-    const localStorageInstances = JSON.parse(
+    // Get a copy of the current localStorage for both embedded and running instances
+    const embeddedInstances = JSON.parse(
       localStorage.getItem('headlamp_embeded_resources') || '[]'
     );
-    let updatedLocalStorageInstances = [...localStorageInstances];
-    let updatedRunningInstances = [...runningInstances];
+    const foregroundRunningInstances = JSON.parse(
+      localStorage.getItem('headlamp_gadget_foreground_running_instances') || '[]'
+    );
     
+    let updatedEmbeddedInstances = [...embeddedInstances];
+    let updatedRunningInstances = [...foregroundRunningInstances];
+    let updatedDisplayInstances = [...(runningInstances || [])];
+    console.log('selected rows:', selectedRows);
     // Process each selected row
     selectedRows.forEach((id) => {
       const instance = runningInstances.find((instance) => instance.id === id);
-      
+      console.log('instance:', instance);
       if (!instance) return;
       
       if (instance.isHeadless != undefined && !instance.isHeadless) {
-        // Handle localStorage instance deletion using the stored original index
-        const id = instance.id;
-        updatedLocalStorageInstances = updatedLocalStorageInstances.filter(
-          (i) => i.id !== id
-        );
+        // Handle localStorage instance deletion
+        // a instance is embedded if it's in the updatedEmbeddedInstances
+        const isEmbedded = updatedEmbeddedInstances.findIndex((i) => i.id === id) !== -1;
+        if (isEmbedded) {
+          // Remove from embedded instances
+          updatedEmbeddedInstances = updatedEmbeddedInstances.filter(
+            (i) => i.id !== id
+          );
+        } else {
+          // Remove from running instances
+          updatedRunningInstances = updatedRunningInstances.filter(
+            (i) => i.id !== id
+          );
+        }
       } else {
         // Handle remote instance deletion
         ig.deleteGadgetInstance(id, (success) => {
-          // This is handled in the updatedRunningInstances filter below
+          // This is handled in the updatedDisplayInstances filter below
         }, err => {
           console.error('Error deleting instance:', err);
         });
+
+        // if it's a background running instance which is embeded or not remove it
+        const isEmbedded = updatedEmbeddedInstances.findIndex((i) => i.id === id) !== -1;
+        if (isEmbedded) {
+          // Remove from embedded instances
+          updatedEmbeddedInstances = updatedEmbeddedInstances.filter(
+            (i) => i.id !== id
+          );
+        } else {
+          // Remove from running instances
+          updatedRunningInstances = updatedRunningInstances.filter(
+            (i) => i.id !== id
+          );
+        }
       }
       
       // Remove from running instances in UI
-      updatedRunningInstances = updatedRunningInstances.filter(i => i.id !== id);
-      // also delete from localStorage if present
-      updatedLocalStorageInstances = updatedLocalStorageInstances.filter(i => i.id !== id);
+      updatedDisplayInstances = updatedDisplayInstances.filter(i => i.id !== id);
+      console.log('id is:', id);
     });
     
-    // Update localStorage and state
+    // Update localStorage for both keys
     localStorage.setItem(
       'headlamp_embeded_resources',
-      JSON.stringify(updatedLocalStorageInstances)
+      JSON.stringify(updatedEmbeddedInstances)
     );
-    setRunningInstances(updatedRunningInstances);
+    localStorage.setItem(
+      'headlamp_gadget_foreground_running_instances',
+      JSON.stringify(updatedRunningInstances)
+    );
+    console.log('updated display instances:', updatedDisplayInstances);
+    setRunningInstances(updatedDisplayInstances);
     setSelectedRows(new Set());
     selectedRowsRef.current = new Set();
     setOpenConfirmDialog(false);
@@ -190,10 +265,14 @@ export function BackgroundRunning({ imageName, callback, hideTitle = false, addG
     return <Loader />;
   }
   
+  if(isIGInstallationFound == null) {
+    return <Loader />;
+  }
+
   if (!isIGInstallationFound) {
     return <IGNotFound />;
   }
-  
+  console.log('running instances:', runningInstances);
   return (
     <>
       <ConfirmDialog
@@ -205,7 +284,7 @@ export function BackgroundRunning({ imageName, callback, hideTitle = false, addG
           setOpenConfirmDialog(false);
         }}
       />
-      <SectionBox backLink={false}>
+      <SectionBox>
         {selectedRows && selectedRows.size > 0 && (
           <Box display="flex" justifyContent="flex-end" mb={2}>
             <Box>
@@ -230,18 +309,11 @@ export function BackgroundRunning({ imageName, callback, hideTitle = false, addG
           </Box>
         )}
         <Table
-          data={runningInstances}
+          data={runningInstances?.filter(instance => instance.cluster === cluster)}
           columns={[
             {
               id: 'select',
-              header: (
-                'Select'
-                // <Checkbox
-                //   checked={isAllSelected}
-                //   indeterminate={isIndeterminate}
-                //   onChange={e => handleSelectAll(e.target.checked)}
-                // />
-              ),
+              header: 'Select',
               accessorFn: row => {
                 return (
                 <CustomCheckbox
@@ -257,27 +329,35 @@ export function BackgroundRunning({ imageName, callback, hideTitle = false, addG
             {
               id: 'name',
               header: 'Name',
-              accessorFn: row => row.name || row?.gadgetConfig?.imageName || 'Unnamed',
+              accessorFn: row => <Link routeName={"/gadgets/:imageName/:id"} params={{
+                imageName: row.gadgetConfig?.imageName,
+                id: row.id,
+              }}>{ row.name || row?.gadgetConfig?.imageName || 'Unnamed' }</Link>,
             },
             {
               id: 'id',
               header: 'ID',
-              accessorKey: 'id',
-              size: 300,
-              Cell: ({ row }) => (
-                <Link
-                  routeName={''}
-                  onClick={e => {
-                    if (hideTitle) {
-                      e.preventDefault();
-                      callback(row.original);
-                    }
-                  }}
-                >
-                  {row.original.id}
-                </Link>
-              ),
+              accessorFn: row => row.id,
             },
+            // {
+            //   id: 'id',
+            //   header: 'ID',
+            //   accessorKey: 'id',
+            //   size: 300,
+            //   Cell: ({ row }) => (
+            //     <Link
+            //       routeName={''}
+            //       onClick={e => {
+            //         if (hideTitle) {
+            //           e.preventDefault();
+            //           callback(row.original);
+            //         }
+            //       }}
+            //     >
+            //       {row.original.id}
+            //     </Link>
+            //   ),
+            // },
             {
               id: 'imageName',
               header: 'ImageName',
@@ -293,6 +373,12 @@ export function BackgroundRunning({ imageName, callback, hideTitle = false, addG
               id: 'Status',
               header: 'Status',
               accessorFn: row => row.isHeadless ? 'Running In Background' : 'Not Running',
+            },
+            {
+              id: 'embedded',
+              header: 'Embedded',
+              accessorFn: row => row.isEmbedded ? 'Yes' : 'No',
+              size: 150,
             },
             {
               id: 'version',
