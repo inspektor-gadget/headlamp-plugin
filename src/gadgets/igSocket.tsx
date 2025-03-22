@@ -1,7 +1,7 @@
 import './wasm.js';
 import { stream } from '@kinvolk/headlamp-plugin/lib/ApiProxy';
 import pako from 'pako';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface GadgetInfo {
   name: string;
@@ -37,11 +37,26 @@ interface RunGadgetParams extends GadgetParams {
 
 // Type definitions
 export interface IGConnection {
-  getGadgetInfo: (params: any, onSuccess: (info: any) => void, onError: (error: Error) => void) => void;
-  createGadgetInstance: (params, onSuccess: (instance: any) => void, onError: (error: Error) => void) => void;
-  listGadgetInstances: (onSuccess: (instances: any[]) => void, onError: (error: Error) => void) => void;
-  deleteGadgetInstance: (id: string, onSuccess: () => void, onError: (error: Error) => void) => void;
-  attachGadgetInstance: ({...params}, {...RunGadgetCallbacks}) => void
+  getGadgetInfo: (
+    params: any,
+    onSuccess: (info: any) => void,
+    onError: (error: Error) => void
+  ) => void;
+  createGadgetInstance: (
+    params,
+    onSuccess: (instance: any) => void,
+    onError: (error: Error) => void
+  ) => void;
+  listGadgetInstances: (
+    onSuccess: (instances: any[]) => void,
+    onError: (error: Error) => void
+  ) => void;
+  deleteGadgetInstance: (
+    id: string,
+    onSuccess: () => void,
+    onError: (error: Error) => void
+  ) => void;
+  attachGadgetInstance: ({ ...params }, { ...RunGadgetCallbacks }) => void;
   runGadget: (
     params: RunGadgetParams,
     callbacks: RunGadgetCallbacks,
@@ -86,17 +101,19 @@ async function getIG(): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
       const gzippedData = await response.arrayBuffer();
       const decompressedData = pako.inflate(gzippedData);
       const wasmResponse = new Response(decompressedData);
-      
+
       igPromise = wasmResponse
         .arrayBuffer()
         .then(buffer => WebAssembly.instantiate(buffer, go.importObject))
         .then(result => {
-          go.run(result.instance).then(() => {
-            // console.log('WebAssembly instance initialized successfully');
-            console.error('Something went wrong while running the WebAssembly instance');
-          }).catch((err) => {
-            console.error('Error running WebAssembly instance:', err);
-          });
+          go.run(result.instance)
+            .then(() => {
+              // console.log('WebAssembly instance initialized successfully');
+              console.error('Something went wrong while running the WebAssembly instance');
+            })
+            .catch(err => {
+              console.error('Error running WebAssembly instance:', err);
+            });
           return result;
         })
         .catch(error => {
@@ -121,9 +138,9 @@ const usePortForward = (url: string | null): PortForwardState => {
   // State for tracking connection status and IG instance
   const [state, setState] = useState<PortForwardState>({
     ig: null,
-    isConnected: false
+    isConnected: false,
   });
-  
+
   // Refs for tracking active connections and component mounted status
   const streamRef = useRef<Record<string, StreamRef>>({});
   const socketRef = useRef<Record<string, WebSocket>>({});
@@ -138,20 +155,20 @@ const usePortForward = (url: string | null): PortForwardState => {
       socketRef.current[targetUrl].close();
       delete socketRef.current[targetUrl];
     }
-    
+
     // Cancel and cleanup stream
     if (streamRef.current[targetUrl]) {
       streamRef.current[targetUrl].cancel();
       delete streamRef.current[targetUrl];
     }
-    
+
     // Update state if component is still mounted
     if (mountedRef.current) {
       setState(prev => ({
         ...prev,
         isConnected: false,
         ig: null,
-        error: undefined
+        error: undefined,
       }));
     }
   }, []);
@@ -187,7 +204,7 @@ const usePortForward = (url: string | null): PortForwardState => {
    */
   useEffect(() => {
     mountedRef.current = true;
-    
+
     return () => {
       mountedRef.current = false;
       // Cleanup all connections on unmount
@@ -204,7 +221,7 @@ const usePortForward = (url: string | null): PortForwardState => {
       setState({
         ig: null,
         isConnected: false,
-        error: undefined
+        error: undefined,
       });
       Object.keys(socketRef.current).forEach(cleanup);
       return;
@@ -215,7 +232,7 @@ const usePortForward = (url: string | null): PortForwardState => {
     const initConnection = async () => {
       try {
         const result = await getIG();
-        
+
         if (!isCurrentRequest || !mountedRef.current) {
           return;
         }
@@ -229,7 +246,7 @@ const usePortForward = (url: string | null): PortForwardState => {
 
         // Initialize stream
         streamRef.current[url] = await stream(url, () => {}, { additionalProtocols });
-        
+
         // Get socket with timeout
         const socket = await prepareSocket(url);
         if (!isCurrentRequest || !mountedRef.current) {
@@ -246,7 +263,7 @@ const usePortForward = (url: string | null): PortForwardState => {
               setState({
                 ig: igConnection,
                 isConnected: true,
-                error: undefined
+                error: undefined,
               });
             }
           },
@@ -257,7 +274,7 @@ const usePortForward = (url: string | null): PortForwardState => {
                 ...prev,
                 error,
                 isConnected: false,
-                ig: null
+                ig: null,
               }));
             }
             cleanup(url);
@@ -268,13 +285,12 @@ const usePortForward = (url: string | null): PortForwardState => {
                 ...prev,
                 isConnected: false,
                 ig: null,
-                error: new Error('Connection closed')
+                error: new Error('Connection closed'),
               }));
               cleanup(url);
             }
-          }
+          },
         });
-
       } catch (error) {
         console.error('Failed to initialize connection:', error);
         if (mountedRef.current) {
@@ -282,7 +298,7 @@ const usePortForward = (url: string | null): PortForwardState => {
             ...prev,
             error: error instanceof Error ? error : new Error(String(error)),
             isConnected: false,
-            ig: null
+            ig: null,
           }));
         }
         cleanup(url);

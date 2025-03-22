@@ -1,160 +1,304 @@
-import { useParams } from 'react-router-dom';
+import { ConfirmDialog, Loader, SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
-import { useContext, useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
+import { useContext, useEffect, useState } from 'react';
+import { generatePath, useHistory, useParams } from 'react-router-dom';
 import { GadgetContext, useGadgetState } from '../common/GadgetContext';
-import { useGadgetConn } from './conn';
-import { NodeSelection } from '../common/NodeSelection';
-import GenericGadgetRenderer from '../common/GenericGadgetRenderer';
-import { GadgetWithDataSource } from '../common/GadgetWithDataSource';
-import { Loader, SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { GadgetDescription } from '../common/GadgetDescription';
+import { GadgetWithDataSource } from '../common/GadgetWithDataSource';
+import GenericGadgetRenderer from '../common/GenericGadgetRenderer';
+import { NodeSelection } from '../common/NodeSelection';
+import { useGadgetConn } from './conn';
+import { generateRandomString, updateInstanceFromStorage } from '../common/helpers';
+import { getClusterPrefixedPath, getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 
 export function GadgetDetails() {
-    const [nodes] = K8s.ResourceClasses.Node.useList();
-    const [pods] = K8s.ResourceClasses.Pod.useList();
-    console.log('nodes', nodes);
-    console.log('pods', pods);
-    console.log(useGadgetState())
-    const gadgetState = useGadgetState();
-    console.log('use params', useParams());
-   
-    if (nodes === null || pods === null) {
-        return <Loader />;
-    }
-    const { imageName, id } = useParams<{ imageName: string, id: string }>();
-    console.log('imageName', imageName);
-    console.log('id', id);
-    const foregroundRunningInstances = JSON.parse(
-        localStorage.getItem('headlamp_gadget_foreground_running_instances') || '[]'
-    );
-    const embeddedInstances = JSON.parse(
-        localStorage.getItem('headlamp_embeded_resources') || '[]'
-    );
+  const [nodes] = K8s.ResourceClasses.Node.useList();
+  const [pods] = K8s.ResourceClasses.Pod.useList();
+  console.log('nodes', nodes);
+  console.log('pods', pods);
+  console.log(useGadgetState());
+  const gadgetState = useGadgetState();
+  console.log('use params', useParams());
 
-    let matchedInstance = foregroundRunningInstances.find((instance) => instance.id === id);
-    if(!matchedInstance) {
-        matchedInstance = embeddedInstances.find((instance) => instance.id === id);
-    }
+  if (nodes === null || pods === null) {
+    return <Loader />;
+  }
+  const { imageName, id } = useParams<{ imageName: string; id: string }>();
+  console.log('imageName', imageName);
+  console.log('id', id);
+  const foregroundRunningInstances = JSON.parse(
+    localStorage.getItem('headlamp_gadget_foreground_running_instances') || '[]'
+  );
+  const embeddedInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
 
-    if (!matchedInstance) {
-        return <div>Gadget instance not found</div>;
-    }
-     
-     let instance = null;
-     let isInstantRun = false;
-     if (!matchedInstance.isHeadless) {
-        instance = null;
-        isInstantRun = true;
-     } else {
-        instance = {
-                id: matchedInstance.id,
-                gadgetConfig: {
-                ...matchedInstance.gadgetConfig
-            },
-        };
-    }
+  let matchedInstance = foregroundRunningInstances.find(instance => instance.id === id);
+  if (!matchedInstance) {
+    matchedInstance = embeddedInstances.find(instance => instance.id === id);
+  }
 
-    return (
-        <GadgetContext.Provider value={{ ...gadgetState }}>
-        
-        <GadgetRenderer
-                    nodes={nodes}
-                    pods={pods}
-                    instance={instance}
-                    onGadgetInstanceCreation={() => {}}
-                    imageName={imageName}
-                    isInstantRun={isInstantRun}
-        />
-        </GadgetContext.Provider>
-    )
+  if (!matchedInstance) {
+    return <div>Gadget instance not found</div>;
+  }
+
+  let instance = null;
+  let isInstantRun = false;
+  if (!matchedInstance.isHeadless) {
+    instance = null;
+    isInstantRun = true;
+  } else {
+    instance = {
+      id: matchedInstance.id,
+      gadgetConfig: {
+        ...matchedInstance.gadgetConfig,
+      },
+    };
+  }
+
+  return (
+    <GadgetContext.Provider value={{ ...gadgetState }}>
+      <GadgetRenderer
+        nodes={nodes}
+        pods={pods}
+        instance={instance}
+        onGadgetInstanceCreation={() => {}}
+        imageName={imageName}
+        isInstantRun={isInstantRun}
+      />
+    </GadgetContext.Provider>
+  );
 }
 
-function GadgetRenderer({ nodes, pods, instance = null, onGadgetInstanceCreation, imageName, isInstantRun = false }) {
-    console.log('Gadget instance is ', instance);
-    const {
-      podsSelected,
-      podStreamsConnected,
-      setPodStreamsConnected,
-      isGadgetInfoFetched,
-      setIsGadgetInfoFetched,
-      dataSources,
-      prepareGadgetInfo,
-      gadgetInstance,
-      dataColumns,
-      gadgetConn,
-      setPodsSelected,
-      nodesSelected,
-      setOpen,
-      setNodesSelected,
-      setGadgetConn,
-      ...otherState
-    } = useContext(GadgetContext);
-    const [error, setError] = useState(null);
-    // Track whether we've made the gadget info request
-    const [infoRequested, setInfoRequested] = useState(false);
-    const ig = useGadgetConn(nodes, pods);
-    // Effect for handling pod stream connections
-    useEffect(() => {
-      if (podStreamsConnected > podsSelected.length) {
-        setPodStreamsConnected(podsSelected.length);
-        otherState.setGadgetRunningStatus(false);
+function GadgetRenderer({
+  nodes,
+  pods,
+  instance = null,
+  onGadgetInstanceCreation,
+  imageName,
+  isInstantRun = false,
+}) {
+  console.log('Gadget instance is ', instance);
+  const {
+    podsSelected,
+    podStreamsConnected,
+    setPodStreamsConnected,
+    isGadgetInfoFetched,
+    setIsGadgetInfoFetched,
+    dataSources,
+    prepareGadgetInfo,
+    gadgetInstance,
+    dataColumns,
+    gadgetConn,
+    setPodsSelected,
+    nodesSelected,
+    setOpen,
+    setNodesSelected,
+    setGadgetConn,
+    ...otherState
+  } = useContext(GadgetContext);
+  const [error, setError] = useState(null);
+  // Track whether we've made the gadget info request
+  const [infoRequested, setInfoRequested] = useState(false);
+  const history = useHistory();
+  const ig = useGadgetConn(nodes, pods);
+  const [embedView, setEmbedView] = useState('None');
+  const { id } = useParams<{ id: string }>();
+  const [enableHistoricalData, setEnableHistoricalData] = useState(false);
+  const [update, setUpdate] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  // Effect for handling pod stream connections
+  useEffect(() => {
+    if (podStreamsConnected > podsSelected.length) {
+      setPodStreamsConnected(podsSelected.length);
+      otherState.setGadgetRunningStatus(false);
+    }
+  }, [podsSelected, podStreamsConnected]);
+
+  useEffect(() => {
+    otherState.setGadgetRunningStatus(false);
+  }, [JSON.stringify(gadgetInstance || {})]);
+
+  const decodedImageName = instance?.gadgetConfig?.imageName
+    ? decodeURIComponent(instance.gadgetConfig.imageName)
+    : decodeURIComponent(imageName);
+
+  // Effect for fetching gadget info - only run once per instance
+  useEffect(() => {
+    // Only proceed if we have the connection and haven't requested info yet
+    if (ig && !infoRequested && decodedImageName) {
+      setInfoRequested(true);
+
+      // Set connection only if it's different
+      if (gadgetConn !== ig) {
+        setGadgetConn(ig);
       }
-    }, [podsSelected, podStreamsConnected]);
-  
-    useEffect(() => {
-        otherState.setGadgetRunningStatus(false);
-    }, [JSON.stringify(gadgetInstance || {})])
-    
-    const decodedImageName = instance?.gadgetConfig?.imageName 
-      ? decodeURIComponent(instance.gadgetConfig.imageName) 
-      : decodeURIComponent(imageName);
-  
-    // Effect for fetching gadget info - only run once per instance
-    useEffect(() => {
-      // Only proceed if we have the connection and haven't requested info yet
-      if (ig && !infoRequested && decodedImageName) {
-        setInfoRequested(true);
-        
-        // Set connection only if it's different
-        if (gadgetConn !== ig) {
-          setGadgetConn(ig);
+
+      // Request gadget info
+      ig.getGadgetInfo(
+        {
+          version: 1,
+          imageName: decodedImageName,
+        },
+        info => {
+          prepareGadgetInfo(info);
+          setIsGadgetInfoFetched(true);
+          setError(null);
+        },
+        err => {
+          console.error('Failed to get gadget info:', err);
+          // Reset the flag so we can try again if needed
+          setError(err);
+          setIsGadgetInfoFetched(true);
+          setInfoRequested(false);
         }
-        
-        // Request gadget info
-        ig.getGadgetInfo(
-          {
+      );
+    }
+  }, [ig, decodedImageName, infoRequested, prepareGadgetInfo, gadgetConn]);
+
+  function headlessGadgetRunCallback() {
+    // i am trying to run now what's my embedded state, also this is a run in background callback so i now isHeadless is true
+    otherState.setGadgetRunningStatus(true);
+    updateInstanceFromStorage(id, embedView, true);
+  }
+
+  const handleRun = () => {
+    // but lets first check if it's not enableHistoricalData and embedView is not None
+    // if embedView is not None we need to set the instance as embedded
+    if (embedView !== 'None' && !enableHistoricalData) {
+      console.log('handleRun', embedView);
+      updateInstanceFromStorage(id, embedView, false);
+      setUpdate(prev => !prev);
+      return;
+    }
+
+    if (enableHistoricalData) {
+      ig.createGadgetInstance(
+        {
+          tags: instance?.tags,
+          nodes: [],
+          gadgetConfig: {
+            imageName: imageName,
             version: 1,
-            imageName: decodedImageName,
+            paramValues: {
+              ...otherState.filters,
+            },
           },
-          (info) => {
-            prepareGadgetInfo(info);
-            setIsGadgetInfoFetched(true);
-            setError(null);
-          },
-          (err) => {
-            console.error('Failed to get gadget info:', err);
-            // Reset the flag so we can try again if needed
-            setError(err);
-            setIsGadgetInfoFetched(true);
-            setInfoRequested(false);
-          }
-        );
-      }
-    }, [
-      ig, 
-      decodedImageName, 
-      infoRequested,  
-      prepareGadgetInfo, 
-      gadgetConn
-    ]);
-    
-    return (
-           <SectionBox
-        title={
-              <GadgetDescription onInstanceDelete={() => {}}  ig={ig}/>
+        },
+        success => {
+          // but we need to remove the old instance from localStorage
+          const allInstances = JSON.parse(
+            localStorage.getItem('headlamp_embeded_resources') || '[]'
+          );
+          const instance = allInstances.find(instance => instance.id === id);
+          const updatedInstances = allInstances.filter(instance => instance.id !== id);
+          localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
+          const newID = success.gadgetInstance.id;
+          console.log('success', success);
+          const newInstance = {
+            id: newID,
+            name: success.gadgetInstance.name || imageName,
+            gadgetConfig: {
+              imageName: instance?.gadgetConfig?.imageName,
+              version: 1,
+              paramValues: {
+                ...otherState.filters,
+              },
+            },
+            isHeadless: true,
+            tags: instance?.tags,
+            nodes: [],
+            cluster: getCluster(),
+            kind: embedView,
+            isEmbedded: embedView !== 'None',
+          };
+          const updatedEmbeddedInstances = [...updatedInstances, newInstance];
+          localStorage.setItem(
+            'headlamp_embeded_resources',
+            JSON.stringify(updatedEmbeddedInstances)
+          );
+          history.replace(
+            `${generatePath(getClusterPrefixedPath(), {
+              cluster: getCluster(),
+            })}/gadgets/${imageName}/${newID}`
+          );
+        },
+        err => {
+          console.error('Failed to create gadget instance:', err);
+          setError(err);
         }
-        backLink={true}
+      );
+    }
+
+    // if historicalData is enabled we need to create a new gadget instance
+  };
+  function headlessGadgetDeleteCallback() {
+    setDeleteDialogOpen(true);
+  }
+
+  function deleteHeadlessGadget() {
+    ig.deleteGadgetInstance(
+      id,
+      () => {
+        const newID = imageName + '-custom-' + generateRandomString();
+
+        updateInstanceFromStorage(id, 'None', false);
+        const allInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
+        localStorage.setItem(
+          'headlamp_embeded_resources',
+          JSON.stringify([
+            ...allInstances,
+            {
+              id: newID,
+              name: imageName + '-custom-' + generateRandomString(),
+              gadgetConfig: {
+                imageName: imageName,
+                version: 1,
+                paramValues: {
+                  ...otherState.filters,
+                },
+              },
+              isHeadless: false,
+              tags: [],
+              nodes: [],
+              cluster: getCluster(),
+              isEmbedded: false,
+            },
+          ])
+        );
+        otherState.setGadgetRunningStatus(false);
+        history.replace(
+          `${generatePath(getClusterPrefixedPath(), {
+            cluster: getCluster(),
+          })}/gadgets/${imageName}/${newID}`
+        );
+      },
+      err => {
+        console.error('Failed to delete gadget instance:', err);
+      }
+    );
+  }
+  return (
+    <>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        handleClose={() => setDeleteDialogOpen(false)}
+        title={`Delete gadget instance ${id}`}
+        description="Are you sure you want to delete this gadget instance?"
+        onConfirm={() => {
+          deleteHeadlessGadget();
+        }}
+      />
+      <SectionBox
+        title={
+          <GadgetDescription
+            setEmbedView={setEmbedView}
+            embedView={embedView}
+            enableHistoricalData={enableHistoricalData}
+            setEnableHistoricalData={setEnableHistoricalData}
+            update={update}
+          />
+        }
+        backLink
       >
         <NodeSelection
           setPodsSelected={setPodsSelected}
@@ -167,47 +311,59 @@ function GadgetRenderer({ nodes, pods, instance = null, onGadgetInstanceCreation
           gadgetInstance={instance}
           isInstantRun={isInstantRun}
         />
-        
+
         {!isGadgetInfoFetched && (
           <Box mt={2}>
             <Loader title="Gadget info loading" />
           </Box>
         )}
-        
-        {isGadgetInfoFetched && podsSelected.map(podSelected => (
-          <GenericGadgetRenderer
-            key={podSelected?.jsonData.metadata.name}
-            {...otherState}
-            filters={instance?.gadgetConfig?.paramValues}
-            gadgetInstance={gadgetInstance || instance}
-            podsSelected={podsSelected}
-            node={podSelected?.spec.nodeName}
-            podSelected={podSelected?.jsonData.metadata.name}
-            dataColumns={dataColumns}
-            podStreamsConnected={podStreamsConnected}
-            setPodStreamsConnected={setPodStreamsConnected}
-            imageName={imageName}
-          />
-        ))}
-        
-        {error ? <Typography variant="body1" color="error">{error}</Typography> : (isGadgetInfoFetched && dataSources.map((dataSource, index) => {
-          const dataSourceID = dataSource?.id || index;
-          return (
-            <GadgetWithDataSource
-              key={`data-source-${dataSourceID}`}
+
+        {isGadgetInfoFetched &&
+          podsSelected.map(podSelected => (
+            <GenericGadgetRenderer
+              key={podSelected?.jsonData.metadata.name}
               {...otherState}
-              podsSelected={podsSelected}
-              podStreamsConnected={podStreamsConnected}
-              dataSourceID={dataSourceID}
-              columns={dataColumns[dataSourceID]}
+              filters={instance?.gadgetConfig?.paramValues}
               gadgetInstance={gadgetInstance || instance}
-              gadgetConn={gadgetConn}
-              onGadgetInstanceCreation={onGadgetInstanceCreation}
-              isInstantRun={isInstantRun}
-              error={error}
+              podsSelected={podsSelected}
+              node={podSelected?.spec.nodeName}
+              podSelected={podSelected?.jsonData.metadata.name}
+              dataColumns={dataColumns}
+              podStreamsConnected={podStreamsConnected}
+              setPodStreamsConnected={setPodStreamsConnected}
+              imageName={imageName}
             />
-          );
-        }))}
+          ))}
+
+        {error ? (
+          <Typography variant="body1" color="error">
+            {error}
+          </Typography>
+        ) : (
+          isGadgetInfoFetched &&
+          dataSources.map((dataSource, index) => {
+            const dataSourceID = dataSource?.id || index;
+            return (
+              <GadgetWithDataSource
+                key={`data-source-${dataSourceID}`}
+                {...otherState}
+                podsSelected={podsSelected}
+                podStreamsConnected={podStreamsConnected}
+                dataSourceID={dataSourceID}
+                columns={dataColumns[dataSourceID]}
+                gadgetInstance={gadgetInstance || instance}
+                gadgetConn={gadgetConn}
+                onGadgetInstanceCreation={onGadgetInstanceCreation}
+                isInstantRun={isInstantRun}
+                error={error}
+                headlessGadgetRunCallback={headlessGadgetRunCallback}
+                headlessGadgetDeleteCallback={headlessGadgetDeleteCallback}
+                handleRun={handleRun}
+              />
+            );
+          })
+        )}
       </SectionBox>
-    );
-  }
+    </>
+  );
+}

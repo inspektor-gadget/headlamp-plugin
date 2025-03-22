@@ -1,6 +1,4 @@
-import _ from 'lodash';
 import React, { useEffect, useRef } from 'react';
-import { useParams } from 'react-router';
 import usePortForward from '../../gadgets/igSocket';
 import { createGadgetCallbacks } from '../../gadgets/utility';
 
@@ -36,7 +34,7 @@ export default function GenericGadgetRenderer({
   node,
   prepareGadgetInfo,
   setPodStreamsConnected,
-  imageName
+  imageName,
 }: GenericGadgetRendererProps) {
   const { ig, isConnected } = usePortForward(
     `api/v1/namespaces/gadget/pods/${podSelected}/portforward?ports=8080`
@@ -57,13 +55,17 @@ export default function GenericGadgetRenderer({
       prepareGadgetInfo
     );
     if (gadgetInstance) {
-      setTimeout(() => ig.attachGadgetInstance(
-        {
-          id: gadgetInstance.id,
-          version: gadgetInstance.gadgetConfig.version,
-        },
-        callbacks
-      ), 2000);
+      setTimeout(
+        () =>
+          ig.attachGadgetInstance(
+            {
+              id: gadgetInstance.id,
+              version: gadgetInstance.gadgetConfig.version,
+            },
+            callbacks
+          ),
+        2000
+      );
     } else {
       gadgetRef.current = ig.runGadget(
         {
@@ -103,7 +105,6 @@ export default function GenericGadgetRenderer({
     if (gadgetRunningStatus && podsSelected.length === podStreamsConnected) {
       gadgetStartStopHandler();
     }
-
   }, [gadgetRunningStatus, podStreamsConnected, podsSelected]);
 
   useEffect(() => {

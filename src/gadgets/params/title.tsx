@@ -1,12 +1,10 @@
-import React from 'react';
 import { Box, Typography } from '@mui/material';
+import React from 'react';
 
 const Title = ({ param }) => {
   return (
     <Box display="flex" flexDirection="column" gap={0.5}>
-      <Typography variant="body1">
-        {param.title || param.key}
-      </Typography>
+      <Typography variant="body1">{param.title || param.key}</Typography>
       {param.description && (
         <Typography
           variant="caption"

@@ -99,11 +99,11 @@ export const createGadgetCallbacks = (
     onData: (dsID: string, dataFromGadget: any) => {
       const dataToProcess = Array.isArray(dataFromGadget) ? dataFromGadget : [dataFromGadget];
       setLoading(false);
-      dataToProcess.forEach(data => 
+      dataToProcess.forEach(data =>
         processGadgetData(
-          data, 
-          dsID, 
-          dataColumns[dsID] || [], 
+          data,
+          dsID,
+          dataColumns[dsID] || [],
           node,
           setGadgetData,
           setBufferedGadgetData

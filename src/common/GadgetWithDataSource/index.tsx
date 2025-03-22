@@ -1,16 +1,15 @@
+import { Icon } from '@iconify/react';
 import { DateLabel, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Box,
   Button,
-  Checkbox,
   Grid,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Typography
+  Typography,
 } from '@mui/material';
-import { Icon } from '@iconify/react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import GadgetFilters from '../../gadgets/gadgetFilters';
 import { IS_METRIC } from '../helpers';
 import { MetricChart } from '../MetricChart';
@@ -38,7 +37,9 @@ interface GadgetWithDataSourceProps {
   setIsRunningInBackground: React.Dispatch<React.SetStateAction<boolean>>;
   onGadgetInstanceCreation: (success: any) => void;
   error: any;
-
+  headlessGadgetRunCallback: (success: any) => void;
+  headlessGadgetDeleteCallback: (success: any) => void;
+  handleRun: () => void;
 }
 
 export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
@@ -58,19 +59,22 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
     bufferedGadgetData,
     podsSelected,
     gadgetInstance,
-    isRunningInBackground,
+
     isInstantRun,
-    error
+    error,
+    headlessGadgetDeleteCallback = () => {},
+    headlessGadgetRunCallback = () => {},
+    handleRun = () => {},
   } = props;
   const areAllPodStreamsConnected = podStreamsConnected === podsSelected.length;
-  useEffect(() => {
-    if (gadgetInstance) {
-      const timer = setTimeout(() => {
-        setGadgetRunningStatus(true);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [JSON.stringify(gadgetInstance || {})]);
+  // useEffect(() => {
+  //   if (gadgetInstance) {
+  //     const timer = setTimeout(() => {
+  //       setGadgetRunningStatus(true);
+  //     }, 1000);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [JSON.stringify(gadgetInstance || {})]);
 
   const fields = useMemo(
     () =>
@@ -89,7 +93,6 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
   }, [bufferedGadgetData[dataSourceID], dataSourceID, setGadgetData]);
 
   function handleStartStop() {
-    // Reset data when starting
     if (!gadgetRunningStatus) {
       setGadgetData(prev => ({
         ...prev,
@@ -99,14 +102,15 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
         ...prev,
         [dataSourceID]: [],
       }));
+      handleRun();
     }
 
     setGadgetRunningStatus(prev => !prev);
+    // Reset data when starting
   }
 
   const renderContent = () => {
     const hasMetricField = fields?.some(field => field.header === IS_METRIC);
-
     if (hasMetricField) {
       return podsSelected.map(pod => {
         const node = pod?.spec.nodeName;
@@ -131,67 +135,56 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
     <>
       {isInstantRun && (
         <Accordion>
-        <AccordionSummary
-          expandIcon={<Icon icon="mdi:chevron-down" />}
-        >
-          <Typography>Configure Params</Typography>
-        </AccordionSummary>
-        <AccordionDetails>
-        {!error ? <GadgetFilters
-          config={gadgetConfig}
-          setFilters={setFilters}
-          filters={filters}
-          onApplyFilters={() => {
-            setGadgetData(prev => ({
-              ...prev,
-              [dataSourceID]: [],
-            }));
-            setBufferedGadgetData(prev => ({
-              ...prev,
-              [dataSourceID]: [],
-            }));
+          <AccordionSummary expandIcon={<Icon icon="mdi:chevron-down" />}>
+            <Typography>Configure Params</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            {!error ? (
+              <GadgetFilters
+                config={gadgetConfig}
+                setFilters={setFilters}
+                filters={filters}
+                onApplyFilters={() => {
+                  setGadgetData(prev => ({
+                    ...prev,
+                    [dataSourceID]: [],
+                  }));
+                  setBufferedGadgetData(prev => ({
+                    ...prev,
+                    [dataSourceID]: [],
+                  }));
 
-            // Toggle running status
-            setGadgetRunningStatus(prev => !prev);
-          }}
-        /> : <Typography variant="body1" color="error">{error}</Typography>}
-        </AccordionDetails>
+                  // Toggle running status
+                  setGadgetRunningStatus(prev => !prev);
+                }}
+              />
+            ) : (
+              <Typography variant="body1" color="error">
+                {error}
+              </Typography>
+            )}
+          </AccordionDetails>
         </Accordion>
       )}
-      {/* {!gadgetInstance && (
-        <Box my={1} mx={2}>
-          <span>Run in Background</span>
-          <Checkbox
-            checked={isRunningInBackground}
-            onChange={e => setIsRunningInBackground(e.target.checked)}
-          />
-        </Box>
-      )} */}
       {areAllPodStreamsConnected && (
         <Box mt={2}>
           <Box m={2}>
             <Grid container justifyContent="space-between" spacing={2}>
               <Grid item>Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}</Grid>
-
-              {/* {!gadgetInstance && renderCreateBackgroundGadget && (
-                <Grid item>
-                  <span>Run in Background</span>
-                  <Checkbox
-                    checked={isRunningInBackground}
-                    onChange={e => setIsRunningInBackground(e.target.checked)}
-                  />
-                </Grid>
-              )} */}
-              
               <Grid item>
                 {gadgetInstance ? (
                   <>
                     <Button
-                      disabled={podsSelected.length === 0 || gadgetRunningStatus}
-                      onClick={() => setGadgetRunningStatus(prev => !prev)}
+                      // disabled={podsSelected.length === 0 || gadgetRunningStatus}
+                      onClick={() => {
+                        if (gadgetRunningStatus) {
+                          headlessGadgetDeleteCallback(gadgetInstance);
+                        }
+                        headlessGadgetRunCallback(gadgetInstance);
+                      }}
                       variant="outlined"
                     >
-                      {loading ? 'Processing' : !gadgetRunningStatus ? 'Attach' : 'Attached'}
+                      {loading ? 'Processing' : !gadgetRunningStatus ? 'Run' : 'Delete'}
                     </Button>
                   </>
                 ) : (
@@ -201,13 +194,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
                       onClick={handleStartStop}
                       variant="outlined"
                     >
-                      {loading
-                        ? 'Processing'
-                        : !gadgetRunningStatus
-                        ? isRunningInBackground
-                          ? 'Start'
-                          : 'Run Now'
-                        : 'Stop'}
+                      {loading ? 'Processing' : !gadgetRunningStatus ? 'Start' : 'Stop'}
                     </Button>
                   )
                 )}

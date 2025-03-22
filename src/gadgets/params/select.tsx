@@ -1,10 +1,10 @@
-import React from 'react';
-import { Box, Select, MenuItem, InputLabel, FormControl } from '@mui/material';
 import { Icon } from '@iconify/react';
+import { Box, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+import React from 'react';
 import Title from './title'; // Assuming you've converted the Title component to React
 
 const SelectFilter = ({ param, config }) => {
-  const handleChange = (event) => {
+  const handleChange = event => {
     config.set(event.target.value);
   };
 
@@ -29,12 +29,12 @@ const SelectFilter = ({ param, config }) => {
                 right: 7,
                 top: 'calc(50% - 12px)',
                 pointerEvents: 'none',
-                color: 'currentColor'
+                color: 'currentColor',
               }}
             />
           )}
         >
-          {param.possibleValues.map((value) => (
+          {param.possibleValues.map(value => (
             <MenuItem key={value} value={value}>
               {value}
             </MenuItem>

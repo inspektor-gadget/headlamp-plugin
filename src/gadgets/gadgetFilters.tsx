@@ -16,10 +16,10 @@ import React, { useCallback, useMemo } from 'react';
 import { FILTERS_TYPE } from './filter_types';
 import { removeDuplicates } from './helper';
 import AnnotationFilter from './params/annotation';
-import SortingFilter from './params/sortingfilter';
 import CheckboxFilter from './params/bool';
 import FilterComponent from './params/filter';
 import SelectFilter from './params/select';
+import SortingFilter from './params/sortingfilter';
 
 // Types for better type safety and documentation
 interface FilterParam {
@@ -58,7 +58,7 @@ const FilterInput: React.FC<{
 
   const commonProps = {
     label: param.title || param.key,
-    variant: "outlined" as const,
+    variant: 'outlined' as const,
     fullWidth: true,
   };
 
@@ -74,7 +74,7 @@ const FilterInput: React.FC<{
     return (
       <TextField
         {...commonProps}
-        onChange={(e) => handleChange(e.target.value)}
+        onChange={e => handleChange(e.target.value)}
         InputProps={{ endAdornment: infoAdornment }}
       />
     );
@@ -90,7 +90,7 @@ const FilterInput: React.FC<{
           control={
             <Checkbox
               defaultChecked={param.defaultValue === 'true'}
-              onChange={(e) => handleChange(String(e.target.checked))}
+              onChange={e => handleChange(String(e.target.checked))}
             />
           }
           label={param.title || param.key}
@@ -102,7 +102,7 @@ const FilterInput: React.FC<{
           {...commonProps}
           type="number"
           defaultValue={param.defaultValue}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={e => handleChange(e.target.value)}
           inputProps={{ min: filter.min, max: filter.max }}
         />
       );
@@ -111,7 +111,7 @@ const FilterInput: React.FC<{
         <TextField
           {...commonProps}
           defaultValue={param.defaultValue}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={e => handleChange(e.target.value)}
           InputProps={{ endAdornment: infoAdornment }}
         />
       );
@@ -136,7 +136,7 @@ const PodsFilter: React.FC<{
       <Select
         fullWidth
         variant="outlined"
-        onChange={(e) => onChange(filterConfig.prefix + filterConfig.key, e.target.value as string)}
+        onChange={e => onChange(filterConfig.prefix + filterConfig.key, e.target.value as string)}
       >
         {pods.map(pod => (
           <MenuItem key={pod.metadata.name} value={pod.metadata.name}>
@@ -154,41 +154,41 @@ export default function GadgetFilters({
   setFilters,
   namespace: initialNamespace,
   pod: initialPod,
-  filters
+  filters,
 }: GadgetFiltersProps) {
   const [selectedNamespace, setSelectedNamespace] = React.useState(initialNamespace || '');
 
-  const handleFilterChange = useCallback((key: string, value: string) => {
-    if(!value) {
-      setFilters(prev => {
-        const newFilters = { ...prev };
-        delete newFilters[key];
-        return newFilters;
-      });
-      return;
-    }
-    setFilters(prev => ({ ...prev, [key]: value }));
-  }, [setFilters]);
+  const handleFilterChange = useCallback(
+    (key: string, value: string) => {
+      if (!value) {
+        setFilters(prev => {
+          const newFilters = { ...prev };
+          delete newFilters[key];
+          return newFilters;
+        });
+        return;
+      }
+      setFilters(prev => ({ ...prev, [key]: value }));
+    },
+    [setFilters]
+  );
 
-  const uniqueParams = useMemo(() => 
-    config?.params ? removeDuplicates(config.params) : [],
+  const uniqueParams = useMemo(
+    () => (config?.params ? removeDuplicates(config.params) : []),
     [config?.params]
   );
 
-  const namespaceParam = useMemo(() => 
-    uniqueParams.find(p => p.valueHint?.includes('namespace')),
+  const namespaceParam = useMemo(
+    () => uniqueParams.find(p => p.valueHint?.includes('namespace')),
     [uniqueParams]
   );
 
-  const allNamespacesParam = useMemo(() => 
-    uniqueParams.find(p => p.key === 'all-namespaces'),
+  const allNamespacesParam = useMemo(
+    () => uniqueParams.find(p => p.key === 'all-namespaces'),
     [uniqueParams]
   );
 
-  const podParam = useMemo(() => 
-    uniqueParams.find(p => p.key === 'podname'),
-    [uniqueParams]
-  );
+  const podParam = useMemo(() => uniqueParams.find(p => p.key === 'podname'), [uniqueParams]);
 
   // Set initial values for namespace and pod if provided
   React.useEffect(() => {
@@ -200,83 +200,90 @@ export default function GadgetFilters({
     }
   }, [initialNamespace, initialPod, namespaceParam, allNamespacesParam, podParam]);
 
-  const filterComponents = useMemo(() => 
-    uniqueParams.map((param, index) => {
-      // Skip namespace-related params as they're handled separately
-      if (param.key === 'all-namespaces' || param?.valueHint?.includes('namespace')) {
-        return null;
-      }
-      if (param.key === 'annotation' || param.key === 'annotate') {
-        return (
-          <Grid item xs={12} key={param.key + index}>
-            <AnnotationFilter 
-              param={param} 
-              setFilters={setFilters} 
-              filters={filters} 
-              // @ts-ignore
-              dataSources={config.dataSources} 
-            />
-          </Grid>
-        );
-      }
+  const filterComponents = useMemo(
+    () =>
+      uniqueParams.map((param, index) => {
+        // Skip namespace-related params as they're handled separately
+        if (param.key === 'all-namespaces' || param?.valueHint?.includes('namespace')) {
+          return null;
+        }
+        if (param.key === 'annotation' || param.key === 'annotate') {
+          return (
+            <Grid item xs={12} key={param.key + index}>
+              <AnnotationFilter
+                param={param}
+                setFilters={setFilters}
+                filters={filters}
+                // @ts-ignore
+                dataSources={config.dataSources}
+              />
+            </Grid>
+          );
+        }
 
-      if (param.key === 'sort' || param.key === 'sorting') {
-        return (
-          <Grid item xs={4} key={param.key + index}>
-          <SortingFilter
-            param={param}
-            config={{
-              get: () => config[param.prefix + param.key],
-              set: (value) => handleFilterChange(param.prefix + param.key, value)
-            }}
-            gadgetConfig={config}
-          />
-          </Grid>
-        );
-      }
-      if (param.typeHint === 'bool') {
-        return <Grid item xs={4}>
-          <CheckboxFilter param={param} config={{
-          get: () => config[param.prefix + param.key],
-          set: (value) => handleFilterChange(param.prefix + param.key, value)
-        }} /></Grid>;
-      }
+        if (param.key === 'sort' || param.key === 'sorting') {
+          return (
+            <Grid item xs={4} key={param.key + index}>
+              <SortingFilter
+                param={param}
+                config={{
+                  get: () => config[param.prefix + param.key],
+                  set: value => handleFilterChange(param.prefix + param.key, value),
+                }}
+                gadgetConfig={config}
+              />
+            </Grid>
+          );
+        }
+        if (param.typeHint === 'bool') {
+          return (
+            <Grid item xs={4}>
+              <CheckboxFilter
+                param={param}
+                config={{
+                  get: () => config[param.prefix + param.key],
+                  set: value => handleFilterChange(param.prefix + param.key, value),
+                }}
+              />
+            </Grid>
+          );
+        }
 
-      if (param.key === 'filter' || param.typeHint === 'filter') {
-        return (
-          <Grid item xs={12} key={param.key + index}>
-          <FilterComponent
-            param={param}
-            config={{
-              get: () => filters[param.prefix + param.key],
-              set: (value) => handleFilterChange(param.prefix + param.key, value)
-            }}
-            gadgetConfig={config}
-          />
-          </Grid>
-        );
-      }
+        if (param.key === 'filter' || param.typeHint === 'filter') {
+          return (
+            <Grid item xs={12} key={param.key + index}>
+              <FilterComponent
+                param={param}
+                config={{
+                  get: () => filters[param.prefix + param.key],
+                  set: value => handleFilterChange(param.prefix + param.key, value),
+                }}
+                gadgetConfig={config}
+              />
+            </Grid>
+          );
+        }
 
-      if (param.possibleValues && param.possibleValues.length > 0) {
+        if (param.possibleValues && param.possibleValues.length > 0) {
+          return (
+            <Grid item md={6} key={param.key + index}>
+              <SelectFilter
+                param={param}
+                config={{
+                  get: () => filters[param.prefix + param.key],
+                  set: value => handleFilterChange(param.prefix + param.key, value),
+                }}
+              />
+            </Grid>
+          );
+        }
+
         return (
           <Grid item md={6} key={param.key + index}>
-          <SelectFilter
-            param={param}
-            config={{
-              get: () => filters[param.prefix + param.key],
-              set: (value) => handleFilterChange(param.prefix + param.key, value)
-            }}
-          />
+            <FilterInput param={param} onChange={handleFilterChange} />
           </Grid>
         );
-      }
-
-      return (
-        <Grid item md={6} key={param.key + index}>
-          <FilterInput param={param} onChange={handleFilterChange} />
-        </Grid>
-      );
-    }),
+      }),
     [uniqueParams, handleFilterChange]
   );
 
@@ -293,7 +300,7 @@ export default function GadgetFilters({
                 fullWidth
                 variant="outlined"
                 value={selectedNamespace}
-                onChange={(e) => {
+                onChange={e => {
                   const newNamespace = e.target.value as string;
                   setSelectedNamespace(newNamespace);
                   if (newNamespace === 'all-namespaces') {
@@ -304,9 +311,7 @@ export default function GadgetFilters({
                   }
                 }}
               >
-                {allNamespacesParam && (
-                  <MenuItem value="all-namespaces">All Namespaces</MenuItem>
-                )}
+                {allNamespacesParam && <MenuItem value="all-namespaces">All Namespaces</MenuItem>}
                 {K8s.ResourceClasses.Namespace.useList()[0]?.map(ns => (
                   <MenuItem key={ns.metadata.name} value={ns.metadata.name}>
                     {ns.metadata.name}
@@ -314,13 +319,16 @@ export default function GadgetFilters({
                 ))}
               </Select>
             </Grid>
-            {!initialPod && selectedNamespace && podParam && selectedNamespace !== 'all-namespaces' && (
-              <PodsFilter
-                namespace={selectedNamespace}
-                onChange={handleFilterChange}
-                filterConfig={podParam}
-              />
-            )}
+            {!initialPod &&
+              selectedNamespace &&
+              podParam &&
+              selectedNamespace !== 'all-namespaces' && (
+                <PodsFilter
+                  namespace={selectedNamespace}
+                  onChange={handleFilterChange}
+                  filterConfig={podParam}
+                />
+              )}
           </>
         )}
         {filterComponents}

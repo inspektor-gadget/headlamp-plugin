@@ -1,8 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router';
 import { isIGPod } from './helper';
-import usePortForward, { IGConnection } from './igSocket';
-import { GadgetContext } from '../common/GadgetContext';
+import usePortForward from './igSocket';
 
 export function useGadgetConn(nodes: any | any[] | null, pods: any[] | null) {
   // Always declare state hooks at the top level
@@ -13,19 +12,20 @@ export function useGadgetConn(nodes: any | any[] | null, pods: any[] | null) {
       setPortForwardUrl(null);
       return;
     }
-    let pod
-    // if nodes is not array 
+    let pod;
+    // if nodes is not array
     if (!Array.isArray(nodes)) {
-       pod = pods.find(pod => pod.jsonData.spec.nodeName === nodes && isIGPod(pod.jsonData));
+      pod = pods.find(pod => pod.jsonData.spec.nodeName === nodes && isIGPod(pod.jsonData));
     } else {
-      pod = pods.find(pod => 
-        pod.jsonData.spec.nodeName === nodes[0]?.jsonData.metadata.name && 
-        isIGPod(pod.jsonData)
+      pod = pods.find(
+        pod =>
+          pod.jsonData.spec.nodeName === nodes[0]?.jsonData.metadata.name && isIGPod(pod.jsonData)
       );
     }
-    const url = pod && isIGInstalled(pods) 
-      ? `api/v1/namespaces/gadget/pods/${pod.jsonData.metadata.name}/portforward?ports=8080` 
-      : null;
+    const url =
+      pod && isIGInstalled(pods)
+        ? `api/v1/namespaces/gadget/pods/${pod.jsonData.metadata.name}/portforward?ports=8080`
+        : null;
     setPortForwardUrl(url);
   }, [nodes, pods]);
 
@@ -55,7 +55,7 @@ export function GadgetConnectionForBackgroundRunningProcess({
   pods,
   callback,
   prepareGadgetInfo,
-  setIsGadgetInfoFetched
+  setIsGadgetInfoFetched,
 }: Props) {
   // Always declare all hooks at the top level
   const [decodedImageName, setDecodedImageName] = React.useState<string>('');

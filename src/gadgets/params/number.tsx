@@ -1,9 +1,9 @@
-import React from 'react';
 import { Box, TextField } from '@mui/material';
+import React from 'react';
 import Title from './title'; // Assuming you've converted the Title component to React
 
 const NumberFilter = ({ param, config }) => {
-  const handleChange = (event) => {
+  const handleChange = event => {
     config.set(param, event.target.value);
   };
 
@@ -24,7 +24,7 @@ const NumberFilter = ({ param, config }) => {
             backgroundColor: '#1f2937', // This is an approximation of bg-gray-800
             color: 'white',
             borderRadius: '0.25rem', // This is equivalent to rounded
-          }
+          },
         }}
       />
     </Box>

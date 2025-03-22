@@ -1,25 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import {  
-  InputAdornment,
-  InputLabel,
-  MenuItem,
-  OutlinedInput,
-  Select,
-  TextField,
-  Tooltip,
-  FormControl, 
-  Box, 
-  Chip, 
+import { Icon } from '@iconify/react';
+import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
+import {
+  Box,
   Button,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  InputAdornment,
+  TextField,
+  Tooltip,
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
-import { Icon } from '@iconify/react';
 import { useGadgetConn } from '../gadgets/conn';
-import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { generateRandomString } from './helpers';
 
 interface InstanceConfig {
@@ -44,17 +38,6 @@ interface BackgroundInstanceFormProps {
   resource: any;
 }
 
-const MENU_ITEM_HEIGHT = 48;
-const MENU_ITEM_PADDING_TOP = 8;
-const MENU_PROPS = {
-  PaperProps: {
-    style: {
-      maxHeight: MENU_ITEM_HEIGHT * 4.5 + MENU_ITEM_PADDING_TOP,
-      width: 250,
-    },
-  },
-};
-
 function getNodeNameFromResource(resource: any) {
   // if resource is pod, Node
   if (resource.kind === 'Pod') {
@@ -74,7 +57,6 @@ export function GadgetBackgroundInstanceForm({
   onGadgetInstanceCreation,
   resource,
   image,
-  showNodesSelector = true,
   selectedView = 'Pod',
   config,
 }: BackgroundInstanceFormProps) {
@@ -84,38 +66,30 @@ export function GadgetBackgroundInstanceForm({
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const ig = useGadgetConn(nodes, pods);
   const cluster = getCluster();
-  
+
   // Generate default name using imageName with a random string
   const getDefaultName = () => {
     const imgName = image || imageName || 'gadget';
     return `${imgName}-custom-${generateRandomString()}`;
   };
-  
+
   const [instanceConfig, setInstanceConfig] = useState<InstanceConfig>({
     name: getDefaultName(),
     tags: [],
     nodes: [],
     runInBackground: false,
   });
-    
+
   useEffect(() => {
     setInstanceConfig(prev => ({ ...prev, nodes: nodesSelected }));
   }, [nodesSelected]);
-  
+
   // Update name if image changes
   useEffect(() => {
     if (!instanceConfig.name || instanceConfig.name === '') {
       setInstanceConfig(prev => ({ ...prev, name: getDefaultName() }));
     }
   }, [image, imageName]);
-
-  function handleNodesChange(event: React.ChangeEvent<{ value: unknown }>) {
-    const value = event.target.value as string[];
-    setInstanceConfig(prev => ({
-      ...prev,
-      nodes: typeof value === 'string' ? value.split(',') : value,
-    }));
-  }
 
   function handleCreateInstance() {
     // Validate required fields
@@ -133,49 +107,59 @@ export function GadgetBackgroundInstanceForm({
         version: config?.version || 1,
         paramValues: {
           ...filters,
-        }
+        },
       },
       cluster: cluster,
       isHeadless: false,
       tags: instanceConfig.tags,
+      isEmbedded: true,
     };
     if (instanceConfig.runInBackground) {
       // Make a call to ig.createGadgetInstance when Run In Background is checked
       try {
         if (ig && ig.createGadgetInstance) {
-          ig.createGadgetInstance({
-            name: instanceConfig.name,
-            tags: instanceConfig.tags,
-            nodes: resource ? [getNodeNameFromResource(resource?.jsonData)] : instanceConfig.nodes,
-            gadgetConfig: {
-              imageName: image || imageName || '',
-              version: 1,
-              paramValues: {
-                ...filters,
-              }
+          ig.createGadgetInstance(
+            {
+              name: instanceConfig.name,
+              tags: instanceConfig.tags,
+              nodes: resource
+                ? [getNodeNameFromResource(resource?.jsonData)]
+                : instanceConfig.nodes,
+              gadgetConfig: {
+                imageName: image || imageName || '',
+                version: 1,
+                paramValues: {
+                  ...filters,
+                },
+              },
+            },
+            success => {
+              newInstance.id = success.gadgetInstance.id;
+
+              newInstance.isHeadless = true;
+              newInstance.cluster = cluster;
+
+              const existingInstances = JSON.parse(
+                localStorage.getItem('headlamp_embeded_resources') || '[]'
+              );
+              const updatedInstances = [...existingInstances, newInstance];
+              localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
+              enqueueSnackbar(`Created background instance ${instanceConfig.name}`, {
+                variant: 'success',
+              });
+              onGadgetInstanceCreation(success);
+              onClose();
+            },
+            error => {
+              console.error('Error creating gadget instance:', error);
+              enqueueSnackbar('Failed to create background instance', { variant: 'error' });
             }
-          }, (success) => {
-            
-            newInstance.id = success.gadgetInstance.id;
-
-            newInstance.isHeadless = true;
-            newInstance.cluster = cluster;
-
-            const existingInstances = JSON.parse(
-              localStorage.getItem('headlamp_embeded_resources') || '[]'
-            );
-            const updatedInstances = [...existingInstances, newInstance];
-            localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
-            enqueueSnackbar(`Created background instance ${instanceConfig.name}`, { variant: 'success' });
-            onGadgetInstanceCreation(success);
-            onClose();
-          }, (error) => {
-            console.error('Error creating gadget instance:', error);
-            enqueueSnackbar('Failed to create background instance', { variant: 'error' });
-          });
+          );
         } else {
           console.error('ig.createGadgetInstance is not available');
-          enqueueSnackbar('Failed to create background instance: API not available', { variant: 'error' });
+          enqueueSnackbar('Failed to create background instance: API not available', {
+            variant: 'error',
+          });
           return;
         }
       } catch (error) {
@@ -189,10 +173,7 @@ export function GadgetBackgroundInstanceForm({
         localStorage.getItem('headlamp_embeded_resources') || '[]'
       );
       const updatedInstances = [...existingInstances, newInstance];
-      localStorage.setItem(
-        'headlamp_embeded_resources', 
-        JSON.stringify(updatedInstances)
-      );
+      localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
       enqueueSnackbar(`Created instance ${instanceConfig.name}`, { variant: 'success' });
       onGadgetInstanceCreation(newInstance);
       onClose();
@@ -239,7 +220,7 @@ export function GadgetBackgroundInstanceForm({
       />
       <FormControlLabel
         control={
-          <Checkbox 
+          <Checkbox
             checked={instanceConfig.runInBackground}
             onChange={e => {
               setInstanceConfig(prev => ({
@@ -249,49 +230,17 @@ export function GadgetBackgroundInstanceForm({
             }}
           />
         }
-        label={<Box display="flex" alignItems="center">
-          <Box>Enable Historic Data</Box>
-          <Box ml={1}>
-          <Tooltip title="Enable this option to run the instance in background and get historic data">
-            <Icon icon="mdi:info" />
-          </Tooltip>
+        label={
+          <Box display="flex" alignItems="center">
+            <Box>Enable Historic Data</Box>
+            <Box ml={1}>
+              <Tooltip title="Enable this option to run the instance in background and get historic data">
+                <Icon icon="mdi:info" />
+              </Tooltip>
+            </Box>
           </Box>
-        </Box>}
+        }
       />
-      {/* @todo: Enable selecting a node when embeding an instance */}
-      {/* {nodes && (showNodesSelector || !resource) && (
-        <Box my={1.5}>
-          <FormControl fullWidth>
-            <InputLabel id="nodes">Nodes</InputLabel>
-            <Select
-              fullWidth
-              labelId="nodes"
-              id="nodes"
-              multiple
-              value={instanceConfig.nodes}
-              onChange={handleNodesChange}
-              input={<OutlinedInput id="multiple-nodes" label={" Nodes"}/>}
-              renderValue={selected => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {(selected as string[]).map(value => (
-                    <Chip key={value} label={value} />
-                  ))}
-                </Box>
-              )}
-              MenuProps={MENU_PROPS}
-            >
-              <MenuItem value="All">
-                <em>All</em>
-              </MenuItem>
-              {nodes.map(node => (
-                <MenuItem key={node.metadata.name} value={node.metadata.name}>
-                  {node.metadata.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-      )} */}
       <Box display="flex" justifyContent="flex-end" m={2}>
         <Button onClick={handleCreateInstance} variant="contained" disabled={!instanceConfig.name}>
           Create Instance

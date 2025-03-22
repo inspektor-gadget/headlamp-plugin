@@ -1,20 +1,18 @@
 import { Icon } from '@iconify/react';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import {
   Box,
   Button,
   FormControl,
   Grid,
-  InputLabel,
   MenuItem,
   Select,
   TextField,
   Typography,
 } from '@mui/material';
-import React, { useCallback, useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
+import React, { useCallback, useEffect, useState } from 'react';
 
-const DeleteButton = styled(Button)(({ theme }) => ({
+const DeleteButton = styled(Button)(({}) => ({
   backgroundColor: '#7f1d1d', // bg-red-900
   '&:hover': {
     backgroundColor: '#991b1b', // bg-red-800
@@ -23,7 +21,7 @@ const DeleteButton = styled(Button)(({ theme }) => ({
   minWidth: 'unset',
 }));
 
-const AddButton = styled(Button)(({ theme }) => ({
+const AddButton = styled(Button)(({}) => ({
   padding: '4px 8px',
 }));
 
@@ -46,14 +44,14 @@ interface AnnotationFilterProps {
   dataSources?: Record<string, any>;
 }
 
-export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({ 
-  param, 
-  setFilters, 
+export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
+  param,
+  setFilters,
   filters,
-  dataSources = {}
+  dataSources = {},
 }) => {
   const [filterItems, setFilterItems] = useState<FilterItem[]>([]);
-  
+
   // Parse existing filter string when component mounts or filters change
   useEffect(() => {
     const currentFilter = filters[param.prefix + param.key];
@@ -67,10 +65,10 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
           let field = true; // true if parsing field, false if parsing value
           let key = false; // true if parsing key
           let escaped = false;
-          
+
           for (let i = 0; i < filterStr.length; i++) {
             const char = filterStr[i];
-            
+
             if (escaped) {
               buffer += char;
               escaped = false;
@@ -93,7 +91,7 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
               } else {
                 currentItem.value = buffer;
               }
-              
+
               filters.push(currentItem);
               currentItem = {};
               buffer = '';
@@ -103,7 +101,7 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
               buffer += char;
             }
           }
-          
+
           // Handle the last item
           if (buffer || Object.keys(currentItem).length) {
             if (field) {
@@ -115,10 +113,10 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
             }
             filters.push(currentItem);
           }
-          
+
           return filters;
         };
-        
+
         setFilterItems(parseFilter(currentFilter));
       } catch (e) {
         console.error('Error parsing annotation filter:', e);
@@ -126,28 +124,28 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
       }
     }
   }, [filters, param.key, param.prefix]);
-  
+
   // Generate fields from data sources
   const fields = React.useMemo(() => {
     const tmpFields = [];
-    
+
     Object.values(dataSources).forEach((ds: any) => {
       if (!ds) return;
-      
+
       tmpFields.push({ key: ds.name, display: ds.name });
       if (ds.fields) {
         ds.fields.forEach((f: any) => {
-          tmpFields.push({ 
-            key: ds.name + '.' + f.fullName, 
-            display: '- ' + ds.name + '.' + f.fullName 
+          tmpFields.push({
+            key: ds.name + '.' + f.fullName,
+            display: '- ' + ds.name + '.' + f.fullName,
           });
         });
       }
     });
-    
+
     return tmpFields;
   }, [dataSources]);
-  
+
   // Update parent filters when filterItems change
   useEffect(() => {
     if (!filterItems.length) {
@@ -165,40 +163,34 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
             .replace(/,/g, '\\,')}`;
         })
         .join(',');
-      
+
       setFilters(prev => ({
         ...prev,
         [param.prefix + param.key]: filterString,
       }));
     }
   }, [filterItems, param.key, param.prefix, setFilters]);
-  
+
   const handleAddFilter = useCallback(() => {
     setFilterItems(prev => [...prev, {}]);
   }, []);
-  
+
   const handleDeleteFilter = useCallback((index: number) => {
     setFilterItems(prev => prev.filter((_, i) => i !== index));
   }, []);
-  
+
   const handleFieldChange = useCallback((index: number, field: string) => {
-    setFilterItems(prev => 
-      prev.map((item, i) => i === index ? { ...item, field } : item)
-    );
+    setFilterItems(prev => prev.map((item, i) => (i === index ? { ...item, field } : item)));
   }, []);
-  
+
   const handleKeyChange = useCallback((index: number, key: string) => {
-    setFilterItems(prev => 
-      prev.map((item, i) => i === index ? { ...item, key } : item)
-    );
+    setFilterItems(prev => prev.map((item, i) => (i === index ? { ...item, key } : item)));
   }, []);
-  
+
   const handleValueChange = useCallback((index: number, value: string) => {
-    setFilterItems(prev => 
-      prev.map((item, i) => i === index ? { ...item, value } : item)
-    );
+    setFilterItems(prev => prev.map((item, i) => (i === index ? { ...item, value } : item)));
   }, []);
-  
+
   return (
     <Box>
       <Grid container spacing={2}>
@@ -206,11 +198,14 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
           <Typography variant="subtitle2">{param.title || param.key}</Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {filterItems.map((filter, idx) => (
-              <Box key={idx} sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center' }}>
+              <Box
+                key={idx}
+                sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center' }}
+              >
                 <FormControl size="small" sx={{ minWidth: 200 }}>
                   <Select
                     value={filter.field || ''}
-                    onChange={(e) => handleFieldChange(idx, e.target.value)}
+                    onChange={e => handleFieldChange(idx, e.target.value)}
                     displayEmpty
                     size="small"
                     fullWidth
@@ -218,50 +213,44 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
                     <MenuItem value="">
                       <em>Select field</em>
                     </MenuItem>
-                    {fields.map((field) => (
+                    {fields.map(field => (
                       <MenuItem key={field.key} value={field.key}>
                         {field.display}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
-                
+
                 <TextField
                   size="small"
                   placeholder="Key"
                   value={filter.key || ''}
-                  onChange={(e) => handleKeyChange(idx, e.target.value)}
+                  onChange={e => handleKeyChange(idx, e.target.value)}
                   fullWidth
                 />
-                
+
                 <TextField
                   size="small"
                   placeholder="Value"
                   value={filter.value || ''}
-                  onChange={(e) => handleValueChange(idx, e.target.value)}
+                  onChange={e => handleValueChange(idx, e.target.value)}
                   fullWidth
                 />
-                
+
                 <DeleteButton
                   variant="contained"
                   color="error"
                   onClick={() => handleDeleteFilter(idx)}
                   startIcon={<Icon icon="mdi:trash" />}
-                >
-                </DeleteButton>
+                ></DeleteButton>
               </Box>
             ))}
-            
-            
           </Box>
           <Box mt={1}>
-              <AddButton
-                variant="contained"
-                onClick={handleAddFilter}
-              >
-                Add Annotation
-              </AddButton>
-        </Box>
+            <AddButton variant="contained" onClick={handleAddFilter}>
+              Add Annotation
+            </AddButton>
+          </Box>
         </Grid>
       </Grid>
     </Box>
