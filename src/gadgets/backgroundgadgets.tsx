@@ -12,7 +12,7 @@ import React, { useEffect, useState } from 'react';
 import { IGNotFound } from '../common/NotFound';
 import { isIGInstalled, useGadgetConn } from './conn';
 
-export function BackgroundRunning({ imageName, embedDialogOpen = false }) {
+export function BackgroundRunning({ embedDialogOpen = false }) {
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const [runningInstances, setRunningInstances] = React.useState(null);
@@ -75,7 +75,7 @@ export function BackgroundRunning({ imageName, embedDialogOpen = false }) {
         setRunningInstances(processedInstances);
       }
     );
-  }, [ig, imageName, embedDialogOpen]);
+  }, [ig, embedDialogOpen]);
 
   function CustomCheckbox({ selectedRowsRef, onChange, id }) {
     const [checked, setChecked] = useState(false);

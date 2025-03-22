@@ -351,9 +351,9 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
                   }}
                   variant="contained"
                   size="small"
-                  endIcon={<Icon icon="mdi:play" />}
+                  endIcon={<Icon icon="mdi:plus" />}
                 >
-                  Run
+                  Add
                 </Button>
               )}
             </Box>
@@ -561,11 +561,11 @@ function GadgetInput() {
         <Button
           variant="contained"
           size="small"
-          startIcon={<Icon icon="mdi:play" />}
+          endIcon={<Icon icon="mdi:plus" />}
           onClick={() => handleRun()}
           sx={{ ml: 2 }}
         >
-          Run
+          Add
         </Button>
       </Box>
     </Box>
@@ -576,7 +576,7 @@ const GadgetGrid = ({ gadgets, onEmbedClick, resource = null }) => {
   if (gadgets.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-        <GadgetInput />
+        {!resource && <GadgetInput />}
         <Typography variant="h5" color="textSecondary">
           No gadgets available
         </Typography>

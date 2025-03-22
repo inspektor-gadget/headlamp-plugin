@@ -1,4 +1,4 @@
-import { ConfirmDialog, Loader } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Loader } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import {
   Box,
@@ -72,7 +72,6 @@ export function NodeSelection(props: NodeSelectionProps) {
     isInstantRun,
   } = props;
   const [loading, setLoading] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState(false);
   const [selectionDisabled, setSelectionDisabled] = useState(false);
 
   // Set all nodes when nodesSelected is empty and nodes are available
@@ -105,7 +104,6 @@ export function NodeSelection(props: NodeSelectionProps) {
 
   useEffect(() => {
     if (gadgetInstance && gadgetConn) {
-      setLoading(true);
       gadgetConn.listGadgetInstances(instances => {
         const i = instances?.find(ins => gadgetInstance.id === ins.id);
         if (!i?.nodes) {
@@ -187,16 +185,6 @@ export function NodeSelection(props: NodeSelectionProps) {
 
   return (
     <>
-      <ConfirmDialog
-        open={deleteDialog}
-        title="Delete Instances"
-        description="Are you sure you want to delete the selected instances?"
-        onConfirm={() => {}}
-        handleClose={() => {
-          setDeleteDialog(false);
-        }}
-      />
-
       {gadgetInstance ? (
         <Box>Select a node you want to get result from</Box>
       ) : (
