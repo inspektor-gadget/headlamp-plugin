@@ -126,7 +126,6 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
         <Typography variant="body1">{param.title || param.key}</Typography>
         {renderDescription()}
       </Box>
-
       <Box display="flex" flexDirection="column" gap={1}>
         {filters.map((filter, idx) => (
           <Box key={idx} display="flex" flexDirection="row" alignItems="center" gap={1}>
@@ -161,7 +160,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
               value={filter.value || ''}
               onChange={e => handleFilterChange(idx, 'value', e.target.value)}
             />
-            <IconButton onClick={() => removeFilter(idx)} color="error">
+            <IconButton onClick={() => removeFilter(idx)} color="error" size="large">
               <Icon icon="mdi:delete" />
             </IconButton>
           </Box>

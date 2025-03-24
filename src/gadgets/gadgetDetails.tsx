@@ -170,10 +170,15 @@ function GadgetRenderer({
       setUpdate(prev => !prev);
       return;
     }
-
+    // find me the name of this instance
+    const allInstances = JSON.parse(
+      localStorage.getItem('headlamp_embeded_resources') || '[]'
+    );
+    const instance = allInstances.find(instance => instance.id === id);
     if (enableHistoricalData) {
       ig.createGadgetInstance(
         {
+          name: instance.name,
           tags: instance?.tags,
           nodes: [],
           gadgetConfig: {
@@ -323,7 +328,7 @@ function GadgetRenderer({
             <GenericGadgetRenderer
               key={podSelected?.jsonData.metadata.name}
               {...otherState}
-              filters={instance?.gadgetConfig?.paramValues}
+              filters={otherState.filters}
               gadgetInstance={gadgetInstance || instance}
               podsSelected={podsSelected}
               node={podSelected?.spec.nodeName}

@@ -5,7 +5,7 @@ import {
   registerRoute,
   registerSidebarEntry,
 } from '@kinvolk/headlamp-plugin/lib';
-import { EmptyContent, SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
+import { ActionButton, EmptyContent, SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { DetailsViewSectionProps } from '@kinvolk/headlamp-plugin/lib/components/DetailsViewSection/DetailsViewSection';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { useState } from 'react';
@@ -59,15 +59,14 @@ registerDetailsViewSection(({ resource }: DetailsViewSectionProps) => {
                 <Typography variant="h5">Inspektor Gadget</Typography>
               </Box>
               <Box>
-                <Tooltip title="Add Gadget">
-                  <IconButton
-                    onClick={() => {
-                      setOpen(true);
-                    }}
-                  >
-                    <Icon icon="mdi:plus" width={25} height={25} />
-                  </IconButton>
-                </Tooltip>
+                <ActionButton
+                                color="primary"
+                                description={'Add Gadget'}
+                                icon={'mdi:plus-circle'}
+                                onClick={() => {
+                                  setOpen(true);
+                                }}
+                              />
               </Box>
             </Box>
           }

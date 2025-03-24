@@ -291,48 +291,7 @@ export default function GadgetFilters({
 
   return (
     <Box p={2}>
-      <Grid container spacing={2} alignItems="center">
-        {namespaceParam && !initialNamespace && (
-          <>
-            <Grid item md={6}>
-              <InputLabel>Namespace</InputLabel>
-              <Select
-                fullWidth
-                variant="outlined"
-                value={selectedNamespace}
-                onChange={e => {
-                  const newNamespace = e.target.value as string;
-                  setSelectedNamespace(newNamespace);
-                  if (newNamespace === 'all-namespaces') {
-                    handleFilterChange(allNamespacesParam.prefix + allNamespacesParam.key, 'true');
-                  } else {
-                    handleFilterChange(allNamespacesParam.prefix + allNamespacesParam.key, 'false');
-                    handleFilterChange(namespaceParam.prefix + namespaceParam.key, newNamespace);
-                  }
-                }}
-              >
-                {allNamespacesParam && <MenuItem value="all-namespaces">All Namespaces</MenuItem>}
-                {K8s.ResourceClasses.Namespace.useList()[0]?.map(ns => (
-                  <MenuItem key={ns.metadata.name} value={ns.metadata.name}>
-                    {ns.metadata.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </Grid>
-            {!initialPod &&
-              selectedNamespace &&
-              podParam &&
-              selectedNamespace !== 'all-namespaces' && (
-                <PodsFilter
-                  namespace={selectedNamespace}
-                  onChange={handleFilterChange}
-                  filterConfig={podParam}
-                />
-              )}
-          </>
-        )}
         {filterComponents}
-      </Grid>
     </Box>
   );
 }

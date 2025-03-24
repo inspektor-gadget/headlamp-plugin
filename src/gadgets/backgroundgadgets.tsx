@@ -265,7 +265,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
             {
               id: 'embedded',
               header: 'Embedded',
-              accessorFn: row => (row.isEmbedded ? 'Yes' : 'No'),
+              accessorFn: row => (row.isEmbedded ? 'Yes' + `(${row.kind})` : 'No'),
               size: 150,
             },
             {

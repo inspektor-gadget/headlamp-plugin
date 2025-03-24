@@ -29,12 +29,11 @@ export function GadgetDescription({
   setEnableHistoricalData,
   update,
 }) {
-  const [isEmbedded, setIsEmbedded] = useState(false);
   const { imageName, id } = useParams<{ imageName: string; id: string }>();
   const [gadgetInstance, setGadgetInstance] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
-
+  console.log('enabled historical data:', enableHistoricalData);
   useEffect(() => {
     findGadgetInstance();
     checkGadgetStatus();
@@ -56,7 +55,6 @@ export function GadgetDescription({
     const allInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
     const instance = allInstances.find(instance => instance.id === id);
     if (instance) {
-      setIsEmbedded(instance.isEmbedded);
       setEnableHistoricalData(!!instance.isHeadless);
     }
   };
@@ -126,16 +124,6 @@ export function GadgetDescription({
             )}
           </Box>
         }
-        action={
-          <Chip
-            label={isEmbedded ? 'Embedded Resource' : 'Non-Embedded Resource'}
-            color={isEmbedded ? 'success' : 'warning'}
-            variant="outlined"
-            size="small"
-            sx={{ mt: 1 }}
-            icon={<Icon icon={isEmbedded ? 'mdi:link-variant' : 'mdi:play-circle'} />}
-          />
-        }
       />
 
       <Divider />
@@ -185,26 +173,27 @@ export function GadgetDescription({
               </Typography>
 
               <Box sx={{ mb: 1 }}>
-                {isEmbedded ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="body2" sx={{ mr: 1 }}>
-                      <strong>Type:</strong>
-                    </Typography>
-                    <Chip
-                      label={gadgetInstance.kind || 'None'}
-                      size="small"
-                      color="primary"
-                      icon={<Icon icon="mdi:cube-outline" />}
-                    />
-                  </Box>
-                ) : (
                   <FormControl size="small" fullWidth sx={{ mb: 2 }}>
-                    <InputLabel id="embed-type-label">Embed Type</InputLabel>
+                    <InputLabel id="embed-type-label">Embedded</InputLabel>
                     <Select
                       labelId="embed-type-label"
                       value={embedView}
                       label="Embed Type"
-                      onChange={e => setEmbedView(e.target.value)}
+                      onChange={e => {
+                        setEmbedView(e.target.value);
+                        if(enableHistoricalData) {
+                          const allInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
+                          const index = allInstances.findIndex(instance => instance.id === id);
+                          if (index !== -1) {
+                            if (e.target.value !== 'None') {
+                              allInstances[index].isEmbedded = true;  
+                            }
+                            allInstances[index].kind = e.target.value;
+                            localStorage.setItem('headlamp_embeded_resources', JSON.stringify(allInstances));
+                            setGadgetInstance({ ...gadgetInstance, kind: e.target.value });
+                          }
+                        }
+                      }}
                       startAdornment={<Icon icon="mdi:cube-outline" style={{ marginRight: 8 }} />}
                     >
                       <MenuItem value="None">None</MenuItem>
@@ -212,7 +201,7 @@ export function GadgetDescription({
                       <MenuItem value="Node">Node</MenuItem>
                     </Select>
                   </FormControl>
-                )}
+                
 
                 <FormControlLabel
                   control={
@@ -225,7 +214,7 @@ export function GadgetDescription({
                     />
                   }
                   label={
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', ml: -2 }}>
                       <Icon icon="mdi:history" style={{ marginRight: 4 }} />
                       <Typography variant="body2">
                         <strong>Historical Data</strong>
@@ -237,6 +226,7 @@ export function GadgetDescription({
                       </Typography>
                     </Box>
                   }
+                  labelPlacement="start"
                 />
               </Box>
             </Paper>

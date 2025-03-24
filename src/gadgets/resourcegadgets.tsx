@@ -128,7 +128,7 @@ const RunningGadgetsForResource = ({ resource, open }) => {
   }, [gadgetInstances]);
 
   if (!gadgetInstances || gadgetInstances.length === 0) return null;
-
+  console.log('matching gadget pod:', matchingGadgetPodForThisResourceNode);
   return (
     <Box sx={{ width: '100%' }}>
       <ConfirmDialog
@@ -187,14 +187,11 @@ const RunningGadgetsForResource = ({ resource, open }) => {
                     sx={{ display: 'block', mb: 1 }}
                   >
                     Version: {instance.gadgetConfig.version} • Status:{' '}
-                    {instance.isHeadless ? 'Running In Background' : 'Running In Foreground'}
+                    {instance.isHeadless ? 'Running (With Historical Data)' : 'Running'}
                   </Typography>
 
                   <Divider sx={{ mb: 2 }} />
-
-                  {matchingGadgetPodForThisResourceNode && (
                     <RunningGadgetForActiveTab instance={instance} resource={resource} ig={ig} />
-                  )}
                 </Box>
               </AccordionDetails>
             </Accordion>
@@ -463,10 +460,25 @@ const GadgetDataView = ({ resource, dataSourceID, dataColumns, gadgetData, loadi
       />
     );
   }
-
+  console.log('fields:', fields);
+  console.log('gadgetData:', gadgetData[dataSourceID]);
+  console.log('loading:', loading);
+  if(!gadgetData[dataSourceID] || gadgetData[dataSourceID].length === 0) {
+    return (
+      <Box display="flex" flexDirection="column" alignItems="center">
+        <Icon icon="mdi:alert-circle-outline" width="2em" height="2em" />
+        <Typography variant="body1">No Data Available</Typography>
+      </Box>
+    );
+  }
   return (
     fields.length > 0 && (
-      <Table columns={fields} data={gadgetData[dataSourceID] || []} loading={loading} />
+      <Table columns={fields} data={gadgetData[dataSourceID] || []} loading={loading} emptyMessage={
+        <Box display="flex" flexDirection="column" alignItems="center">
+          <Icon icon="mdi:alert-circle-outline" width="2em" height="2em" />
+          <Typography variant="body1">No Data Available</Typography>
+        </Box>
+      }/>
     )
   );
 };
