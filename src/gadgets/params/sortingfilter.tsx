@@ -82,10 +82,10 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
             <IconButton
               onClick={() => handleSortingChange(idx)}
               title={operations[filter.sorting].title}
-            >
+              size="large">
               <Icon icon={operations[filter.sorting].icon} />
             </IconButton>
-            <IconButton onClick={() => handleDelete(idx)} color="error">
+            <IconButton onClick={() => handleDelete(idx)} color="error" size="large">
               <Icon icon={'mdi:trash'} />
             </IconButton>
           </Box>

@@ -73,7 +73,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
 
     if (shouldCollapse) {
       return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', marginBottom: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', my: 1 }}>
           <Typography
             variant="caption"
             color="text.secondary"
@@ -122,7 +122,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
 
   return (
     <Box>
-      <Box>
+      <Box my={1}>
         <Typography variant="body1">{param.title || param.key}</Typography>
         {renderDescription()}
       </Box>

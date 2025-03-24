@@ -8,7 +8,7 @@ const NumberFilter = ({ param, config }) => {
   };
 
   return (
-    <Box display="flex" flexDirection="column" width="100%">
+    <Box display="flex" flexDirection="column" width="100%" m={2}>
       <Box width="33%">
         <Title param={param} />
       </Box>
@@ -21,7 +21,6 @@ const NumberFilter = ({ param, config }) => {
         onChange={handleChange}
         InputProps={{
           style: {
-            backgroundColor: '#1f2937', // This is an approximation of bg-gray-800
             color: 'white',
             borderRadius: '0.25rem', // This is equivalent to rounded
           },

@@ -86,34 +86,40 @@ const FilterInput: React.FC<{
   switch (filter.type) {
     case 'checkbox':
       return (
-        <FormControlLabel
-          control={
-            <Checkbox
-              defaultChecked={param.defaultValue === 'true'}
-              onChange={e => handleChange(String(e.target.checked))}
-            />
-          }
-          label={param.title || param.key}
-        />
+        <Box my={1}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                defaultChecked={param.defaultValue === 'true'}
+                onChange={e => handleChange(String(e.target.checked))}
+              />
+            }
+            label={param.title || param.key}
+          />
+        </Box>
       );
     case 'number':
       return (
-        <TextField
-          {...commonProps}
-          type="number"
-          defaultValue={param.defaultValue}
-          onChange={e => handleChange(e.target.value)}
-          inputProps={{ min: filter.min, max: filter.max }}
-        />
+        <Box my={1}>
+          <TextField
+            {...commonProps}
+            type="number"
+            defaultValue={param.defaultValue}
+            onChange={e => handleChange(e.target.value)}
+            inputProps={{ min: filter.min, max: filter.max }}
+          />
+        </Box>
       );
     case 'string':
       return (
-        <TextField
-          {...commonProps}
-          defaultValue={param.defaultValue}
-          onChange={e => handleChange(e.target.value)}
-          InputProps={{ endAdornment: infoAdornment }}
-        />
+        <Box my={1}>
+          <TextField
+            {...commonProps}
+            defaultValue={param.defaultValue}
+            onChange={e => handleChange(e.target.value)}
+            InputProps={{ endAdornment: infoAdornment }}
+          />
+        </Box>
       );
     default:
       return null;
@@ -289,9 +295,5 @@ export default function GadgetFilters({
 
   if (!config || !filterComponents.length) return null;
 
-  return (
-    <Box p={2}>
-        {filterComponents}
-    </Box>
-  );
+  return <Box p={2}>{filterComponents}</Box>;
 }
