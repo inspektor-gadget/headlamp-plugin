@@ -67,10 +67,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
     handleRun = () => {},
   } = props;
   const areAllPodStreamsConnected = podStreamsConnected === podsSelected.length;
-  console.log('bufferedGadgetData:', bufferedGadgetData);
-  console.log('gadgetData:', gadgetData);
-  console.log('dataSourceID:', dataSourceID);
-  console.log('gadgetRunningStatus:', gadgetRunningStatus);
+
   useEffect(() => {
     if (gadgetInstance) {
       const timer = setTimeout(() => {
@@ -91,7 +88,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
   );
 
   useEffect(() => {
-    // also bufferedGadgetData[dataSourceID] can be an object as well 
+    // also bufferedGadgetData[dataSourceID] can be an object as well
     if (bufferedGadgetData[dataSourceID]) {
       setGadgetData(bufferedGadgetData);
     }
@@ -115,7 +112,6 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
   }
 
   const renderContent = () => {
-    console.log('gadgetData:', gadgetData);
     const hasMetricField = fields?.some(field => field.header === IS_METRIC);
     if (hasMetricField) {
       return podsSelected.map(pod => {
@@ -141,37 +137,37 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
     <>
       {isInstantRun && (
         <Box mb={1}>
-        <Accordion>
-          <AccordionSummary expandIcon={<Icon icon="mdi:chevron-down" />}>
-            <Typography>Configure Params</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            {!error ? (
-              <GadgetFilters
-                config={gadgetConfig}
-                setFilters={setFilters}
-                filters={filters}
-                onApplyFilters={() => {
-                  setGadgetData(prev => ({
-                    ...prev,
-                    [dataSourceID]: [],
-                  }));
-                  setBufferedGadgetData(prev => ({
-                    ...prev,
-                    [dataSourceID]: [],
-                  }));
+          <Accordion>
+            <AccordionSummary expandIcon={<Icon icon="mdi:chevron-down" />}>
+              <Typography>Configure Params</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              {!error ? (
+                <GadgetFilters
+                  config={gadgetConfig}
+                  setFilters={setFilters}
+                  filters={filters}
+                  onApplyFilters={() => {
+                    setGadgetData(prev => ({
+                      ...prev,
+                      [dataSourceID]: [],
+                    }));
+                    setBufferedGadgetData(prev => ({
+                      ...prev,
+                      [dataSourceID]: [],
+                    }));
 
-                  // Toggle running status
-                  setGadgetRunningStatus(prev => !prev);
-                }}
-              />
-            ) : (
-              <Typography variant="body1" color="error">
-                {error}
-              </Typography>
-            )}
-          </AccordionDetails>
-        </Accordion>
+                    // Toggle running status
+                    setGadgetRunningStatus(prev => !prev);
+                  }}
+                />
+              ) : (
+                <Typography variant="body1" color="error">
+                  {error}
+                </Typography>
+              )}
+            </AccordionDetails>
+          </Accordion>
         </Box>
       )}
       {areAllPodStreamsConnected && (

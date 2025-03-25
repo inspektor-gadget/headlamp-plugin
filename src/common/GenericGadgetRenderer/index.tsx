@@ -67,9 +67,6 @@ export default function GenericGadgetRenderer({
         2000
       );
     } else {
-      console.log('Running gadget:', decodedImageName);
-      console.log('Filters:', filters);
-      console.log('node:', node);
       gadgetRef.current = ig.runGadget(
         {
           version: 1,

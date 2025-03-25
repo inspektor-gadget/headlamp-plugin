@@ -33,7 +33,7 @@ export function GadgetDescription({
   const [gadgetInstance, setGadgetInstance] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
-  console.log('enabled historical data:', enableHistoricalData);
+
   useEffect(() => {
     findGadgetInstance();
     checkGadgetStatus();
@@ -173,35 +173,39 @@ export function GadgetDescription({
               </Typography>
 
               <Box sx={{ mb: 1 }}>
-                  <FormControl size="small" fullWidth sx={{ mb: 2 }}>
-                    <InputLabel id="embed-type-label">Embedded</InputLabel>
-                    <Select
-                      labelId="embed-type-label"
-                      value={embedView}
-                      label="Embed Type"
-                      onChange={e => {
-                        setEmbedView(e.target.value);
-                        if(enableHistoricalData) {
-                          const allInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
-                          const index = allInstances.findIndex(instance => instance.id === id);
-                          if (index !== -1) {
-                            if (e.target.value !== 'None') {
-                              allInstances[index].isEmbedded = true;  
-                            }
-                            allInstances[index].kind = e.target.value;
-                            localStorage.setItem('headlamp_embeded_resources', JSON.stringify(allInstances));
-                            setGadgetInstance({ ...gadgetInstance, kind: e.target.value });
+                <FormControl size="small" fullWidth sx={{ mb: 2 }}>
+                  <InputLabel id="embed-type-label">Embedded</InputLabel>
+                  <Select
+                    labelId="embed-type-label"
+                    value={embedView}
+                    label="Embed Type"
+                    onChange={e => {
+                      setEmbedView(e.target.value);
+                      if (enableHistoricalData) {
+                        const allInstances = JSON.parse(
+                          localStorage.getItem('headlamp_embeded_resources') || '[]'
+                        );
+                        const index = allInstances.findIndex(instance => instance.id === id);
+                        if (index !== -1) {
+                          if (e.target.value !== 'None') {
+                            allInstances[index].isEmbedded = true;
                           }
+                          allInstances[index].kind = e.target.value;
+                          localStorage.setItem(
+                            'headlamp_embeded_resources',
+                            JSON.stringify(allInstances)
+                          );
+                          setGadgetInstance({ ...gadgetInstance, kind: e.target.value });
                         }
-                      }}
-                      startAdornment={<Icon icon="mdi:cube-outline" style={{ marginRight: 8 }} />}
-                    >
-                      <MenuItem value="None">None</MenuItem>
-                      <MenuItem value="Pod">Pod</MenuItem>
-                      <MenuItem value="Node">Node</MenuItem>
-                    </Select>
-                  </FormControl>
-                
+                      }
+                    }}
+                    startAdornment={<Icon icon="mdi:cube-outline" style={{ marginRight: 8 }} />}
+                  >
+                    <MenuItem value="None">None</MenuItem>
+                    <MenuItem value="Pod">Pod</MenuItem>
+                    <MenuItem value="Node">Node</MenuItem>
+                  </Select>
+                </FormControl>
 
                 <FormControlLabel
                   control={
@@ -215,12 +219,14 @@ export function GadgetDescription({
                   }
                   label={
                     <Box sx={{ display: 'flex', alignItems: 'center', ml: -2 }}>
-                      <Icon icon="mdi:history" style={{ marginRight: 4 }} />
+                      <Tooltip title="Enable historical data for this gadget, For now 1000 buffered data points are served as historical data by IG">
+                        <Icon icon="mdi:history" style={{ marginRight: 4 }} />
+                      </Tooltip>
                       <Typography variant="body2">
                         <strong>Historical Data</strong>
                         {gadgetInstance?.isHeadless && (
                           <Typography variant="caption" display="block" color="text.secondary">
-                            (Locked by headless mode)
+                            ( Running in background )
                           </Typography>
                         )}
                       </Typography>

@@ -73,41 +73,47 @@ const RunningGadgetsForResource = ({ resource, open }) => {
     const localStorageInstances = JSON.parse(
       localStorage.getItem('headlamp_embeded_resources') || '[]'
     );
+
+    // Find the instance to delete in the current state
+    const instance = gadgetInstances.find(instance => instance.id === instanceToDelete);
+    if (!instance) {
+      console.error('Instance to delete not found in state.');
+      setInstanceToDelete(null);
+      setOpenConfirmDialog(false);
+      return;
+    }
+
     let updatedLocalStorageInstances = [...localStorageInstances];
 
-    const instance = gadgetInstances.find(instance => instance.id === instanceToDelete);
-    if (instance) {
-      if (instance.isHeadless != undefined && !instance.isHeadless) {
-        // Handle localStorage instance deletion
-        updatedLocalStorageInstances = updatedLocalStorageInstances.filter(
-          i => i.id !== instanceToDelete
-        );
-      } else {
-        // Handle remote instance deletion
-        ig.deleteGadgetInstance(
-          instanceToDelete,
-          () => {
-            // This is handled in the updatedLocalStorageInstances filter below
-          },
-          err => {
-            console.error('Error deleting instance:', err);
-          }
-        );
-      }
-
-      // Remove from localStorage
-      updatedLocalStorageInstances = updatedLocalStorageInstances.filter(
-        i => i.id !== instanceToDelete
+    if (instance.isHeadless) {
+      // Handle remote instance deletion
+      ig.deleteGadgetInstance(
+        instanceToDelete,
+        () => {
+          console.log('Remote instance deleted:', instanceToDelete);
+        },
+        err => {
+          console.error('Error deleting remote instance:', err);
+        }
       );
-
-      // Update localStorage and state
-      localStorage.setItem(
-        'headlamp_embeded_resources',
-        JSON.stringify(updatedLocalStorageInstances)
-      );
-
-      setGadgetInstances(updatedLocalStorageInstances);
     }
+
+    console.log('Deleting instance:', instanceToDelete);
+
+    // Remove the instance from localStorage
+    updatedLocalStorageInstances = updatedLocalStorageInstances.filter(
+      i => i.id !== instanceToDelete
+    );
+
+    // Update localStorage and state
+    localStorage.setItem(
+      'headlamp_embeded_resources',
+      JSON.stringify(updatedLocalStorageInstances)
+    );
+
+    setGadgetInstances(prevInstances =>
+      prevInstances.filter(instance => instance.id !== instanceToDelete)
+    );
 
     setInstanceToDelete(null);
     setOpenConfirmDialog(false);
@@ -128,7 +134,6 @@ const RunningGadgetsForResource = ({ resource, open }) => {
   }, [gadgetInstances]);
 
   if (!gadgetInstances || gadgetInstances.length === 0) return null;
-  console.log('matching gadget pod:', matchingGadgetPodForThisResourceNode);
   return (
     <Box sx={{ width: '100%' }}>
       <ConfirmDialog
@@ -191,7 +196,7 @@ const RunningGadgetsForResource = ({ resource, open }) => {
                   </Typography>
 
                   <Divider sx={{ mb: 2 }} />
-                    <RunningGadgetForActiveTab instance={instance} resource={resource} ig={ig} />
+                  <RunningGadgetForActiveTab instance={instance} resource={resource} ig={ig} />
                 </Box>
               </AccordionDetails>
             </Accordion>
@@ -460,10 +465,8 @@ const GadgetDataView = ({ resource, dataSourceID, dataColumns, gadgetData, loadi
       />
     );
   }
-  console.log('fields:', fields);
-  console.log('gadgetData:', gadgetData[dataSourceID]);
-  console.log('loading:', loading);
-  if(!gadgetData[dataSourceID] || gadgetData[dataSourceID].length === 0) {
+
+  if (!gadgetData[dataSourceID] || gadgetData[dataSourceID].length === 0) {
     return (
       <Box display="flex" flexDirection="column" alignItems="center">
         <Icon icon="mdi:alert-circle-outline" width="2em" height="2em" />
@@ -473,12 +476,17 @@ const GadgetDataView = ({ resource, dataSourceID, dataColumns, gadgetData, loadi
   }
   return (
     fields.length > 0 && (
-      <Table columns={fields} data={gadgetData[dataSourceID] || []} loading={loading} emptyMessage={
-        <Box display="flex" flexDirection="column" alignItems="center">
-          <Icon icon="mdi:alert-circle-outline" width="2em" height="2em" />
-          <Typography variant="body1">No Data Available</Typography>
-        </Box>
-      }/>
+      <Table
+        columns={fields}
+        data={gadgetData[dataSourceID] || []}
+        loading={loading}
+        emptyMessage={
+          <Box display="flex" flexDirection="column" alignItems="center">
+            <Icon icon="mdi:alert-circle-outline" width="2em" height="2em" />
+            <Typography variant="body1">No Data Available</Typography>
+          </Box>
+        }
+      />
     )
   );
 };

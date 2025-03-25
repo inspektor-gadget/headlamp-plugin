@@ -41,7 +41,6 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
     // Load remote instances
     ig.listGadgetInstances(
       instances => {
-        console.log('instances:', instances);
         let filteredInstances = instances || [];
         // Filter out instances already in localStorage
         filteredInstances = filteredInstances.filter(instance => {
@@ -66,7 +65,6 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
         const updatedInstances = [...processedInstances, ...filteredInstances];
         localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
 
-        console.log('filtered instances:', filteredInstances);
         setRunningInstances(updatedInstances);
       },
       err => {
@@ -119,12 +117,10 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
 
     let updatedInstances = [...localStorageInstances];
     let updatedDisplayInstances = [...(runningInstances || [])];
-    console.log('selected rows:', selectedRows);
 
     // Process each selected row
     selectedRows.forEach(id => {
       const instance = runningInstances.find(instance => instance.id === id);
-      console.log('instance:', instance);
       if (!instance) return;
 
       if (instance.isHeadless !== undefined && !instance.isHeadless) {
@@ -148,12 +144,10 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
 
       // Remove from running instances in UI
       updatedDisplayInstances = updatedDisplayInstances.filter(i => i.id !== id);
-      console.log('id is:', id);
     });
 
     // Update localStorage
     localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
-    console.log('updated display instances:', updatedDisplayInstances);
     setRunningInstances(updatedDisplayInstances);
     setSelectedRows(new Set());
     selectedRowsRef.current = new Set();
@@ -171,7 +165,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   if (!isIGInstallationFound) {
     return <IGNotFound />;
   }
-  console.log('running instances:', runningInstances);
+
   return (
     <>
       <ConfirmDialog
@@ -265,7 +259,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
             {
               id: 'embedded',
               header: 'Embedded',
-              accessorFn: row => (row.isEmbedded ? 'Yes' + `(${row.kind})` : 'No'),
+              accessorFn: row => (row.isEmbedded ? row.kind : '-'),
               size: 150,
             },
             {

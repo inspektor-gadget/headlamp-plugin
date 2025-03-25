@@ -6,7 +6,6 @@ const CheckboxFilter = ({ param, config }) => {
   const handleChange = event => {
     config.set(event.target.checked.toString());
   };
-  console.log('params', config.get(param));
   return (
     <Box display="flex" flexDirection="row" gap={2}>
       <FormControlLabel

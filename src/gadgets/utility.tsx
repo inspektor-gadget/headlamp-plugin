@@ -49,7 +49,6 @@ export const processGadgetData = (
   setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>,
   setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>
 ) => {
-  console.log('columns:', columns);
   if (columns.length === 0) return;
 
   const massagedData: Record<string, any> = columns.includes(IS_METRIC)
@@ -98,7 +97,6 @@ export const createGadgetCallbacks = (
     onDone: () => setLoading(false),
     onError: (error: any) => console.error('Gadget error:', error),
     onData: (dsID: string, dataFromGadget: any) => {
-      console.log('Gadget data:', dsID, dataFromGadget);
       const dataToProcess = Array.isArray(dataFromGadget) ? dataFromGadget : [dataFromGadget];
       setLoading(false);
       dataToProcess.forEach(data =>

@@ -15,27 +15,14 @@ import { getClusterPrefixedPath, getCluster } from '@kinvolk/headlamp-plugin/lib
 export function GadgetDetails() {
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
-  console.log('nodes', nodes);
-  console.log('pods', pods);
-  console.log(useGadgetState());
   const gadgetState = useGadgetState();
-  console.log('use params', useParams());
 
   if (nodes === null || pods === null) {
     return <Loader />;
   }
   const { imageName, id } = useParams<{ imageName: string; id: string }>();
-  console.log('imageName', imageName);
-  console.log('id', id);
-  const foregroundRunningInstances = JSON.parse(
-    localStorage.getItem('headlamp_gadget_foreground_running_instances') || '[]'
-  );
   const embeddedInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
-
-  let matchedInstance = foregroundRunningInstances.find(instance => instance.id === id);
-  if (!matchedInstance) {
-    matchedInstance = embeddedInstances.find(instance => instance.id === id);
-  }
+  const matchedInstance = embeddedInstances.find(instance => instance.id === id);
 
   if (!matchedInstance) {
     return <div>Gadget instance not found</div>;
@@ -77,7 +64,6 @@ function GadgetRenderer({
   imageName,
   isInstantRun = false,
 }) {
-  console.log('Gadget instance is ', instance);
   const {
     podsSelected,
     podStreamsConnected,
@@ -165,15 +151,12 @@ function GadgetRenderer({
     // but lets first check if it's not enableHistoricalData and embedView is not None
     // if embedView is not None we need to set the instance as embedded
     if (embedView !== 'None' && !enableHistoricalData) {
-      console.log('handleRun', embedView);
       updateInstanceFromStorage(id, embedView, false);
       setUpdate(prev => !prev);
       return;
     }
     // find me the name of this instance
-    const allInstances = JSON.parse(
-      localStorage.getItem('headlamp_embeded_resources') || '[]'
-    );
+    const allInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
     const instance = allInstances.find(instance => instance.id === id);
     if (enableHistoricalData) {
       ig.createGadgetInstance(
@@ -198,7 +181,6 @@ function GadgetRenderer({
           const updatedInstances = allInstances.filter(instance => instance.id !== id);
           localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
           const newID = success.gadgetInstance.id;
-          console.log('success', success);
           const newInstance = {
             id: newID,
             name: success.gadgetInstance.name || imageName,

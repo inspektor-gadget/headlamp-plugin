@@ -28,6 +28,7 @@ import {
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { generatePath, useHistory } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
 import { GadgetBackgroundInstanceForm } from '../common/gadgetbackgroundinstanceform';
 import { generateRandomString } from '../common/helpers';
 import { useGadgetConn } from './conn';
@@ -276,7 +277,7 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
                 icon={<Icon icon="mdi:verified" />}
                 label="Official"
                 size="small"
-                color="primary"
+                style={{ backgroundColor: '#4caf50', color: '#fff' }}
               />
             )}
             {gadget.signed && (
@@ -292,7 +293,7 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
           </Stack>
 
           <Box mt="auto">
-            <Box display="flex" justifyContent="flex-center" alignItems="center" gap={2}>
+            <Box display="flex" justifyContent="justify-center" alignItems="center" gap={2}>
               {!resource ? (
                 <>
                   <Button
@@ -519,11 +520,24 @@ function CreateGadgetInstance({ gadgetInfo, resource, ig, imageName, enableEmbed
   );
 }
 
-function GadgetInput() {
+function GadgetInput({ resource, onAddGadget }) {
   const [imageURL, setImageURL] = useState('');
   const history = useHistory();
+  const { enqueueSnackbar } = useSnackbar();
   const handleRun = () => {
-    const row = {
+    const row: {
+      id: string;
+      isHeadless: boolean;
+      gadgetConfig: {
+        imageName: string;
+        version: number;
+        paramValues: object;
+      };
+      name: string;
+      cluster: string;
+      isEmbedded: boolean;
+      kind?: string;
+    } = {
       id: imageURL + '-custom-' + generateRandomString(),
       isHeadless: false,
       gadgetConfig: {
@@ -531,20 +545,28 @@ function GadgetInput() {
         version: 1,
         paramValues: {},
       },
-      name: imageURL,
+      name: imageURL + '-custom-' + generateRandomString(),
       cluster: getCluster(),
+      isEmbedded: resource ? true : false,
     };
-    const runningInstances = JSON.parse(
-      localStorage.getItem('headlamp_gadget_foreground_running_instances') || '[]'
-    );
-    runningInstances.push(row);
-    localStorage.setItem(
-      'headlamp_gadget_foreground_running_instances',
-      JSON.stringify(runningInstances)
-    );
-    history.push({
-      pathname: `/c/${getCluster()}/gadgets/${imageURL}/${row.id}`,
-    });
+    if (resource) {
+      row.kind = resource.jsonData.kind;
+    }
+    const instances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
+    instances.push(row);
+    localStorage.setItem('headlamp_embeded_resources', JSON.stringify(instances));
+    if (resource) {
+      onAddGadget(row);
+      enqueueSnackbar(`Added gadget ${imageURL}`, {
+        variant: 'success',
+      });
+      setImageURL('');
+    }
+    if (!resource) {
+      history.push({
+        pathname: `/c/${getCluster()}/gadgets/${imageURL}/${row.id}`,
+      });
+    }
   };
 
   return (
@@ -564,6 +586,7 @@ function GadgetInput() {
           endIcon={<Icon icon="mdi:plus" />}
           onClick={() => handleRun()}
           sx={{ ml: 2 }}
+          disabled={!imageURL}
         >
           Add
         </Button>
@@ -572,11 +595,11 @@ function GadgetInput() {
   );
 }
 
-const GadgetGrid = ({ gadgets, onEmbedClick, resource = null }) => {
+const GadgetGrid = ({ gadgets, onEmbedClick, resource = null, onAddGadget = gadget => {} }) => {
   if (gadgets.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-        {!resource && <GadgetInput />}
+        {!resource && <GadgetInput resource={resource} onAddGadget={() => {}} />}
         <Typography variant="h5" color="textSecondary">
           No gadgets available
         </Typography>
@@ -587,7 +610,7 @@ const GadgetGrid = ({ gadgets, onEmbedClick, resource = null }) => {
   return (
     <Grid container spacing={3}>
       <Grid item xs={12}>
-        {!resource && <GadgetInput />}
+        <GadgetInput resource={resource} onAddGadget={onAddGadget} />
       </Grid>
       {gadgets.map(gadget => (
         <Grid item xs={12} sm={6} md={4} key={gadget.package_id}>

@@ -29,7 +29,6 @@ function GadgetRendererWithTabs() {
     }
   }, [dynamicTabs, activeTabIndex, setActiveTabIndex]);
 
-  console.log('dynamicTabs', dynamicTabs);
   return (
     <GadgetContext.Provider value={{ ...gadgetState }}>
       <SectionBox
@@ -89,6 +88,10 @@ function GadgetRendererWithTabs() {
                     onEmbedClick={row => {
                       setSelectedGadget(row);
                       setEmbedDialogOpen(true);
+                    }}
+                    onAddGadget={gadget => {
+                      addDynamicTab(gadget);
+                      setOpenConfirmDialog(false);
                     }}
                   />
                   {embedDialogOpen && (
