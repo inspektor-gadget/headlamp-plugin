@@ -1,14 +1,10 @@
 import { Icon } from '@iconify/react';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import {
   Box,
   Checkbox,
   FormControlLabel,
   Grid,
   InputAdornment,
-  InputLabel,
-  MenuItem,
-  Select,
   TextField,
   Tooltip,
 } from '@mui/material';
@@ -126,34 +122,6 @@ const FilterInput: React.FC<{
   }
 });
 
-// Separate component for pods filter
-const PodsFilter: React.FC<{
-  namespace: string;
-  onChange: (key: string, value: string) => void;
-  filterConfig: FilterParam;
-}> = React.memo(({ namespace, onChange, filterConfig }) => {
-  const [pods, error] = K8s.ResourceClasses.Pod.useList({ namespace });
-
-  if (error || !pods || !namespace) return null;
-
-  return (
-    <Grid item md={6}>
-      <InputLabel>Pods</InputLabel>
-      <Select
-        fullWidth
-        variant="outlined"
-        onChange={e => onChange(filterConfig.prefix + filterConfig.key, e.target.value as string)}
-      >
-        {pods.map(pod => (
-          <MenuItem key={pod.metadata.name} value={pod.metadata.name}>
-            {pod.metadata.name}
-          </MenuItem>
-        ))}
-      </Select>
-    </Grid>
-  );
-});
-
 // Main component
 export default function GadgetFilters({
   config,
@@ -162,8 +130,6 @@ export default function GadgetFilters({
   pod: initialPod,
   filters,
 }: GadgetFiltersProps) {
-  const [selectedNamespace, setSelectedNamespace] = React.useState(initialNamespace || '');
-
   const handleFilterChange = useCallback(
     (key: string, value: string) => {
       if (!value) {
@@ -199,7 +165,6 @@ export default function GadgetFilters({
   // Set initial values for namespace and pod if provided
   React.useEffect(() => {
     if (initialNamespace && initialPod && namespaceParam && allNamespacesParam && podParam) {
-      setSelectedNamespace(initialNamespace);
       handleFilterChange(allNamespacesParam.prefix + allNamespacesParam.key, 'false');
       handleFilterChange(namespaceParam.prefix + namespaceParam.key, initialNamespace);
       handleFilterChange(podParam.prefix + podParam.key, initialPod);

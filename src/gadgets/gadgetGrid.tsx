@@ -26,9 +26,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useSnackbar } from 'notistack';
 import { useEffect, useState } from 'react';
 import { generatePath, useHistory } from 'react-router-dom';
-import { useSnackbar } from 'notistack';
 import { GadgetBackgroundInstanceForm } from '../common/gadgetbackgroundinstanceform';
 import { generateRandomString } from '../common/helpers';
 import { useGadgetConn } from './conn';
@@ -474,13 +474,7 @@ const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageNam
   }
 };
 
-const GadgetCreationStepper = ({
-  resource = null,
-  gadgetInfo,
-  ig,
-  imageName,
-  enableEmbed = false,
-}) => {
+const GadgetCreationStepper = ({ resource = null, gadgetInfo, imageName, enableEmbed = false }) => {
   const [activeStep, setActiveStep] = useState(0);
 
   const steps = enableEmbed
@@ -508,12 +502,11 @@ const GadgetCreationStepper = ({
 };
 
 // Update CreateGadgetInstance to pass enableEmbed
-function CreateGadgetInstance({ gadgetInfo, resource, ig, imageName, enableEmbed = false }) {
+function CreateGadgetInstance({ gadgetInfo, resource, imageName, enableEmbed = false }) {
   return (
     <GadgetCreationStepper
       resource={resource}
       gadgetInfo={gadgetInfo}
-      ig={ig}
       imageName={imageName}
       enableEmbed={enableEmbed}
     />
@@ -547,7 +540,7 @@ function GadgetInput({ resource, onAddGadget }) {
       },
       name: imageURL + '-custom-' + generateRandomString(),
       cluster: getCluster(),
-      isEmbedded: resource ? true : false,
+      isEmbedded: !!resource,
     };
     if (resource) {
       row.kind = resource.jsonData.kind;
@@ -595,7 +588,14 @@ function GadgetInput({ resource, onAddGadget }) {
   );
 }
 
-const GadgetGrid = ({ gadgets, onEmbedClick, resource = null, onAddGadget = gadget => {} }) => {
+const GadgetGrid = ({
+  gadgets,
+  onEmbedClick,
+  resource = null,
+  onAddGadget = gadget => {
+    console.log('Gadget added:', gadget);
+  },
+}) => {
   if (gadgets.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100%">

@@ -3,10 +3,10 @@ import { Icon } from '@iconify/react';
 import { ActionButton, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { Box, IconButton, Modal, Paper, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { fetchInspektorGadgetFromArtifactHub } from '../api/artifacthub';
 import { GadgetContext, useGadgetState } from '../common/GadgetContext';
 import { BackgroundRunning } from './backgroundgadgets';
 import { GadgetCardEmbedWrapper, GadgetGrid } from './gadgetGrid';
-import { fetchInspektorGadgetFromArtifactHub } from '../api/artifacthub';
 
 function GadgetRendererWithTabs() {
   const gadgetState = useGadgetState();
@@ -19,8 +19,7 @@ function GadgetRendererWithTabs() {
     fetchInspektorGadgetFromArtifactHub().then(data => setGadgets([...data])); // Wrap single item in array if needed
   }, []);
 
-  const { dynamicTabs, activeTabIndex, setActiveTabIndex, addDynamicTab, removeDynamicTab } =
-    gadgetState;
+  const { dynamicTabs, activeTabIndex, setActiveTabIndex, addDynamicTab } = gadgetState;
 
   // Ensure we default to the "Running Instances" tab (index 0) when there are no dynamic tabs
   useEffect(() => {

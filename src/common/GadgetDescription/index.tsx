@@ -1,26 +1,25 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router';
 import { Icon } from '@iconify/react';
 import {
   Box,
   Card,
   CardContent,
   CardHeader,
-  Typography,
-  TextField,
-  IconButton,
   Divider,
-  FormControlLabel,
-  Switch,
-  Select,
-  MenuItem,
-  InputLabel,
   FormControl,
-  Paper,
-  Chip,
+  FormControlLabel,
   Grid,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Switch,
+  TextField,
   Tooltip,
+  Typography,
 } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router';
 
 export function GadgetDescription({
   setEmbedView,
@@ -99,7 +98,6 @@ export function GadgetDescription({
                   size="small"
                   variant="outlined"
                   fullWidth
-                  autoFocus
                   placeholder="Enter gadget name"
                   sx={{ mr: 1 }}
                 />

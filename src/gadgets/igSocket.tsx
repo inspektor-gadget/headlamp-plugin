@@ -16,12 +16,6 @@ interface GadgetParams {
   // Add other common parameters as needed
 }
 
-interface CreateGadgetParams extends GadgetParams {
-  // Additional parameters specific to creation
-  name?: string;
-  options?: Record<string, unknown>;
-}
-
 interface RunGadgetCallbacks {
   onDone: () => void;
   onError: (error: Error) => void;
@@ -74,12 +68,6 @@ interface PortForwardState {
 interface StreamRef {
   cancel: () => void;
   getSocket: () => WebSocket | null;
-}
-
-interface WebSocketWrapperOptions {
-  onReady: () => void;
-  onError: (error: Error) => void;
-  onClose: () => void;
 }
 
 // WebAssembly initialization
@@ -231,7 +219,7 @@ const usePortForward = (url: string | null): PortForwardState => {
 
     const initConnection = async () => {
       try {
-        const result = await getIG();
+        await getIG();
 
         if (!isCurrentRequest || !mountedRef.current) {
           return;

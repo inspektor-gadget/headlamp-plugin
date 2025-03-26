@@ -3,9 +3,6 @@ import { Box, Button, IconButton, MenuItem, Select, TextField, Typography } from
 import React, { useEffect, useMemo, useState } from 'react';
 // Assuming you've converted the Title component to React
 
-// Assuming you have a context for currentGadget
-const CurrentGadgetContext = React.createContext(null);
-
 const operations = [
   { key: '==', description: 'equals' },
   { key: '!=', description: 'not equals' },

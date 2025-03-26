@@ -214,8 +214,8 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
       : resource?.jsonData?.spec.nodeName;
   const [dataColumns, setDataColumns] = useState({});
   const [dataSources, setDataSources] = useState([]);
-  const [gadgetConfig, setGadgetConfig] = useState({});
-  const [gadgetData, setGadgetData] = useState({});
+  const [, setGadgetConfig] = useState({});
+  const [, setGadgetData] = useState({});
   const [bufferedGadgetData, setBufferedGadgetData] = useState({});
   const [isGadgetInfoFetched, setIsGadgetInfoFetched] = useState(false);
   const dataColumnsRef = useRef(dataColumns); // Create a ref to store dataColumns

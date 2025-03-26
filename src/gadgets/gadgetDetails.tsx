@@ -1,5 +1,6 @@
 import { ConfirmDialog, Loader, SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import { getCluster, getClusterPrefixedPath } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Box, Typography } from '@mui/material';
 import { useContext, useEffect, useState } from 'react';
 import { generatePath, useHistory, useParams } from 'react-router-dom';
@@ -7,10 +8,9 @@ import { GadgetContext, useGadgetState } from '../common/GadgetContext';
 import { GadgetDescription } from '../common/GadgetDescription';
 import { GadgetWithDataSource } from '../common/GadgetWithDataSource';
 import GenericGadgetRenderer from '../common/GenericGadgetRenderer';
+import { generateRandomString, updateInstanceFromStorage } from '../common/helpers';
 import { NodeSelection } from '../common/NodeSelection';
 import { useGadgetConn } from './conn';
-import { generateRandomString, updateInstanceFromStorage } from '../common/helpers';
-import { getClusterPrefixedPath, getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 
 export function GadgetDetails() {
   const [nodes] = K8s.ResourceClasses.Node.useList();
