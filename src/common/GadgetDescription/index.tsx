@@ -208,8 +208,8 @@ export function GadgetDescription({
                 <FormControlLabel
                   control={
                     <Switch
-                      checked={enableHistoricalData}
-                      onChange={e => setEnableHistoricalData(e.target.checked)}
+                      checked={!enableHistoricalData}
+                      onChange={e => setEnableHistoricalData(!e.target.checked)}
                       color="primary"
                       disabled={gadgetInstance?.isHeadless}
                       size="small"
@@ -217,16 +217,11 @@ export function GadgetDescription({
                   }
                   label={
                     <Box sx={{ display: 'flex', alignItems: 'center', ml: -2 }}>
-                      <Tooltip title="Enable historical data for this gadget, For now 1000 buffered data points are served as historical data by IG">
-                        <Icon icon="mdi:history" style={{ marginRight: 4 }} />
+                      <Tooltip title="When activated, the gadget will only run when requested and while the page is open.">
+                        <Icon icon="mdi:lightning-bolt-circle" style={{ marginRight: 4 }} />
                       </Tooltip>
                       <Typography variant="body2">
-                        <strong>Historical Data</strong>
-                        {gadgetInstance?.isHeadless && (
-                          <Typography variant="caption" display="block" color="text.secondary">
-                            ( Running in background )
-                          </Typography>
-                        )}
+                        Run on demand
                       </Typography>
                     </Box>
                   }
