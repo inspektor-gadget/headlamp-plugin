@@ -2,6 +2,7 @@ import './wasm.js';
 import { stream } from '@kinvolk/headlamp-plugin/lib/ApiProxy';
 import pako from 'pako';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getServerURL, isDockerDesktop, isElectron } from './helper';
 
 interface GadgetInfo {
   name: string;
@@ -81,7 +82,12 @@ const go = new (window as any).Go();
 async function getIG(): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
   if (!igPromise) {
     try {
-      const response = await fetch('/plugins/headlamp-ig/main.wasm.gz');
+      let response;
+      if (isElectron() || isDockerDesktop()) {
+        response = await fetch(getServerURL() + '/plugins/headlamp-ig/main.wasm.gz');
+      } else {
+        response = await fetch('/plugins/headlamp-ig/main.wasm.gz');
+      }
       if (!response.ok) {
         throw new Error(`Failed to fetch WASM: ${response.statusText}`);
       }
