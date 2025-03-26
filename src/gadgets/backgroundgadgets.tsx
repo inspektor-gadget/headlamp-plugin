@@ -1,3 +1,4 @@
+import { Icon } from '@iconify/react';
 import {
   ConfirmDialog,
   Link,
@@ -7,7 +8,7 @@ import {
 } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
-import { Box, Button, Checkbox } from '@mui/material';
+import { Box, Button, Checkbox, Tooltip } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { IGNotFound } from '../common/NotFound';
 import { isIGInstalled, useGadgetConn } from './conn';
@@ -155,11 +156,11 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   };
 
   if (pods === null) {
-    return <Loader />;
+    return <Loader title="loading pods" />;
   }
 
-  if (isIGInstallationFound == null) {
-    return <Loader />;
+  if (isIGInstallationFound === null) {
+    return <Loader title="loading ig installation checks" />;
   }
 
   if (!isIGInstallationFound) {
@@ -178,25 +179,30 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
         }}
       />
       <SectionBox>
-        {selectedRows && selectedRows.size > 0 && (
-          <Box display="flex" justifyContent="flex-end" mb={2}>
-            <Box>
+        {runningInstances?.length > 0 && (
+          <Box
+            display="flex"
+            justifyContent="flex-end"
+            mb={2}
+            style={{
+              backgroundColor: selectedRows.size > 0 ? 'rgba(51, 147, 220, 0.3)' : '',
+            }}
+          >
+            <Box ml={2}>
               <Button
-                sx={theme => ({
-                  color: theme.palette.clusterChooser.button.color,
-                  background: theme.palette.clusterChooser.button.background,
-                  '&:hover': {
-                    background: theme.palette.clusterChooser.button.hover.background,
-                  },
-                  maxWidth: '20em',
-                  textTransform: 'none',
-                  padding: '6px 6px',
-                })}
                 onClick={() => {
                   setOpenConfirmDialog(true);
                 }}
+                disabled={!selectedRows || selectedRows.size === 0}
               >
-                Delete Selected Instances
+                <Tooltip title="Delete Instances">
+                  <Icon
+                    icon="mdi:delete"
+                    width="25px"
+                    height="25px"
+                    color={selectedRows.size > 0 && 'rgb(51, 147, 220)'}
+                  />
+                </Tooltip>
               </Button>
             </Box>
           </Box>
