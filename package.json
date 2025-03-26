@@ -21,24 +21,26 @@
     "kubernetes-debugging",
     "plugins"
   ],
-  "prettier": "@kinvolk/eslint-config/prettier-config",
+  "prettier": "@headlamp-k8s/eslint-config/prettier-config",
   "eslintConfig": {
     "extends": [
-      "@kinvolk",
+      "@headlamp-k8s",
       "prettier",
       "plugin:jsx-a11y/recommended"
     ]
   },
   "devDependencies": {
-    "@kinvolk/headlamp-plugin": "^0.9.2",
+    "@kinvolk/headlamp-plugin": "^0.11.1",
     "concurrently": "^9.1.2"
   },
   "dependencies": {
-    "@devexpress/dx-react-chart-material-ui": "^4.0.5",
-    "chart.js": "^4.4.0",
     "pako": "^2.1.0",
-    "react-chartjs-2": "^5.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-json-pretty": "^2.2.0",
     "recharts": "^2.13.3"
+  },
+  "overrides": {
+    "typescript": "5.6.2"
   }
 }
