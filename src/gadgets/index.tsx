@@ -31,7 +31,7 @@ function GadgetRendererWithTabs() {
   return (
     <GadgetContext.Provider value={{ ...gadgetState }}>
       <SectionBox
-        title="Gadgets"
+        title="Gadgets (beta)"
         headerProps={{
           titleSideActions: [
             <ActionButton
