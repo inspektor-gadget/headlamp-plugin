@@ -39,6 +39,7 @@ export function GadgetDetails() {
       gadgetConfig: {
         ...matchedInstance.gadgetConfig,
       },
+      name: matchedInstance.name,
     };
   }
 
@@ -230,13 +231,14 @@ function GadgetRenderer({
 
         updateInstanceFromStorage(id, 'None', false);
         const allInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
+        const instance = allInstances.find(instance => instance.id === id);
         localStorage.setItem(
           'headlamp_embeded_resources',
           JSON.stringify([
             ...allInstances,
             {
               id: newID,
-              name: imageName + '-custom-' + generateRandomString(),
+              name: instance.name,
               gadgetConfig: {
                 imageName: imageName,
                 version: 1,
@@ -264,12 +266,13 @@ function GadgetRenderer({
       }
     );
   }
+
   return (
     <>
       <ConfirmDialog
         open={deleteDialogOpen}
         handleClose={() => setDeleteDialogOpen(false)}
-        title={`Delete gadget instance ${id}`}
+        title={`Delete gadget instance ${instance?.name || ''}`}
         description="Are you sure you want to delete this gadget instance?"
         onConfirm={() => {
           deleteHeadlessGadget();
