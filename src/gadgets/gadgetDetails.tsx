@@ -89,7 +89,7 @@ function GadgetRenderer({
   const ig = useGadgetConn(nodes, pods);
   const [embedView, setEmbedView] = useState('None');
   const { id } = useParams<{ id: string }>();
-  const [enableHistoricalData, setEnableHistoricalData] = useState(false);
+  const [enableHistoricalData, setEnableHistoricalData] = useState(true);
   const [update, setUpdate] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   // Effect for handling pod stream connections
