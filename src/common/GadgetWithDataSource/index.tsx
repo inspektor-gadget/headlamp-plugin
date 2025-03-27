@@ -187,6 +187,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
                         headlessGadgetRunCallback(gadgetInstance);
                       }}
                       variant="outlined"
+                      disabled={loading}
                     >
                       {loading ? 'Processing' : !gadgetRunningStatus ? 'Run' : 'Delete'}
                     </Button>
@@ -194,7 +195,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
                 ) : (
                   podsSelected.length > 0 && (
                     <Button
-                      disabled={podsSelected.length === 0}
+                      disabled={loading || podsSelected.length === 0}
                       onClick={handleStartStop}
                       variant="outlined"
                     >
