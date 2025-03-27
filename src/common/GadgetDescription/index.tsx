@@ -229,7 +229,7 @@ export function GadgetDescription({
                     />
                   }
                   label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', ml: -2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Tooltip title="When activated, the gadget will only run when requested and while the page is open.">
                         <Icon icon="mdi:lightning-bolt-circle" style={{ marginRight: 4 }} />
                       </Tooltip>
