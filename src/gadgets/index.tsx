@@ -31,24 +31,18 @@ function GadgetRendererWithTabs() {
   return (
     <GadgetContext.Provider value={{ ...gadgetState }}>
       <SectionBox
-        title={
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Box>
-              <Typography variant="h5" sx={{ ml: 4 }}>
-                Gadgets
-              </Typography>
-            </Box>
-            <Box>
-              <ActionButton
-                color="primary"
-                description={'Add Gadget'}
-                icon={'mdi:plus-circle'}
-                onClick={() => {
-                  setOpenConfirmDialog(true);
-                }}
-              />
-            </Box>
-          </Box>
+        title="Gadgets"
+        headerProps={{
+          titleSideActions: [
+            <ActionButton
+              color="primary"
+              description={'Add Gadget'}
+              icon={'mdi:plus-circle'}
+              onClick={() => {
+                setOpenConfirmDialog(true);
+              }}
+            />
+          ]}
         }
       >
         <Box sx={{ width: '100%', typography: 'body1' }}>
