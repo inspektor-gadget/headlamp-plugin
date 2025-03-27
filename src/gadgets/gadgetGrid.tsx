@@ -336,7 +336,7 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
                     }}
                     variant="contained"
                     size="small"
-                    endIcon={<Icon icon="mdi:plus" />}
+                    startIcon={<Icon icon="mdi:plus" />}
                   >
                     Add
                   </Button>
@@ -352,7 +352,7 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
                   }}
                   variant="contained"
                   size="small"
-                  endIcon={<Icon icon="mdi:plus" />}
+                  startIcon={<Icon icon="mdi:plus" />}
                 >
                   Add
                 </Button>
@@ -576,7 +576,7 @@ function GadgetInput({ resource, onAddGadget }) {
         <Button
           variant="contained"
           size="small"
-          endIcon={<Icon icon="mdi:plus" />}
+          startIcon={<Icon icon="mdi:plus" />}
           onClick={() => handleRun()}
           sx={{ ml: 2 }}
           disabled={!imageURL}
