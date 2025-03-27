@@ -1,7 +1,7 @@
 import './wasm.js';
 import { Icon } from '@iconify/react';
 import { ActionButton, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import { Box, IconButton, Modal, Paper, Typography } from '@mui/material';
+import { Link, Box, IconButton, Modal, Paper, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { fetchInspektorGadgetFromArtifactHub } from '../api/artifacthub';
 import { GadgetContext, useGadgetState } from '../common/GadgetContext';
@@ -99,6 +99,11 @@ function GadgetRendererWithTabs() {
             </Modal>
             <BackgroundRunning embedDialogOpen={embedDialogOpen} />
           </Box>
+        </Box>
+        <Box textAlign="right">
+          <Link href="https://inspektor-gadget.io/" target="_blank">
+            Powered by Inspektor Gadget
+          </Link>
         </Box>
       </SectionBox>
     </GadgetContext.Provider>
