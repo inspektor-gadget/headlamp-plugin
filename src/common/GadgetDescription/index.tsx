@@ -140,7 +140,7 @@ export function GadgetDescription({
                 Details
               </Typography>
 
-              <Box sx={{ mb: 2 }}>
+              <Box sx={{ mb: 2, ml: 2 }}>
                 <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <strong>Image:</strong>
                   <Box component="span" sx={{ ml: 1 }}>
