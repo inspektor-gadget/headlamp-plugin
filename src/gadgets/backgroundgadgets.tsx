@@ -104,6 +104,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
 
     localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
     setRunningInstances(updatedDisplayInstances);
+    tableInstance.resetRowSelection(); // Reset row selection after updating data
     setOpenConfirmDialog(false);
   };
 
@@ -134,11 +135,6 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
           {row.name || row?.gadgetConfig?.imageName || 'Unnamed'}
         </Link>
       ),
-    },
-    {
-      id: 'id',
-      header: 'ID',
-      accessorFn: row => row.id,
     },
     {
       id: 'imageName',

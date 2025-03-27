@@ -273,7 +273,7 @@ function GadgetRenderer({
         open={deleteDialogOpen}
         handleClose={() => setDeleteDialogOpen(false)}
         title={`Delete gadget instance ${instance?.name || ''}`}
-        description="Are you sure you want to delete this gadget instance?"
+        description="Are you sure you want to stop this gadget instance? Any data collected will be lost."
         onConfirm={() => {
           deleteHeadlessGadget();
         }}

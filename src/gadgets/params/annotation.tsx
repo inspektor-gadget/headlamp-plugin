@@ -4,6 +4,7 @@ import {
   Button,
   FormControl,
   Grid,
+  IconButton,
   MenuItem,
   Select,
   TextField,
@@ -11,15 +12,6 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import React, { useCallback, useEffect, useState } from 'react';
-
-const DeleteButton = styled(Button)(({}) => ({
-  backgroundColor: '#7f1d1d', // bg-red-900
-  '&:hover': {
-    backgroundColor: '#991b1b', // bg-red-800
-  },
-  padding: '4px 8px',
-  minWidth: 'unset',
-}));
 
 const AddButton = styled(Button)(({}) => ({
   padding: '4px 8px',
@@ -236,13 +228,9 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
                   onChange={e => handleValueChange(idx, e.target.value)}
                   fullWidth
                 />
-
-                <DeleteButton
-                  variant="contained"
-                  color="error"
-                  onClick={() => handleDeleteFilter(idx)}
-                  startIcon={<Icon icon="mdi:trash" />}
-                ></DeleteButton>
+                <IconButton onClick={() => handleDeleteFilter(idx)} color="error" size="large">
+                  <Icon icon="mdi:delete" />
+                </IconButton>
               </Box>
             ))}
           </Box>

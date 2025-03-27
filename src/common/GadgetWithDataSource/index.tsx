@@ -188,7 +188,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
                       }}
                       variant="outlined"
                     >
-                      {loading ? 'Processing' : !gadgetRunningStatus ? 'Run' : 'Delete'}
+                      {loading ? 'Processing' : !gadgetRunningStatus ? 'Run' : 'Stop'}
                     </Button>
                   </>
                 ) : (
