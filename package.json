@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Your Headlamp plugin",
   "scripts": {
-    "start": "concurrently 'headlamp-plugin start' 'sleep 5 && npx shx cp main.wasm.gz dist/main.wasm.gz'",
+    "start": "headlamp-plugin start",
     "build": "headlamp-plugin build && npx shx cp main.wasm.gz dist/main.wasm.gz",
     "format": "headlamp-plugin format",
     "lint": "headlamp-plugin lint",
@@ -21,6 +21,11 @@
     "kubernetes-debugging",
     "plugins"
   ],
+  "headlamp": {
+    "extraDist": {
+      "main.wasm.gz": "main.wasm.gz"
+    }
+  },
   "prettier": "@headlamp-k8s/eslint-config/prettier-config",
   "eslintConfig": {
     "extends": [
@@ -30,8 +35,7 @@
     ]
   },
   "devDependencies": {
-    "@kinvolk/headlamp-plugin": "^0.11.1",
-    "concurrently": "^9.1.2"
+    "@kinvolk/headlamp-plugin": "^0.11.3"
   },
   "dependencies": {
     "pako": "^2.1.0",
