@@ -155,7 +155,7 @@ const RunningGadgetsForResource = ({ resource, open }) => {
           </Typography>
 
           {instances?.map(instance => (
-            <Accordion key={instance.id} sx={{ mb: 1 }}>
+            <Accordion key={instance.id} sx={{ mb: 1 }} defaultExpanded={instance.isHeadless}>
               <AccordionSummary
                 expandIcon={<Icon icon="mdi:chevron-down" />}
                 aria-controls={`panel-${instance.id}-content`}
@@ -192,7 +192,9 @@ const RunningGadgetsForResource = ({ resource, open }) => {
                     sx={{ display: 'block', mb: 1 }}
                   >
                     Version: {instance.gadgetConfig.version} • Status:{' '}
-                    {instance.isHeadless ? 'Running (With Historical Data)' : 'Running'}
+                    {instance.isHeadless
+                      ? 'Running'
+                      : 'Running on demand (will stop if this view is closed)'}
                   </Typography>
 
                   <Divider sx={{ mb: 2 }} />

@@ -77,7 +77,7 @@ export function GadgetBackgroundInstanceForm({
     name: getDefaultName(),
     tags: [],
     nodes: [],
-    runInBackground: false,
+    runInBackground: true,
   });
 
   useEffect(() => {
@@ -221,20 +221,20 @@ export function GadgetBackgroundInstanceForm({
       <FormControlLabel
         control={
           <Checkbox
-            checked={instanceConfig.runInBackground}
+            checked={!instanceConfig.runInBackground}
             onChange={e => {
               setInstanceConfig(prev => ({
                 ...prev,
-                runInBackground: e.target.checked,
+                runInBackground: !e.target.checked,
               }));
             }}
           />
         }
         label={
           <Box display="flex" alignItems="center">
-            <Box>Enable Historic Data</Box>
+            <Box>Run on demand</Box>
             <Box ml={1}>
-              <Tooltip title="Enable this option to run the instance in background and get historic data">
+              <Tooltip title="When activated, the gadget will only run when requested and while the page is open.">
                 <Icon icon="mdi:info" />
               </Tooltip>
             </Box>

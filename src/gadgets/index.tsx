@@ -1,7 +1,7 @@
 import './wasm.js';
 import { Icon } from '@iconify/react';
 import { ActionButton, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import { Link, Box, IconButton, Modal, Paper, Typography } from '@mui/material';
+import { Box, IconButton, Link, Modal, Paper, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { fetchInspektorGadgetFromArtifactHub } from '../api/artifacthub';
 import { GadgetContext, useGadgetState } from '../common/GadgetContext';
@@ -41,9 +41,9 @@ function GadgetRendererWithTabs() {
               onClick={() => {
                 setOpenConfirmDialog(true);
               }}
-            />
-          ]}
-        }
+            />,
+          ],
+        }}
       >
         <Box sx={{ width: '100%', typography: 'body1' }}>
           <Box mt={2}>

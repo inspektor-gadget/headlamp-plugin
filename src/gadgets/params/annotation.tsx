@@ -187,7 +187,7 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
     <Box>
       <Grid container spacing={2}>
         <Grid item xs={12}>
-          <Typography variant="subtitle2">{param.title || param.key}</Typography>
+          <Typography variant="subtitle1">{param.title || param.key}</Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {filterItems.map((filter, idx) => (
               <Box
@@ -228,7 +228,7 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
                   onChange={e => handleValueChange(idx, e.target.value)}
                   fullWidth
                 />
-                <IconButton onClick={() => handleDeleteFilter(idx)} color="error" size="large">
+                <IconButton onClick={() => handleDeleteFilter(idx)} color="error">
                   <Icon icon="mdi:delete" />
                 </IconButton>
               </Box>

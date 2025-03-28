@@ -1,25 +1,23 @@
-import { Icon } from '@iconify/react';
+import { Icon, InlineIcon } from '@iconify/react';
 import {
   Box,
   Card,
   CardContent,
   CardHeader,
   Divider,
-  FormControl,
   FormControlLabel,
   Grid,
   IconButton,
-  InputLabel,
   MenuItem,
-  Paper,
   Select,
   Switch,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
+import { GadgetContext } from '../GadgetContext';
 
 export function GadgetDescription({
   setEmbedView,
@@ -32,7 +30,8 @@ export function GadgetDescription({
   const [gadgetInstance, setGadgetInstance] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
-
+  const { gadgetRunningStatus } = useContext(GadgetContext);
+  console.log('gadget running status', gadgetRunningStatus);
   useEffect(() => {
     findGadgetInstance();
     checkGadgetStatus();
@@ -129,14 +128,14 @@ export function GadgetDescription({
       <CardContent>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
-            <Paper variant="outlined" sx={{ p: 2 }} style={{ height: '150px' }}>
+            <Box sx={{ p: 2 }} style={{ height: '150px' }}>
+              <InlineIcon icon="mdi:information-outline" style={{ marginRight: 8 }} />
               <Typography
-                variant="subtitle2"
+                variant="subtitle1"
                 color="textSecondary"
                 gutterBottom
-                sx={{ display: 'flex', alignItems: 'center' }}
+                sx={{ display: 'inline' }}
               >
-                <Icon icon="mdi:information-outline" style={{ marginRight: 8 }} />
                 Details
               </Typography>
 
@@ -155,18 +154,18 @@ export function GadgetDescription({
                   </Box>
                 </Typography>
               </Box>
-            </Paper>
+            </Box>
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <Paper variant="outlined" sx={{ p: 2 }} style={{ height: '150px' }}>
+            <Box sx={{ p: 2 }} style={{ height: '150px' }}>
+              <InlineIcon icon="mdi:cog-outline" style={{ marginRight: 8 }} />
               <Typography
-                variant="subtitle2"
+                variant="subtitle1"
                 color="textSecondary"
                 gutterBottom
-                sx={{ display: 'flex', alignItems: 'center' }}
+                sx={{ display: 'inline' }}
               >
-                <Icon icon="mdi:cog-outline" style={{ marginRight: 8 }} />
                 Configuration
               </Typography>
 
@@ -181,22 +180,22 @@ export function GadgetDescription({
                         label="Embed Type"
                         onChange={e => {
                           setEmbedView(e.target.value);
-                          if (enableHistoricalData) {
-                            const allInstances = JSON.parse(
-                              localStorage.getItem('headlamp_embeded_resources') || '[]'
-                            );
-                            const index = allInstances.findIndex(instance => instance.id === id);
-                            if (index !== -1) {
-                              if (e.target.value !== 'None') {
-                                allInstances[index].isEmbedded = true;
-                              }
-                              allInstances[index].kind = e.target.value;
-                              localStorage.setItem(
-                                'headlamp_embeded_resources',
-                                JSON.stringify(allInstances)
-                              );
-                              setGadgetInstance({ ...gadgetInstance, kind: e.target.value });
+                          const allInstances = JSON.parse(
+                            localStorage.getItem('headlamp_embeded_resources') || '[]'
+                          );
+                          const index = allInstances.findIndex(instance => instance.id === id);
+                          if (index !== -1) {
+                            if (e.target.value !== 'None') {
+                              allInstances[index].isEmbedded = true;
+                            } else {
+                              allInstances[index].isEmbedded = false;
                             }
+                            allInstances[index].kind = e.target.value;
+                            localStorage.setItem(
+                              'headlamp_embeded_resources',
+                              JSON.stringify(allInstances)
+                            );
+                            setGadgetInstance({ ...gadgetInstance, kind: e.target.value });
                           }
                         }}
                       >
@@ -210,9 +209,7 @@ export function GadgetDescription({
                         <Tooltip title="Adds this gadget to details view of a Pod or Node, allowing to see the gadget's data in context.">
                           <Icon icon="mdi:cube-outline" style={{ marginRight: 4 }} />
                         </Tooltip>
-                        <Typography variant="body2">
-                          Embed
-                        </Typography>
+                        <Typography variant="body2">Embed</Typography>
                       </Box>
                     }
                   />
@@ -224,7 +221,7 @@ export function GadgetDescription({
                       checked={!enableHistoricalData}
                       onChange={e => setEnableHistoricalData(!e.target.checked)}
                       color="primary"
-                      disabled={gadgetInstance?.isHeadless}
+                      disabled={gadgetRunningStatus}
                       size="small"
                     />
                   }
@@ -233,15 +230,13 @@ export function GadgetDescription({
                       <Tooltip title="When activated, the gadget will only run when requested and while the page is open.">
                         <Icon icon="mdi:lightning-bolt-circle" style={{ marginRight: 4 }} />
                       </Tooltip>
-                      <Typography variant="body2">
-                        Run on demand
-                      </Typography>
+                      <Typography variant="body2">Run on demand</Typography>
                     </Box>
                   }
                   labelPlacement="start"
                 />
               </Box>
-            </Paper>
+            </Box>
           </Grid>
         </Grid>
       </CardContent>
