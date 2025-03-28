@@ -296,7 +296,7 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
                           gadget.display_name?.split(' ').join('_') +
                           '-custom-' +
                           generateRandomString(),
-                        isHeadless: false,
+                        isHeadless: undefined,
                         isEmbedded: false,
                         name:
                           gadget.display_name?.split(' ').join('_') +
@@ -522,7 +522,7 @@ function GadgetInput({ resource, onAddGadget }) {
       kind?: string;
     } = {
       id: imageURL + '-custom-' + generateRandomString(),
-      isHeadless: false,
+      isHeadless: undefined,
       gadgetConfig: {
         imageName: imageURL,
         version: 1,
