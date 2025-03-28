@@ -1,15 +1,27 @@
 # headlamp-ig
 
-This is the default template README for [Headlamp Plugins](https://github.com/kinvolk/headlamp).
+## About
 
-- The description of your plugin should go here.
-- You should also edit the package.json file meta data (like name and description).
+This Headlamp plugin allows you to interact with [Inspektor Gadget](https://inspektor-gadget.io/) directly from your Headlamp dashboard. Inspektor Gadget is a collection of tools (gadgets) for debugging and inspecting Kubernetes resources.
 
-## Developing Headlamp plugins
+### What is Inspektor Gadget?
 
-For more information on developing Headlamp plugins, please refer to:
+Inspektor Gadget is a powerful tool that leverages eBPF to provide deep insights into your Kubernetes cluster, including networking, security, and performance monitoring capabilities.
 
-- [Getting Started](https://kinvolk.io/docs/headlamp/latest/development/plugins/), How to create a new Headlamp plugin.
-- [API Reference](https://kinvolk.io/docs/headlamp/latest/development/api/), API documentation for what you can do
-- [UI Component Storybook](https://kinvolk.io/docs/headlamp/latest/development/storybook/), pre-existing components you can use when creating your plugin.
-- [Plugin Examples](https://kinvolk.io/docs/headlamp/latest/development/plugins/examples/), Example plugins you can look at to see how it's done.
+### Installing Inspektor Gadget
+
+Before using this plugin, you need to have Inspektor Gadget installed on your Kubernetes cluster. Follow the [official installation guide](https://inspektor-gadget.io/docs/latest/quick-start#kubernetes) for detailed instructions.
+
+## Development
+
+To test this plugin:
+
+1. Make sure you have Headlamp running first. Follow the [Headlamp Quickstart Guide](https://github.com/headlamp-k8s/headlamp?tab=readme-ov-file#quickstart) to set up Headlamp.
+
+2. Once Headlamp is running, install and start this plugin:
+
+```bash
+npm i && npm start
+```
+
+This will build the plugin and make it available in your local Headlamp instance.
