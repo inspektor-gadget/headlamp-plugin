@@ -273,18 +273,10 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
 
           <Stack direction="row" spacing={1} sx={{ mb: 2, mt: 2 }}>
             {gadget.official && (
-              <Chip
-                icon={<Icon icon="mdi:verified" />}
-                label="Official"
-                size="small"
-              />
+              <Chip icon={<Icon icon="mdi:verified" />} label="Official" size="small" />
             )}
             {gadget.signed && (
-              <Chip
-                icon={<Icon icon="mdi:file-sign" />}
-                label="Signed"
-                size="small"
-              />
+              <Chip icon={<Icon icon="mdi:file-sign" />} label="Signed" size="small" />
             )}
             {gadget.cncf && <Chip label="CNCF" size="small" />}
             <Chip label={`v${gadget.version}`} size="small" variant="outlined" />
