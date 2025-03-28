@@ -36,7 +36,7 @@
     ]
   },
   "devDependencies": {
-    "@kinvolk/headlamp-plugin": "^0.11.3"
+    "@kinvolk/headlamp-plugin": "^0.11.4"
   },
   "dependencies": {
     "pako": "^2.1.0",
