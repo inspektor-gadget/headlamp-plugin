@@ -1,6 +1,6 @@
 {
-  "name": "headlamp-ig",
-  "version": "0.0.1",
+  "name": "inspektor-gadget",
+  "version": "0.1.0-beta.1",
   "description": "Your Headlamp plugin",
   "scripts": {
     "start": "headlamp-plugin start",
