@@ -74,7 +74,7 @@ interface StreamRef {
 // WebAssembly initialization
 let igPromise: Promise<WebAssembly.WebAssemblyInstantiatedSource> | null = null;
 const go = new (window as any).Go();
-
+const PLUGIN_NAME = 'inspektor-gadget';
 /**
  * Initializes and returns the WebAssembly instance
  * Implements singleton pattern to ensure only one instance is created
@@ -84,9 +84,9 @@ async function getIG(): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
     try {
       let response;
       if (isElectron() || isDockerDesktop()) {
-        response = await fetch(getServerURL() + '/plugins/headlamp-ig/main.wasm.gz');
+        response = await fetch(getServerURL() + `/plugins/${PLUGIN_NAME}/main.wasm.gz`);
       } else {
-        response = await fetch('/plugins/headlamp-ig/main.wasm.gz');
+        response = await fetch(`/plugins/${PLUGIN_NAME}/main.wasm.gz`);
       }
       if (!response.ok) {
         throw new Error(`Failed to fetch WASM: ${response.statusText}`);
