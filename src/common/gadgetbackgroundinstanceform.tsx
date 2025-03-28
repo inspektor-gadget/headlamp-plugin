@@ -126,7 +126,7 @@ export function GadgetBackgroundInstanceForm({
                 ? [getNodeNameFromResource(resource?.jsonData)]
                 : instanceConfig.nodes,
               gadgetConfig: {
-                imageName: image || imageName || '',
+                imageName: decodeURIComponent(image || imageName || ''),
                 version: 1,
                 paramValues: {
                   ...filters,
