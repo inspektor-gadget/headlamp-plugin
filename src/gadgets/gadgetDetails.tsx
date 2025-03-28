@@ -152,7 +152,7 @@ function GadgetRenderer({
     // but lets first check if it's not enableHistoricalData and embedView is not None
     // if embedView is not None we need to set the instance as embedded
     if (embedView !== 'None' && !enableHistoricalData) {
-      updateInstanceFromStorage(id, embedView, false);
+      updateInstanceFromStorage(id, embedView, false, otherState.filters);
       setUpdate(prev => !prev);
       return;
     }
