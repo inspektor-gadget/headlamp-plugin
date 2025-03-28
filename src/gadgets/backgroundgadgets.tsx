@@ -240,7 +240,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
                       icon="mdi:delete"
                       width="22px"
                       height="22px"
-                      style={{ cursor: 'pointer', color: 'white' }}
+                      style={{ cursor: 'pointer' }}
                       onClick={() => setOpenConfirmDialog(true)}
                     />
                   </Tooltip>
