@@ -166,7 +166,7 @@ function GadgetRenderer({
           tags: instance?.tags,
           nodes: [],
           gadgetConfig: {
-            imageName: imageName,
+            imageName: decodeURIComponent(imageName),
             version: 1,
             paramValues: {
               ...otherState.filters,

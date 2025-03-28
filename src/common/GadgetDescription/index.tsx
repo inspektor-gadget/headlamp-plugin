@@ -31,7 +31,7 @@ export function GadgetDescription({
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   const { gadgetRunningStatus } = useContext(GadgetContext);
-  console.log('gadget running status', gadgetRunningStatus);
+
   useEffect(() => {
     findGadgetInstance();
     checkGadgetStatus();
@@ -53,7 +53,8 @@ export function GadgetDescription({
     const allInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
     const instance = allInstances.find(instance => instance.id === id);
     if (instance) {
-      setEnableHistoricalData(!!instance.isHeadless);
+      // this would happen when you come to details page for the first time
+      setEnableHistoricalData(instance.isHeadless ?? true);
     }
   };
 
@@ -84,6 +85,7 @@ export function GadgetDescription({
     );
   }
 
+  console.log('enableHistoricalData', enableHistoricalData);
   return (
     <Card elevation={2} sx={{ mx: 'auto', mt: 2, mb: 2 }}>
       <CardHeader

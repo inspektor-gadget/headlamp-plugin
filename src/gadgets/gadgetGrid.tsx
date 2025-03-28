@@ -296,7 +296,7 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
                           gadget.display_name?.split(' ').join('_') +
                           '-custom-' +
                           generateRandomString(),
-                        isHeadless: false,
+                        isHeadless: undefined,
                         isEmbedded: false,
                         name:
                           gadget.display_name?.split(' ').join('_') +
@@ -507,6 +507,8 @@ function GadgetInput({ resource, onAddGadget }) {
   const [imageURL, setImageURL] = useState('');
   const history = useHistory();
   const { enqueueSnackbar } = useSnackbar();
+  const encodedImageURL = encodeURIComponent(imageURL);
+
   const handleRun = () => {
     const row: {
       id: string;
@@ -521,14 +523,14 @@ function GadgetInput({ resource, onAddGadget }) {
       isEmbedded: boolean;
       kind?: string;
     } = {
-      id: imageURL + '-custom-' + generateRandomString(),
-      isHeadless: false,
+      id: encodedImageURL + '-custom-' + generateRandomString(),
+      isHeadless: undefined,
       gadgetConfig: {
-        imageName: imageURL,
+        imageName: encodedImageURL,
         version: 1,
         paramValues: {},
       },
-      name: imageURL + '-custom-' + generateRandomString(),
+      name: 'gadget-custom-' + generateRandomString(),
       cluster: getCluster(),
       isEmbedded: !!resource,
     };
@@ -547,7 +549,7 @@ function GadgetInput({ resource, onAddGadget }) {
     }
     if (!resource) {
       history.push({
-        pathname: `/c/${getCluster()}/gadgets/${imageURL}/${row.id}`,
+        pathname: `/c/${getCluster()}/gadgets/${encodedImageURL}/${row.id}`,
       });
     }
   };
