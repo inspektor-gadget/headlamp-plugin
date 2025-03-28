@@ -12,7 +12,12 @@ export function generateRandomString(length: number = 6): string {
   return result;
 }
 
-export function updateInstanceFromStorage(id, embedView = 'None', isHeadless = false) {
+export function updateInstanceFromStorage(
+  id,
+  embedView = 'None',
+  isHeadless = false,
+  paramValues = {}
+) {
   const embeddedInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
   const instance = embeddedInstances.find(instance => instance.id === id);
 
@@ -28,6 +33,7 @@ export function updateInstanceFromStorage(id, embedView = 'None', isHeadless = f
       delete instance.kind; // Remove kind if embedView is 'None'
       instance.isEmbedded = false; // Mark as non-embedded
     }
+    instance.gadgetConfig.paramValues = paramValues; // Update paramValues
 
     const updatedEmbeddedInstances = [...updatedInstances, instance];
     localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedEmbeddedInstances));
