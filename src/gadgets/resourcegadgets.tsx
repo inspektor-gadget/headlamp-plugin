@@ -192,7 +192,7 @@ const RunningGadgetsForResource = ({ resource, open }) => {
                     sx={{ display: 'block', mb: 1 }}
                   >
                     Version: {instance.gadgetConfig.version} • Status:{' '}
-                    {instance.isHeadless ? 'Running (With Historical Data)' : 'Running'}
+                    {instance.isHeadless ? 'Running' : 'Running on demand (will stop if this view is closed)'}
                   </Typography>
 
                   <Divider sx={{ mb: 2 }} />

@@ -10,9 +10,7 @@ const Title = ({ param }) => {
           variant="caption"
           color="text.secondary"
           sx={{
-            whiteSpace: 'pre-wrap',
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
             maxHeight: '6rem', // Approximately 24px * 4 lines
             marginBottom: 1,
           }}

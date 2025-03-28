@@ -1,17 +1,14 @@
-import { Icon } from '@iconify/react';
+import { Icon, InlineIcon } from '@iconify/react';
 import {
   Box,
   Card,
   CardContent,
   CardHeader,
   Divider,
-  FormControl,
   FormControlLabel,
   Grid,
   IconButton,
-  InputLabel,
   MenuItem,
-  Paper,
   Select,
   Switch,
   TextField,
@@ -129,14 +126,14 @@ export function GadgetDescription({
       <CardContent>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
-            <Paper variant="outlined" sx={{ p: 2 }} style={{ height: '150px' }}>
+            <Box sx={{ p: 2 }} style={{ height: '150px' }}>
+              <InlineIcon icon="mdi:information-outline" style={{ marginRight: 8 }} />
               <Typography
-                variant="subtitle2"
+                variant="subtitle1"
                 color="textSecondary"
                 gutterBottom
-                sx={{ display: 'flex', alignItems: 'center' }}
+                sx={{ display: 'inline' }}
               >
-                <Icon icon="mdi:information-outline" style={{ marginRight: 8 }} />
                 Details
               </Typography>
 
@@ -155,18 +152,18 @@ export function GadgetDescription({
                   </Box>
                 </Typography>
               </Box>
-            </Paper>
+            </Box>
           </Grid>
 
           <Grid item xs={12} md={6}>
-            <Paper variant="outlined" sx={{ p: 2 }} style={{ height: '150px' }}>
+            <Box sx={{ p: 2 }} style={{ height: '150px' }}>
+              <InlineIcon icon="mdi:cog-outline" style={{ marginRight: 8 }} />
               <Typography
-                variant="subtitle2"
+                variant="subtitle1"
                 color="textSecondary"
                 gutterBottom
-                sx={{ display: 'flex', alignItems: 'center' }}
+                sx={{ display: 'inline'}}
               >
-                <Icon icon="mdi:cog-outline" style={{ marginRight: 8 }} />
                 Configuration
               </Typography>
 
@@ -241,7 +238,7 @@ export function GadgetDescription({
                   labelPlacement="start"
                 />
               </Box>
-            </Paper>
+            </Box>
           </Grid>
         </Grid>
       </CardContent>

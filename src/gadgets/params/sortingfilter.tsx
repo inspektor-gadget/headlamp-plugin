@@ -61,7 +61,7 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
   };
 
   return (
-    <Box display="flex" flexDirection="column" gap={1}>
+    <Box display="flex" flexDirection="column" gap={1} mb={2}>
       <Box width="33%">
         <Title param={param} />
       </Box>
@@ -86,8 +86,8 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
             >
               <Icon icon={operations[filter.sorting].icon} />
             </IconButton>
-            <IconButton onClick={() => handleDelete(idx)} color="error" size="large">
-              <Icon icon={'mdi:trash'} />
+            <IconButton onClick={() => handleDelete(idx)} color="error">
+              <Icon icon={'mdi:delete'} />
             </IconButton>
           </Box>
         ))}

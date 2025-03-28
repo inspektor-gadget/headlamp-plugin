@@ -277,7 +277,6 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
                 icon={<Icon icon="mdi:verified" />}
                 label="Official"
                 size="small"
-                style={{ backgroundColor: '#4caf50', color: '#fff' }}
               />
             )}
             {gadget.signed && (
@@ -285,10 +284,9 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
                 icon={<Icon icon="mdi:file-sign" />}
                 label="Signed"
                 size="small"
-                color="success"
               />
             )}
-            {gadget.cncf && <Chip label="CNCF" size="small" color="secondary" />}
+            {gadget.cncf && <Chip label="CNCF" size="small" />}
             <Chip label={`v${gadget.version}`} size="small" variant="outlined" />
           </Stack>
 

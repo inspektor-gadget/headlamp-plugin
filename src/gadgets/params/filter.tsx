@@ -70,7 +70,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
 
     if (shouldCollapse) {
       return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', my: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', my: 2 }}>
           <Typography
             variant="caption"
             color="text.secondary"
@@ -123,7 +123,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
         <Typography variant="body1">{param.title || param.key}</Typography>
         {renderDescription()}
       </Box>
-      <Box display="flex" flexDirection="column" gap={1}>
+      <Box display="flex" flexDirection="column" gap={1} mb={2}>
         {filters.map((filter, idx) => (
           <Box key={idx} display="flex" flexDirection="row" alignItems="center" gap={1}>
             <Select
@@ -157,7 +157,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
               value={filter.value || ''}
               onChange={e => handleFilterChange(idx, 'value', e.target.value)}
             />
-            <IconButton onClick={() => removeFilter(idx)} color="error" size="large">
+            <IconButton onClick={() => removeFilter(idx)} color="error">
               <Icon icon="mdi:delete" />
             </IconButton>
           </Box>
