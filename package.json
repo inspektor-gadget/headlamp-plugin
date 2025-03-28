@@ -1,7 +1,7 @@
 {
   "name": "inspektor-gadget",
   "version": "0.1.0-beta.1",
-  "description": "Your Headlamp plugin",
+  "description": "An easy way to run gadgets from the Inspektor Gadget project and configure views for them.",
   "scripts": {
     "start": "headlamp-plugin start",
     "build": "headlamp-plugin build && npx shx cp main.wasm.gz dist/main.wasm.gz",
