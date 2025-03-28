@@ -208,42 +208,52 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
                 <Box
                   sx={{
                     display: 'flex',
-                    justifyContent: 'space-between',
                     alignItems: 'center',
                     paddingX: '1rem',
-                    paddingY: '0.5rem',
+                    paddingY: '0rem',
                     width: '100%',
+                    height: '50px',
                   }}
                 >
                   {/* Left: X of Y selected + Clear */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <span>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                    }}
+                  >
+                    <Box>
                       {selectedCount} of {totalCount} row{totalCount > 1 ? 's' : ''} selected
-                    </span>
-                    <Button
-                      sx={{
-                        cursor: 'pointer',
-                        color: '#3393DC',
-                        fontWeight: 500,
-                        textTransform: 'none',
-                        padding: 0,
-                        minWidth: 'unset',
-                      }}
-                      onClick={() => table.resetRowSelection()}
-                    >
-                      CLEAR SELECTION
-                    </Button>
+                    </Box>
+                    <Box>
+                      <Button
+                        sx={{
+                          cursor: 'pointer',
+                          color: '#3393DC',
+                          fontWeight: 500,
+                          textTransform: 'none',
+                          padding: 0,
+                          minWidth: 'unset',
+                        }}
+                        onClick={() => table.resetRowSelection()}
+                      >
+                        CLEAR SELECTION
+                      </Button>
+                    </Box>
                   </Box>
-
-                  <Tooltip title="Delete Instances">
-                    <Icon
-                      icon="mdi:delete"
-                      width="22px"
-                      height="22px"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => setOpenConfirmDialog(true)}
-                    />
-                  </Tooltip>
+                  <Box ml={2}>
+                    <Tooltip title="Delete Instances">
+                      <Icon
+                        icon="mdi:delete"
+                        width="22px"
+                        height="22px"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => setOpenConfirmDialog(true)}
+                      />
+                    </Tooltip>
+                  </Box>
                 </Box>
               );
             }}
