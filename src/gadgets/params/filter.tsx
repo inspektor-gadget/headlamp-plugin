@@ -133,10 +133,10 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
             >
               {fields.map(field => (
                 <MenuItem
-                  key={`${field.ds}.${field.fullName}`}
-                  value={`${field.ds}.${field.fullName}`}
+                  key={`${field.ds}:${field.fullName}`}
+                  value={`${field.ds}:${field.fullName}`}
                 >
-                  {`${field.ds}.${field.fullName}`}
+                  {`${field.ds}:${field.fullName}`}
                 </MenuItem>
               ))}
             </Select>
