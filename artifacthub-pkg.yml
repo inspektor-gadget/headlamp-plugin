@@ -1,11 +1,11 @@
-version: '0.1.0-beta.1'
+version: 0.1.0-beta.2
 name: inspektor-gadget
 displayName: Inspektor Gadget
-createdAt: '2025-03-28T06:32:21.432Z'
-logoURL: 'https://raw.githubusercontent.com/inspektor-gadget/headlamp-plugin/main/logo.png'
+createdAt: '2025-04-30T15:06:10Z'
+logoURL: https://raw.githubusercontent.com/inspektor-gadget/headlamp-plugin/main/logo.png
 description: An easy way to run gadgets from the Inspektor Gadget project and configure views for them.
 annotations:
-  headlamp/plugin/archive-url: 'https://github.com/headlamp-k8s/plugins/releases/download/inspektor-gadget-0.1.0-beta.1.tar.gz'
-  headlamp/plugin/archive-checksum: 'SHA256:ea6ba94d3db2c8fcbda0636857520b1a2b4f852ee1d9dc68eef329e01ba1c174'
+  headlamp/plugin/archive-url: https://github.com/inspektor-gadget/headlamp-plugin/releases/download/0.1.0-beta.2/inspektor-gadget-plugin-0.1.0-beta.2.tar.gz
+  headlamp/plugin/archive-checksum: SHA256:48dc55cfff3e7b74da2308d2207b98027994658efc70cb0df5156a513e667fd8
   headlamp/plugin/version-compat: '>=0.22'
-  headlamp/plugin/distro-compat: 'in-cluster,web,docker-desktop,desktop'
+  headlamp/plugin/distro-compat: in-cluster,web,docker-desktop,desktop
