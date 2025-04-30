@@ -1,5 +1,14 @@
 import { Icon } from '@iconify/react';
-import { Box, Button, IconButton, MenuItem, Select, TextField, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  IconButton,
+  MenuItem,
+  Select,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
 // Assuming you've converted the Title component to React
 
@@ -21,6 +30,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
 
   const fields = useMemo(() => {
     const gadgetInfo = gadgetConfig.dataSources;
+    console.log('Gadget info:', gadgetInfo);
     if (!gadgetInfo) return [];
     const tmpFields = [];
     Object.values(gadgetInfo).forEach(ds => {
@@ -29,7 +39,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
       });
     });
     return tmpFields;
-  }, []);
+  }, [gadgetConfig.dataSources]);
 
   useEffect(() => {
     const res = filters
@@ -117,6 +127,52 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
     );
   };
 
+  // Helper function to get field description from annotations
+  const getFieldDescription = fieldKey => {
+    if (!fieldKey) return null;
+    const [dsName, fieldName] = fieldKey.split(':');
+    const field = fields.find(f => f.ds === dsName && f.fullName === fieldName);
+    return field?.annotations?.description;
+  };
+
+  // Helper function to get the selected field
+  const getSelectedField = fieldKey => {
+    if (!fieldKey) return null;
+    const [dsName, fieldName] = fieldKey.split(':');
+    return fields.find(f => f.ds === dsName && f.fullName === fieldName);
+  };
+
+  function prepareFilterValueComponentType(filter, idx) {
+    if (!filter.key) return null;
+
+    const selectedField = getSelectedField(filter.key);
+
+    if (selectedField?.annotations?.['value.one-of']) {
+      const options = selectedField.annotations['value.one-of'].split(',').map(o => o.trim());
+      return (
+        <Select
+          fullWidth
+          value={filter.value || ''}
+          onChange={e => handleFilterChange(idx, 'value', e.target.value)}
+        >
+          {options.map(option => (
+            <MenuItem key={option} value={option}>
+              {option}
+            </MenuItem>
+          ))}
+        </Select>
+      );
+    }
+
+    return (
+      <TextField
+        fullWidth
+        placeholder={param.defaultValue}
+        value={filter.value || ''}
+        onChange={e => handleFilterChange(idx, 'value', e.target.value)}
+      />
+    );
+  }
   return (
     <Box>
       <Box my={1}>
@@ -140,6 +196,13 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
                 </MenuItem>
               ))}
             </Select>
+            {filter.key && getFieldDescription(filter.key) && (
+              <Tooltip title={getFieldDescription(filter.key)} arrow placement="top">
+                <IconButton size="small" color="info" sx={{ mr: -1, ml: -0.5 }}>
+                  <Icon icon="mdi:information" width="16" height="16" />
+                </IconButton>
+              </Tooltip>
+            )}
             <Select
               value={filter.op || ''}
               onChange={e => handleFilterChange(idx, 'op', e.target.value)}
@@ -151,12 +214,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
                 </MenuItem>
               ))}
             </Select>
-            <TextField
-              fullWidth
-              placeholder={param.defaultValue}
-              value={filter.value || ''}
-              onChange={e => handleFilterChange(idx, 'value', e.target.value)}
-            />
+            {prepareFilterValueComponentType(filter, idx)}
             <IconButton onClick={() => removeFilter(idx)} color="error">
               <Icon icon="mdi:delete" />
             </IconButton>
