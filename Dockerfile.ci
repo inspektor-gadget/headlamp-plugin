@@ -1,0 +1,5 @@
+FROM busybox:latest
+
+COPY inspektor-gadget-plugin /plugins/inspektor-gadget-plugin
+
+USER 1001

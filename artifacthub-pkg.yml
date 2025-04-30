@@ -2,7 +2,7 @@ version: '0.1.0-beta.1'
 name: inspektor-gadget
 displayName: Inspektor Gadget
 createdAt: '2025-03-28T06:32:21.432Z'
-logoURL: 'https://raw.githubusercontent.com/headlamp-k8s/plugins/main/inspektor-gadget/logo.png'
+logoURL: 'https://raw.githubusercontent.com/inspektor-gadget/headlamp-plugin/main/logo.png'
 description: An easy way to run gadgets from the Inspektor Gadget project and configure views for them.
 annotations:
   headlamp/plugin/archive-url: 'https://github.com/headlamp-k8s/plugins/releases/download/inspektor-gadget-0.1.0-beta.1.tar.gz'

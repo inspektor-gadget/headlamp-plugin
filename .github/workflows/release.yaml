@@ -1,0 +1,110 @@
+name: IG/HL Plugin Release
+env:
+  REGISTRY: 'ghcr.io'
+  NODE_VERSION: '22.X'
+  RELEASE_TAR: 'inspektor-gadget-plugin-${{ github.event.inputs.releaseVersion }}.tar.gz'
+
+on:
+  workflow_dispatch:
+    inputs:
+      releaseVersion:
+        description: 'Release version (without v prefix)'
+        required: true
+        default: '0.0.0'
+
+permissions: read-all
+
+jobs:
+  release:
+    name: Release
+    permissions:
+      contents: write
+      packages: write
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npx @kinvolk/headlamp-plugin build .
+
+      - name: Update package.json
+        uses: fjogeleit/yaml-update-action@main
+        with:
+          valueFile: package.json
+          propertyPath: version
+          value: '${{ github.event.inputs.releaseVersion }}'
+          commitChange: false
+
+      - name: Create Archive
+        run: |
+          mkdir -p inspektor-gadget-plugin
+          cp package.json dist/*.js dist/*.wasm.gz inspektor-gadget-plugin
+          tar -czf ${{ env.RELEASE_TAR }} inspektor-gadget-plugin
+
+      - name: Calculate Checksum
+        id: checksum
+        run: |
+          echo "value=$(sha256sum ${{ env.RELEASE_TAR }} | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
+      - name: Calculate Date
+        id: date
+        run: |
+          echo "value=$(date +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Update artifacthub-pkg.yml
+        uses: fjogeleit/yaml-update-action@main
+        with:
+          valueFile: artifacthub-pkg.yml
+          changes: |
+            {
+              "version": "${{ github.event.inputs.releaseVersion }}",
+              "createdAt": "${{ steps.date.outputs.value }}",
+              "annotations[\"headlamp/plugin/archive-url\"]": "https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.releaseVersion }}/${{ env.RELEASE_TAR }}", 
+              "annotations[\"headlamp/plugin/archive-checksum\"]": "SHA256:${{ steps.checksum.outputs.value }}"
+            }
+          commitChange: false
+
+      - name: Commit Changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: Release ${{ github.event.inputs.releaseVersion }}
+          add: |
+            - artifacthub-pkg.yml
+            - package.json
+
+      - name: Create Release Draft
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.releaseVersion }}
+          prerelease: true
+          files: ${{ env.RELEASE_TAR }}
+          token: ${{ github.token }}
+
+      - name: Login to Quay Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push plugin image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.ci
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.event.inputs.releaseVersion }}
