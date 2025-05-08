@@ -1,48 +1,34 @@
-# headlamp-ig
+# Inspektor Gadget Headlamp Plugin
 
-## About
+ This repository contains the official [Headlamp](https://headlamp.dev/) plugin for [Inspektor Gagdet](https://inspektor-gadget.io/), providing an easier interface to run gadgets, better visualize the data, and manage the lifecycle of gadgets.
 
-This Headlamp plugin allows you to interact with [Inspektor Gadget](https://inspektor-gadget.io/) directly from your Headlamp dashboard. Inspektor Gadget is a collection of tools (gadgets) for debugging and inspecting Kubernetes resources.
+![Plugin Demo](media/plugin-demo.gif)
 
-### What is Inspektor Gadget?
+## Prerequisites
 
-Inspektor Gadget is a powerful tool that leverages eBPF to provide deep insights into your Kubernetes cluster, including networking, security, and performance monitoring capabilities.
+Before using this plugin, you need to install Inspektor Gadget on your Kubernetes cluster. For Headlamp Desktop users, you can directly install it from App Catalog. For other installation workflows, please refer to the [Inspektor Gadget documentation](https://inspektor-gadget.io/docs/latest/quick-start#kubernetes).
 
-### Installing Inspektor Gadget
+## Installation
 
-Before using this plugin, you need to have Inspektor Gadget installed on your Kubernetes cluster. Follow the [official installation guide](https://inspektor-gadget.io/docs/latest/quick-start#kubernetes) for detailed instructions.
+### Headlamp Desktop
 
----
+- Install Headlamp (https://headlamp.dev/docs/latest/installation/desktop/)
+- Open Plugin Catalog
+- Select the "Inspektor Gadget" and press the install button.
+- Restart Headlamp
 
-## Development (Local Testing)
+### In-Cluster Installation
 
-To test this plugin locally with a development instance of Headlamp:
+To use the plugin as part of Headlamp in-cluster installation, you can install it using Helm:
 
-1. Make sure you have Headlamp running first. Follow the [Headlamp Quickstart Guide](https://github.com/headlamp-k8s/headlamp?tab=readme-ov-file#quickstart).
-
-2. Once Headlamp is running, install and start this plugin:
-
-    ```bash
-    npm install
-    npm start
-    ```
-
-This will build the plugin and make it available in your local Headlamp instance at runtime.
-
----
-
-## Running the Plugin with a Headlamp Helm Deployment
-
-To use this plugin in a **deployed Headlamp instance** via **Helm**, follow the steps below:
-
-### Step 1: Add the Headlamp Helm Repository
+#### Step 1: Add the Headlamp Helm Repository
 
 ```bash
 helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
 helm repo update
 ```
 
-## Create a values.yaml with headlamp-ig plugin
+#### Create a values.yaml with headlamp-ig plugin
 ```bash
 initContainers:
   - name: "headlamp-plugins"
@@ -82,3 +68,20 @@ helm install my-headlamp headlamp/headlamp \
   --namespace kube-system \
   -f values.yaml
 ```
+
+---
+
+## Development (Local Testing)
+
+To test this plugin locally with a development instance of Headlamp:
+
+1. Make sure you have Headlamp running first. Follow the [Headlamp Quickstart Guide](https://github.com/headlamp-k8s/headlamp?tab=readme-ov-file#quickstart).
+
+2. Once Headlamp is running, install and start this plugin:
+
+    ```bash
+    npm install
+    npm start
+    ```
+
+This will build the plugin and make it available in your local Headlamp instance at runtime.
