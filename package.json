@@ -12,7 +12,8 @@
     "storybook": "headlamp-plugin storybook",
     "package": "headlamp-plugin package",
     "test": "headlamp-plugin test",
-    "storybook-build": "headlamp-plugin storybook-build"
+    "storybook-build": "headlamp-plugin storybook-build",
+    "i18n": "headlamp-plugin i18n"
   },
   "keywords": [
     "headlamp",
@@ -25,7 +26,21 @@
   "headlamp": {
     "extraDist": {
       "main.wasm.gz": "main.wasm.gz"
-    }
+    },
+    "i18n": [
+      "en",
+      "de",
+      "es",
+      "fr",
+      "hi",
+      "it",
+      "ja",
+      "ko",
+      "pt",
+      "ta",
+      "zh",
+      "zh-tw"
+    ]
   },
   "prettier": "@headlamp-k8s/eslint-config/prettier-config",
   "eslintConfig": {
@@ -36,7 +51,7 @@
     ]
   },
   "devDependencies": {
-    "@kinvolk/headlamp-plugin": "^0.11.4"
+    "@kinvolk/headlamp-plugin": "^0.13.0"
   },
   "dependencies": {
     "pako": "^2.1.0",

@@ -14,6 +14,7 @@ import { DetailsViewSectionProps } from '@kinvolk/headlamp-plugin/lib/components
 import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import { Box, Typography } from '@mui/material';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IGNotFound } from './common/NotFound';
 import { GadgetCreation } from './gadgets/gadgetcreationinresource';
 import { GadgetDetails } from './gadgets/gadgetDetails';
@@ -52,6 +53,7 @@ registerRoute({
 });
 
 registerDetailsViewSection(({ resource }: DetailsViewSectionProps) => {
+  const { t } = useTranslation();
   const embeddedResources = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
   const [open, setOpen] = useState(false);
   const isResourceEmbedded = embeddedResources.find((r: any) => r.kind === resource?.jsonData.kind);
@@ -74,12 +76,12 @@ registerDetailsViewSection(({ resource }: DetailsViewSectionProps) => {
           title={
             <Box display="flex" alignItems="center" ml={2}>
               <Box>
-                <Typography variant="h5">Inspektor Gadget</Typography>
+                <Typography variant="h5">{t('Inspektor Gadget')}</Typography>
               </Box>
               <Box>
                 <ActionButton
                   color="primary"
-                  description={'Add Gadget'}
+                  description={t('Add Gadget')}
                   icon={'mdi:plus-circle'}
                   onClick={() => {
                     setOpen(true);
@@ -95,8 +97,8 @@ registerDetailsViewSection(({ resource }: DetailsViewSectionProps) => {
             <EmptyContent>
               <Box display="flex" flexDirection="column" alignItems="center">
                 <Icon icon="mdi:alert-circle-outline" width="2em" height="2em" />
-                <Typography variant="body1">No Gadget Instances Added</Typography>
-                <Typography variant="body2">Click the plus icon to add a Gadget</Typography>
+                <Typography variant="body1">{t('No Gadget Instances Added')}</Typography>
+                <Typography variant="body2">{t('Click the plus icon to add a Gadget')}</Typography>
               </Box>
             </EmptyContent>
           )}

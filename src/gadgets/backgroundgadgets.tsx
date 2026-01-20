@@ -11,10 +11,12 @@ import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Button } from '@mui/material';
 import { Box, Tooltip } from '@mui/material';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IGNotFound } from '../common/NotFound';
 import { isIGInstalled, useGadgetConn } from './conn';
 
 export function BackgroundRunning({ embedDialogOpen = false }) {
+  const { t } = useTranslation();
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const [runningInstances, setRunningInstances] = React.useState(null);
@@ -109,11 +111,11 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   };
 
   if (pods === null) {
-    return <Loader title="loading pods" />;
+    return <Loader title={t('loading pods')} />;
   }
 
   if (isIGInstallationFound === null) {
-    return <Loader title="loading ig installation checks" />;
+    return <Loader title={t('loading ig installation checks')} />;
   }
 
   if (!isIGInstallationFound) {
@@ -123,7 +125,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   const columns = [
     {
       id: 'name',
-      header: 'Name',
+      header: t('Name'),
       accessorFn: row => (
         <Link
           routeName={'/gadgets/:imageName/:id'}
@@ -132,35 +134,35 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
             id: row.id,
           }}
         >
-          {row.name || row?.gadgetConfig?.imageName || 'Unnamed'}
+          {row.name || row?.gadgetConfig?.imageName || t('Unnamed')}
         </Link>
       ),
     },
     {
       id: 'imageName',
-      header: 'ImageName',
+      header: t('ImageName'),
       accessorFn: row => row.imageName || row?.gadgetConfig?.imageName,
       size: 300,
     },
     {
       id: 'tags',
-      header: 'Tags',
+      header: t('Tags'),
       accessorFn: row => row?.tags?.join(', ') || '',
     },
     {
       id: 'Status',
-      header: 'Status',
-      accessorFn: row => (row.isHeadless ? 'Running In Background' : 'Not Running'),
+      header: t('Status'),
+      accessorFn: row => (row.isHeadless ? t('Running In Background') : t('Not Running')),
     },
     {
       id: 'embedded',
-      header: 'Embedded',
+      header: t('Embedded'),
       accessorFn: row => (row.isEmbedded ? row.kind : '-'),
       size: 150,
     },
     {
       id: 'version',
-      header: 'Version',
+      header: t('Version'),
       accessorFn: row => row.version || row?.gadgetConfig?.version,
       size: 200,
     },
@@ -170,8 +172,8 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
     <>
       <ConfirmDialog
         open={openConfirmDialog}
-        title="Delete Instances"
-        description="Are you sure you want to delete the selected instances?"
+        title={t('Delete Instances')}
+        description={t('Are you sure you want to delete the selected instances?')}
         onConfirm={handleDeleteInstances}
         handleClose={() => {
           setOpenConfirmDialog(false);
@@ -183,7 +185,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
             data={runningInstances?.filter(instance => instance.cluster === cluster) || []}
             columns={columns}
             loading={runningInstances === null}
-            emptyMessage="No Embedded Instances"
+            emptyMessage={t('No Embedded Instances')}
             enableRowSelection
             positionToolbarAlertBanner="top"
             renderTopToolbarCustomActions={({ table }) => {
@@ -197,7 +199,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
             data={runningInstances?.filter(instance => instance.cluster === cluster) || []}
             columns={columns}
             loading={runningInstances === null}
-            emptyMessage="No Embedded Instances"
+            emptyMessage={t('No Embedded Instances')}
             enableRowSelection
             enableToolbarInternalActions={false}
             positionToolbarAlertBanner="top"
@@ -225,7 +227,11 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
                     }}
                   >
                     <Box>
-                      {selectedCount} of {totalCount} row{totalCount > 1 ? 's' : ''} selected
+                      {t('{{selectedCount}} of {{totalCount}} row{{plural}} selected', {
+                        selectedCount,
+                        totalCount,
+                        plural: totalCount > 1 ? 's' : ''
+                      })}
                     </Box>
                     <Box>
                       <Button
@@ -239,12 +245,12 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
                         }}
                         onClick={() => table.resetRowSelection()}
                       >
-                        CLEAR SELECTION
+                        {t('CLEAR SELECTION')}
                       </Button>
                     </Box>
                   </Box>
                   <Box ml={2}>
-                    <Tooltip title="Delete Instances">
+                    <Tooltip title={t('Delete Instances')}>
                       <Icon
                         icon="mdi:delete"
                         width="22px"

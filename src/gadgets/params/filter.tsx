@@ -9,6 +9,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useMemo, useState } from 'react';
 // Assuming you've converted the Title component to React
 
@@ -25,6 +26,7 @@ const operations = [
 const FilterComponent = ({ param, config, gadgetConfig }) => {
   const [filters, setFilters] = useState([]);
   const [expanded, setExpanded] = useState(false);
+  const { t } = useTranslation();
   const maxDescriptionLength = 100; // Characters before collapsing
   const shouldCollapse = param.description && param.description.length > maxDescriptionLength;
 
@@ -221,7 +223,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
           </Box>
         ))}
         <Button variant="contained" onClick={addFilter} startIcon={<Icon icon="mdi:add" />}>
-          Add Filter
+          {t('Add Filter')}
         </Button>
       </Box>
     </Box>

@@ -1,7 +1,9 @@
 import { Box, Link, useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 export function IGNotFound() {
   const theme = useTheme();
+  const { t } = useTranslation();
   return (
     <Box
       // center this box and also wrap it in a white background with some box shadow
@@ -14,13 +16,13 @@ export function IGNotFound() {
         backgroundColor: theme.palette.background.paper,
       }}
     >
-      <h1>Inspektor Gadget is not installed</h1>
+      <h1>{t('Inspektor Gadget is not installed')}</h1>
       <p>
-        Follow the{' '}
+        {t('Follow the')}{' '}
         <Link target="_blank" href="https://inspektor-gadget.io/docs/latest/quick-start">
-          installation guide
+          {t('installation guide')}
         </Link>{' '}
-        to install Inspektor Gadget on your cluster
+        {t('to install Inspektor Gadget on your cluster')}
       </p>
     </Box>
   );

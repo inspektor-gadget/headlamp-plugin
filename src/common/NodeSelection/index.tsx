@@ -13,6 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isIGPod } from '../../gadgets/helper';
 
 // Improved type definitions
@@ -60,6 +61,7 @@ interface NodeSelectionProps {
 }
 
 export function NodeSelection(props: NodeSelectionProps) {
+  const { t } = useTranslation();
   const [nodes] = K8s.ResourceClasses.Node.useList() as [Node[]];
   const [pods] = K8s.ResourceClasses.Pod.useList() as [Pod[]];
   const [finalNodes, setFinalNodes] = useState<Node[]>(null);
@@ -154,7 +156,7 @@ export function NodeSelection(props: NodeSelectionProps) {
     return <Loader title="" />;
   }
   if (loading) {
-    return <Loader title="Loading" />;
+    return <Loader title={t('Loading')} />;
   }
 
   const handleChange = (event: { target: { value: string[] } }) => {
@@ -186,10 +188,10 @@ export function NodeSelection(props: NodeSelectionProps) {
   return (
     <>
       {gadgetInstance ? (
-        <Box>Select a node you want to get result from</Box>
+        <Box>{t('Select a node you want to get result from')}</Box>
       ) : (
         <Box>
-          {!isInstantRun ? 'Running on all nodes' : 'Select a node you want to run the gadget on'}
+          {!isInstantRun ? t('Running on all nodes') : t('Select a node you want to run the gadget on')}
         </Box>
       )}
       <Box display="flex" my={2} width="100%">
@@ -201,7 +203,7 @@ export function NodeSelection(props: NodeSelectionProps) {
               margin: '-0.3rem -0.1rem',
             }}
           >
-            Nodes
+            {t('Nodes')}
           </InputLabel>
           <Select
             labelId="nodes-select"
@@ -209,9 +211,9 @@ export function NodeSelection(props: NodeSelectionProps) {
             multiple
             value={nodesSelected}
             onChange={handleChange}
-            input={<OutlinedInput label="Nodes" />}
+            input={<OutlinedInput label={t('Nodes')} />}
             renderValue={selected => {
-              return !isInstantRun ? 'All nodes selected' : selected.join(', ');
+              return !isInstantRun ? t('All nodes selected') : selected.join(', ');
             }}
             MenuProps={MenuProps}
             fullWidth
@@ -229,7 +231,7 @@ export function NodeSelection(props: NodeSelectionProps) {
           </Select>
           {!isInstantRun && (
             <Typography variant="caption" color="textSecondary" style={{ marginTop: '4px' }}>
-              All nodes are automatically selected and cannot be changed
+              {t('All nodes are automatically selected and cannot be changed')}
             </Typography>
           )}
         </FormControl>

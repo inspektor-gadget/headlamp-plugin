@@ -3,12 +3,14 @@ import { Icon } from '@iconify/react';
 import { ActionButton, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { Box, IconButton, Link, Modal, Paper, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchInspektorGadgetFromArtifactHub } from '../api/artifacthub';
 import { GadgetContext, useGadgetState } from '../common/GadgetContext';
 import { BackgroundRunning } from './backgroundgadgets';
 import { GadgetCardEmbedWrapper, GadgetGrid } from './gadgetGrid';
 
 function GadgetRendererWithTabs() {
+  const { t } = useTranslation();
   const gadgetState = useGadgetState();
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [gadgets, setGadgets] = useState([]);
@@ -31,12 +33,12 @@ function GadgetRendererWithTabs() {
   return (
     <GadgetContext.Provider value={{ ...gadgetState }}>
       <SectionBox
-        title="Gadgets (beta)"
+        title={t('Gadgets (beta)')}
         headerProps={{
           titleSideActions: [
             <ActionButton
               color="primary"
-              description={'Add Gadget'}
+              description={t('Add Gadget')}
               icon={'mdi:plus-circle'}
               onClick={() => {
                 setOpenConfirmDialog(true);
@@ -68,7 +70,7 @@ function GadgetRendererWithTabs() {
                   sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1 }}
                 >
                   <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                    Add Gadget
+                    {t('Add Gadget')}
                   </Typography>
                   <IconButton onClick={() => setOpenConfirmDialog(false)} size="small">
                     <Icon icon="mdi:close" />
@@ -102,7 +104,7 @@ function GadgetRendererWithTabs() {
         </Box>
         <Box textAlign="right">
           <Link href="https://inspektor-gadget.io/" target="_blank">
-            Powered by Inspektor Gadget
+            {t('Powered by Inspektor Gadget')}
           </Link>
         </Box>
       </SectionBox>

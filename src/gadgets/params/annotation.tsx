@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const AddButton = styled(Button)(({}) => ({
   padding: '4px 8px',
@@ -42,6 +43,7 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
   filters,
   dataSources = {},
 }) => {
+  const { t } = useTranslation();
   const [filterItems, setFilterItems] = useState<FilterItem[]>([]);
 
   // Parse existing filter string when component mounts or filters change
@@ -203,7 +205,7 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
                     fullWidth
                   >
                     <MenuItem value="">
-                      <em>Select field</em>
+                      <em>{t('Select field')}</em>
                     </MenuItem>
                     {fields.map(field => (
                       <MenuItem key={field.key} value={field.key}>
@@ -215,7 +217,7 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
 
                 <TextField
                   size="small"
-                  placeholder="Key"
+                  placeholder={t('Key')}
                   value={filter.key || ''}
                   onChange={e => handleKeyChange(idx, e.target.value)}
                   fullWidth
@@ -223,7 +225,7 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
 
                 <TextField
                   size="small"
-                  placeholder="Value"
+                  placeholder={t('Value')}
                   value={filter.value || ''}
                   onChange={e => handleValueChange(idx, e.target.value)}
                   fullWidth
@@ -236,7 +238,7 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
           </Box>
           <Box mt={1}>
             <AddButton variant="contained" onClick={handleAddFilter}>
-              Add Annotation
+              {t('Add Annotation')}
             </AddButton>
           </Box>
         </Grid>

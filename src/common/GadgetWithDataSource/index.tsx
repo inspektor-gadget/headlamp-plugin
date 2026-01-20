@@ -13,6 +13,7 @@ import React, { useEffect, useMemo } from 'react';
 import GadgetFilters from '../../gadgets/gadgetFilters';
 import { IS_METRIC } from '../helpers';
 import { MetricChart } from '../MetricChart';
+import { useTranslation } from 'react-i18next';
 
 interface GadgetWithDataSourceProps {
   podsSelected: any[];
@@ -66,6 +67,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
     headlessGadgetRunCallback = () => {},
     handleRun = () => {},
   } = props;
+  const { t } = useTranslation();
   const areAllPodStreamsConnected = podStreamsConnected === podsSelected.length;
 
   useEffect(() => {
@@ -139,7 +141,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
         <Box mb={1}>
           <Accordion>
             <AccordionSummary expandIcon={<Icon icon="mdi:chevron-down" />}>
-              <Typography>Configure Params</Typography>
+              <Typography>{t('Configure Params')}</Typography>
             </AccordionSummary>
             <AccordionDetails>
               {!error ? (

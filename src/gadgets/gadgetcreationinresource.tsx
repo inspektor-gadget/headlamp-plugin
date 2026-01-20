@@ -32,7 +32,7 @@ export function GadgetCreation({ resource, open, setOpen }) {
         >
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1 }}>
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
-              Add Gadget
+              {t('Add Gadget')}
             </Typography>
             <IconButton onClick={() => setOpen(false)} size="small">
               <Icon icon="mdi:close" />

@@ -28,6 +28,7 @@ import {
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { generatePath, useHistory } from 'react-router-dom';
 import { GadgetBackgroundInstanceForm } from '../common/gadgetbackgroundinstanceform';
 import { generateRandomString } from '../common/helpers';
@@ -42,6 +43,7 @@ const KUBERNETES_VIEWS = [
 ];
 
 export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resource = null }) {
+  const { t } = useTranslation();
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const ig = useGadgetConn(nodes, pods);
@@ -115,7 +117,7 @@ export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resou
           }}
         >
           <Typography variant="h6" color="error">
-            Error fetching gadget info {error}
+            {t('Error fetching gadget info')} {error}
           </Typography>
         </Box>
       </Box>
@@ -218,7 +220,7 @@ export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resou
             borderColor: 'divider',
           }}
         >
-          <Typography variant="h6">Configure Gadget</Typography>
+          <Typography variant="h6">{t('Configure Gadget')}</Typography>
           <IconButton onClick={handleClose} size="small">
             <Icon icon="mdi:close" />
           </IconButton>
@@ -243,6 +245,7 @@ export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resou
 }
 
 const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
+  const { t } = useTranslation();
   const history = useHistory();
   return (
     <>
@@ -273,10 +276,10 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
 
           <Stack direction="row" spacing={1} sx={{ mb: 2, mt: 2 }}>
             {gadget.official && (
-              <Chip icon={<Icon icon="mdi:verified" />} label="Official" size="small" />
+              <Chip icon={<Icon icon="mdi:verified" />} label={t('Official')} size="small" />
             )}
             {gadget.signed && (
-              <Chip icon={<Icon icon="mdi:file-sign" />} label="Signed" size="small" />
+              <Chip icon={<Icon icon="mdi:file-sign" />} label={t('Signed')} size="small" />
             )}
             {gadget.cncf && <Chip label="CNCF" size="small" />}
             <Chip label={`v${gadget.version}`} size="small" variant="outlined" />
@@ -328,7 +331,7 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
                     size="small"
                     startIcon={<Icon icon="mdi:plus" />}
                   >
-                    Add
+                    {t('Add')}
                   </Button>
                 </>
               ) : (
@@ -344,7 +347,7 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
                   size="small"
                   startIcon={<Icon icon="mdi:plus" />}
                 >
-                  Add
+                  {t('Add')}
                 </Button>
               )}
             </Box>
@@ -356,6 +359,7 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
 };
 
 const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageName }) => {
+  const { t } = useTranslation();
   const [currentView, setCurrentView] = useState('');
   const [filters, setFilters] = useState({});
   const commonProps = {
@@ -368,14 +372,14 @@ const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageNam
       return !resource ? (
         <Box sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            Select View to Embed Gadget
+            {t('Select View to Embed Gadget')}
           </Typography>
           <FormControl fullWidth sx={{ mt: 3, mb: 4 }}>
-            <InputLabel>Kubernetes Resource View</InputLabel>
+            <InputLabel>{t('Kubernetes Resource View')}</InputLabel>
             <Select
               value={currentView}
               onChange={e => setCurrentView(e.target.value)}
-              label="Kubernetes Resource View"
+              label={t('Kubernetes Resource View')}
             >
               {KUBERNETES_VIEWS.map(view => (
                 <MenuItem key={view.value} value={view.value}>
@@ -391,7 +395,7 @@ const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageNam
               color="primary"
               disabled={!currentView}
             >
-              Continue
+              {t('Continue')}
             </Button>
           </Box>
         </Box>
@@ -405,7 +409,7 @@ const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageNam
           />
           <Box display="flex" justifyContent="flex-end" mt={3}>
             <Button onClick={() => setActiveStep(1)} variant="contained" color="primary">
-              Continue
+              {t('Continue')}
             </Button>
           </Box>
         </Box>
@@ -422,7 +426,7 @@ const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageNam
           />
           <Box display="flex" justifyContent="flex-end" mt={3}>
             <Button onClick={() => setActiveStep(2)} variant="contained" color="primary">
-              Continue
+              {t('Continue')}
             </Button>
           </Box>
         </Box>
@@ -465,11 +469,12 @@ const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageNam
 };
 
 const GadgetCreationStepper = ({ resource = null, gadgetInfo, imageName, enableEmbed = false }) => {
+  const { t } = useTranslation();
   const [activeStep, setActiveStep] = useState(0);
 
   const steps = enableEmbed
-    ? ['Configure View', 'Configure Filters', 'Setup Background Instance']
-    : ['Configure Filters', 'Setup Background Instance'];
+    ? [t('Configure View'), t('Configure Filters'), t('Setup Background Instance')]
+    : [t('Configure Filters'), t('Setup Background Instance')];
 
   return (
     <Box sx={{ width: '100%', p: 4 }}>
@@ -504,6 +509,7 @@ function CreateGadgetInstance({ gadgetInfo, resource, imageName, enableEmbed = f
 }
 
 function GadgetInput({ resource, onAddGadget }) {
+  const { t } = useTranslation();
   const [imageURL, setImageURL] = useState('');
   const history = useHistory();
   const { enqueueSnackbar } = useSnackbar();
@@ -557,7 +563,7 @@ function GadgetInput({ resource, onAddGadget }) {
   return (
     <Box mt={2} display="flex" alignItems="center">
       <TextField
-        label="Gadget Image URL"
+        label={t('Gadget Image URL')}
         variant="outlined"
         size="small"
         fullWidth
@@ -588,12 +594,13 @@ const GadgetGrid = ({
     console.log('Gadget added:', gadget);
   },
 }) => {
+  const { t } = useTranslation();
   if (gadgets.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100%">
         {!resource && <GadgetInput resource={resource} onAddGadget={() => {}} />}
         <Typography variant="h5" color="textSecondary">
-          No gadgets available
+          {t('No gadgets available')}
         </Typography>
       </Box>
     );
@@ -614,6 +621,7 @@ const GadgetGrid = ({
 };
 
 const RunGadgetPanel = ({ gadget, resource }) => {
+  const { t } = useTranslation();
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const [nodes] = K8s.ResourceClasses.Node.useList();
   if (!gadget) return null;
@@ -621,7 +629,7 @@ const RunGadgetPanel = ({ gadget, resource }) => {
   return (
     <Box p={2}>
       <Typography variant="h6" gutterBottom>
-        Run {gadget.display_name}
+        {t('Run')} {gadget.display_name}
       </Typography>
       <Typography variant="body2" paragraph>
         {gadget.description}
@@ -637,6 +645,7 @@ const RunGadgetPanel = ({ gadget, resource }) => {
 };
 
 function Gadget({ gadget, nodes, pods, resource }) {
+  const { t } = useTranslation();
   const ig = useGadgetConn(nodes, pods);
   const [gadgetInfo, setGadgetInfo] = useState(null);
   const imageName = gadget.gadgetConfig.imageName;
@@ -663,7 +672,7 @@ function Gadget({ gadget, nodes, pods, resource }) {
     return (
       <Box sx={{ p: 3 }}>
         <Typography variant="h6" color="error">
-          Error fetching gadget info: {error.message}
+          {t('Error fetching gadget info')}: {error.message}
         </Typography>
       </Box>
     );
@@ -711,8 +720,8 @@ const ModalGadgetList = ({ open, onClose, gadgets, resource }) => {
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Box display="flex" alignItems="center" px={2}>
             <Tabs value={activeTab} onChange={handleTabChange} sx={{ flexGrow: 1 }}>
-              <Tab label="Available Gadgets" />
-              {selectedGadget && <Tab label="Run Gadget" />}
+              <Tab label={t('Available Gadgets')} />
+              {selectedGadget && <Tab label={t('Run Gadget')} />}
             </Tabs>
             <IconButton onClick={onClose} size="small">
               <Icon icon="mdi:close" />

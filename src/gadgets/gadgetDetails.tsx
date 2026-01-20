@@ -3,6 +3,7 @@ import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import { getCluster, getClusterPrefixedPath } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Box, Typography } from '@mui/material';
 import { useContext, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { generatePath, useHistory, useParams } from 'react-router-dom';
 import { GadgetContext, useGadgetState } from '../common/GadgetContext';
 import { GadgetDescription } from '../common/GadgetDescription';
@@ -13,6 +14,7 @@ import { NodeSelection } from '../common/NodeSelection';
 import { useGadgetConn } from './conn';
 
 export function GadgetDetails() {
+  const { t } = useTranslation();
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const gadgetState = useGadgetState();
@@ -25,7 +27,7 @@ export function GadgetDetails() {
   const matchedInstance = embeddedInstances.find(instance => instance.id === id);
 
   if (!matchedInstance) {
-    return <div>Gadget instance not found</div>;
+    return <div>{t('Gadget instance not found')}</div>;
   }
 
   let instance = null;
@@ -65,6 +67,7 @@ function GadgetRenderer({
   imageName,
   isInstantRun = false,
 }) {
+  const { t } = useTranslation();
   const {
     podsSelected,
     podStreamsConnected,
@@ -272,8 +275,8 @@ function GadgetRenderer({
       <ConfirmDialog
         open={deleteDialogOpen}
         handleClose={() => setDeleteDialogOpen(false)}
-        title={`Delete gadget instance ${instance?.name || ''}`}
-        description="Are you sure you want to stop this gadget instance? Any data collected will be lost."
+        title={t('Delete gadget instance {{name}}', { name: instance?.name || '' })}
+        description={t('Are you sure you want to stop this gadget instance? Any data collected will be lost.')}
         onConfirm={() => {
           deleteHeadlessGadget();
         }}
@@ -304,7 +307,7 @@ function GadgetRenderer({
 
         {!isGadgetInfoFetched && (
           <Box mt={2}>
-            <Loader title="Gadget info loading" />
+            <Loader title={t('Gadget info loading')} />
           </Box>
         )}
 

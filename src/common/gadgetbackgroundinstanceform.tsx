@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useGadgetConn } from '../gadgets/conn';
 import { generateRandomString } from './helpers';
@@ -60,6 +61,7 @@ export function GadgetBackgroundInstanceForm({
   selectedView = 'Pod',
   config,
 }: BackgroundInstanceFormProps) {
+  const { t } = useTranslation();
   const { enqueueSnackbar } = useSnackbar();
   const { imageName } = useParams<{ imageName: string }>();
   const [nodes] = K8s.ResourceClasses.Node.useList();
@@ -183,7 +185,7 @@ export function GadgetBackgroundInstanceForm({
   return (
     <>
       <TextField
-        label="Instance Name"
+        label={t('Instance Name')}
         required
         variant="outlined"
         margin="normal"
@@ -197,7 +199,7 @@ export function GadgetBackgroundInstanceForm({
         }
       />
       <TextField
-        label="Tags"
+        label={t('Tags')}
         variant="outlined"
         margin="normal"
         fullWidth
@@ -211,7 +213,7 @@ export function GadgetBackgroundInstanceForm({
         InputProps={{
           endAdornment: (
             <InputAdornment position="end">
-              <Tooltip title="Tags values should be comma separated">
+              <Tooltip title={t('Tags values should be comma separated')}>
                 <Icon icon="mdi:info" />
               </Tooltip>
             </InputAdornment>
@@ -232,9 +234,9 @@ export function GadgetBackgroundInstanceForm({
         }
         label={
           <Box display="flex" alignItems="center">
-            <Box>Run on demand</Box>
+            <Box>{t('Run on demand')}</Box>
             <Box ml={1}>
-              <Tooltip title="When activated, the gadget will only run when requested and while the page is open.">
+              <Tooltip title={t('When activated, the gadget will only run when requested and while the page is open.')}>
                 <Icon icon="mdi:info" />
               </Tooltip>
             </Box>
@@ -243,7 +245,7 @@ export function GadgetBackgroundInstanceForm({
       />
       <Box display="flex" justifyContent="flex-end" m={2}>
         <Button onClick={handleCreateInstance} variant="contained" disabled={!instanceConfig.name}>
-          Create Instance
+          {t('Create Instance')}
         </Button>
       </Box>
     </>

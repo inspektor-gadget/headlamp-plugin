@@ -1,12 +1,14 @@
 import { Icon } from '@iconify/react';
 import { Box, Button, IconButton, MenuItem, Select, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Title from './title'; // Assuming you've converted the Title component to React
 
 const SortingFilter = ({ param, config, gadgetConfig }) => {
+  const { t } = useTranslation();
   const operations = {
-    '-': { icon: 'mdi:arrow-up', title: 'Descending' },
-    '': { icon: 'mdi:arrow-down', title: 'Ascending' },
+    '-': { icon: 'mdi:arrow-up', title: t('Descending') },
+    '': { icon: 'mdi:arrow-down', title: t('Ascending') },
   };
 
   const [filters, setFilters] = useState([]);
@@ -92,7 +94,7 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
           </Box>
         ))}
         <Button variant="contained" onClick={addFilter} startIcon={<Typography>+</Typography>}>
-          Add Sorting
+          {t('Add Sorting')}
         </Button>
       </Box>
     </Box>

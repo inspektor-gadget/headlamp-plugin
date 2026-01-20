@@ -13,6 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../common/helpers';
 import { MetricChart } from '../common/MetricChart';
 import { isIGPod } from './helper';
@@ -25,6 +26,7 @@ function getGadgetPodForThisResourceNode(node, pods) {
 }
 
 const RunningGadgetsForResource = ({ resource, open }) => {
+  const { t } = useTranslation();
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const [gadgetInstances, setGadgetInstances] = useState(null);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
@@ -138,8 +140,8 @@ const RunningGadgetsForResource = ({ resource, open }) => {
     <Box sx={{ width: '100%' }}>
       <ConfirmDialog
         open={openConfirmDialog}
-        title="Delete Instance"
-        description="Are you sure you want to delete this instance?"
+        title={t('Delete Instance')}
+        description={t('Are you sure you want to delete this instance?')}
         onConfirm={confirmDeleteInstance}
         handleClose={() => {
           setOpenConfirmDialog(false);
@@ -191,10 +193,10 @@ const RunningGadgetsForResource = ({ resource, open }) => {
                     color="text.secondary"
                     sx={{ display: 'block', mb: 1 }}
                   >
-                    Version: {instance.gadgetConfig.version} • Status:{' '}
+                    {t('Version')}: {instance.gadgetConfig.version} • {t('Status')}:{' '}
                     {instance.isHeadless
-                      ? 'Running'
-                      : 'Running on demand (will stop if this view is closed)'}
+                      ? t('Running')
+                      : t('Running on demand (will stop if this view is closed)')}
                   </Typography>
 
                   <Divider sx={{ mb: 2 }} />
@@ -439,6 +441,8 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
 };
 
 const GadgetDataView = ({ resource, dataSourceID, dataColumns, gadgetData, loading }) => {
+  const { t } = useTranslation();
+  
   const fields = useMemo(() => {
     return (
       dataColumns?.[dataSourceID]?.map(column => ({
@@ -472,7 +476,7 @@ const GadgetDataView = ({ resource, dataSourceID, dataColumns, gadgetData, loadi
     return (
       <Box display="flex" flexDirection="column" alignItems="center">
         <Icon icon="mdi:alert-circle-outline" width="2em" height="2em" />
-        <Typography variant="body1">No Data Available</Typography>
+        <Typography variant="body1">{t('No Data Available')}</Typography>
       </Box>
     );
   }
@@ -485,7 +489,7 @@ const GadgetDataView = ({ resource, dataSourceID, dataColumns, gadgetData, loadi
         emptyMessage={
           <Box display="flex" flexDirection="column" alignItems="center">
             <Icon icon="mdi:alert-circle-outline" width="2em" height="2em" />
-            <Typography variant="body1">No Data Available</Typography>
+            <Typography variant="body1">{t('No Data Available')}</Typography>
           </Box>
         }
       />

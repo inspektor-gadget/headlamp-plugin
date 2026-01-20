@@ -16,6 +16,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useContext, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { GadgetContext } from '../GadgetContext';
 
@@ -26,6 +27,7 @@ export function GadgetDescription({
   setEnableHistoricalData,
   update,
 }) {
+  const { t } = useTranslation();
   const { imageName, id } = useParams<{ imageName: string; id: string }>();
   const [gadgetInstance, setGadgetInstance] = useState(null);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -80,7 +82,7 @@ export function GadgetDescription({
   if (!gadgetInstance) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="body1">Loading gadget details...</Typography>
+        <Typography variant="body1">{t('Loading gadget details...')}</Typography>
       </Box>
     );
   }
@@ -99,7 +101,7 @@ export function GadgetDescription({
                   size="small"
                   variant="outlined"
                   fullWidth
-                  placeholder="Enter gadget name"
+                  placeholder={t('Enter gadget name')}
                   sx={{ mr: 1 }}
                 />
                 <IconButton onClick={saveEditedName} color="primary" size="small">
@@ -114,7 +116,7 @@ export function GadgetDescription({
                 <Typography variant="h6" sx={{ mr: 1 }}>
                   {gadgetInstance.name}
                 </Typography>
-                <Tooltip title="Edit name">
+                <Tooltip title={t('Edit name')}>
                   <IconButton onClick={() => setIsEditingName(true)} size="small">
                     <Icon icon="mdi:pencil" />
                   </IconButton>
@@ -138,19 +140,19 @@ export function GadgetDescription({
                 gutterBottom
                 sx={{ display: 'inline' }}
               >
-                Details
+                {t('Details')}
               </Typography>
 
               <Box sx={{ mb: 2, ml: 2 }}>
                 <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <strong>Image:</strong>
+                  <strong>{t('Image')}:</strong>
                   <Box component="span" sx={{ ml: 1 }}>
                     {imageName}
                   </Box>
                 </Typography>
 
                 <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
-                  <strong>ID:</strong>
+                  <strong>{t('ID')}:</strong>
                   <Box component="span" sx={{ ml: 1 }}>
                     {id}
                   </Box>
@@ -168,7 +170,7 @@ export function GadgetDescription({
                 gutterBottom
                 sx={{ display: 'inline' }}
               >
-                Configuration
+                {t('Configuration')}
               </Typography>
 
               <Box sx={{ mb: 1 }}>
@@ -179,7 +181,7 @@ export function GadgetDescription({
                       <Select
                         labelId="embed-type-label"
                         value={embedView}
-                        label="Embed Type"
+                        label={t('Embed Type')}
                         onChange={e => {
                           setEmbedView(e.target.value);
                           const allInstances = JSON.parse(
@@ -201,17 +203,17 @@ export function GadgetDescription({
                           }
                         }}
                       >
-                        <MenuItem value="None">None</MenuItem>
-                        <MenuItem value="Pod">Pod</MenuItem>
-                        <MenuItem value="Node">Node</MenuItem>
+                        <MenuItem value="None">{t('None')}</MenuItem>
+                        <MenuItem value="Pod">{t('Pod')}</MenuItem>
+                        <MenuItem value="Node">{t('Node')}</MenuItem>
                       </Select>
                     }
                     label={
                       <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-                        <Tooltip title="Adds this gadget to details view of a Pod or Node, allowing to see the gadget's data in context.">
+                        <Tooltip title={t('Adds this gadget to details view of a Pod or Node, allowing to see the gadget\'s data in context.')}>
                           <Icon icon="mdi:cube-outline" style={{ marginRight: 4 }} />
                         </Tooltip>
-                        <Typography variant="body2">Embed</Typography>
+                        <Typography variant="body2">{t('Embed')}</Typography>
                       </Box>
                     }
                   />
@@ -229,10 +231,10 @@ export function GadgetDescription({
                   }
                   label={
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Tooltip title="When activated, the gadget will only run when requested and while the page is open.">
+                      <Tooltip title={t('When activated, the gadget will only run when requested and while the page is open.')}>
                         <Icon icon="mdi:lightning-bolt-circle" style={{ marginRight: 4 }} />
                       </Tooltip>
-                      <Typography variant="body2">Run on demand</Typography>
+                      <Typography variant="body2">{t('Run on demand')}</Typography>
                     </Box>
                   }
                   labelPlacement="start"
