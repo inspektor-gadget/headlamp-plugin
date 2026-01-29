@@ -3,7 +3,7 @@ import '@testing-library/jest-dom';
 import { generateRandomString, updateInstanceFromStorage, IS_METRIC } from './helpers';
 import { describe, it, expect, beforeEach } from 'vitest';
 
-describe.only('helpers', () => {
+describe('helpers', () => {
     describe('generateRandomString', () => {
         it('should generate a string of default length 6', () => {
             const str = generateRandomString();
