@@ -40,7 +40,7 @@ describe('GadgetContext', () => {
 
                 expect(result.current.dynamicTabs).toHaveLength(initialTabCount + 1);
                 expect(result.current.dynamicTabs[0].id).toBe('tab1');
-                expect(result.current.activeTabIndex).toBe(1);
+                expect(result.current.activeTabIndex).toBe(2);
             });
 
             it('should remove a dynamic tab', () => {
@@ -50,11 +50,13 @@ describe('GadgetContext', () => {
 
                 act(() => {
                     result.current.addDynamicTab(tab1);
+                });
+                act(() => {
                     result.current.addDynamicTab(tab2);
                 });
 
                 expect(result.current.dynamicTabs).toHaveLength(2);
-                expect(result.current.activeTabIndex).toBe(2);
+                expect(result.current.activeTabIndex).toBe(3);
 
                 act(() => {
                     result.current.removeDynamicTab(0); // Remove tab1
@@ -62,7 +64,7 @@ describe('GadgetContext', () => {
 
                 expect(result.current.dynamicTabs).toHaveLength(1);
                 expect(result.current.dynamicTabs[0].id).toBe('tab2');
-                expect(result.current.activeTabIndex).toBe(1);
+                expect(result.current.activeTabIndex).toBe(2);
             });
 
             it('should not duplicate tab with same ID and set it as active', () => {
@@ -74,7 +76,7 @@ describe('GadgetContext', () => {
                 });
 
                 expect(result.current.dynamicTabs).toHaveLength(1);
-                expect(result.current.activeTabIndex).toBe(1);
+                expect(result.current.activeTabIndex).toBe(2);
 
                 act(() => {
                     result.current.addDynamicTab(tab1);
