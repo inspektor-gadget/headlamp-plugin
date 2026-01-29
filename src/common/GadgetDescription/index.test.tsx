@@ -128,7 +128,7 @@ describe('GadgetDescription', () => {
         expect(screen.queryByText('Cancelled Name')).not.toBeInTheDocument();
     });
 
-    it('should preventing saving an empty name', async () => {
+    it('should prevent saving an empty name', async () => {
         const user = userEvent.setup();
         render(
             <MockProvider>
