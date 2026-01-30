@@ -1,7 +1,25 @@
 
 
 import { generateRandomString, updateInstanceFromStorage, IS_METRIC } from './helpers';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+const localStorageMock = (() => {
+    let store: Record<string, string> = {};
+    return {
+        getItem: (key: string) => store[key] || null,
+        setItem: (key: string, value: string) => {
+            store[key] = value.toString();
+        },
+        clear: () => {
+            store = {};
+        },
+        removeItem: (key: string) => {
+            delete store[key];
+        },
+    };
+})();
+
+vi.stubGlobal('localStorage', localStorageMock);
 
 describe('helpers', () => {
     describe('generateRandomString', () => {
