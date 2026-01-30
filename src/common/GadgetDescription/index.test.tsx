@@ -5,8 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GadgetDescription } from './index';
 import { GadgetContext } from '../GadgetContext';
 
+const mockUseParams = vi.fn();
 vi.mock('react-router', () => ({
-    useParams: () => ({ imageName: 'test-image', id: 'gadget-id-1' }),
+    useParams: () => mockUseParams(),
 }));
 
 describe('GadgetDescription', () => {
@@ -27,6 +28,7 @@ describe('GadgetDescription', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         localStorage.clear();
+        mockUseParams.mockReturnValue({ imageName: 'test-image', id: 'gadget-id-1' });
 
         const initialInstances = [
             { id: 'gadget-id-1', name: 'Test Gadget', kind: 'None', isHeadless: true },
@@ -175,6 +177,31 @@ describe('GadgetDescription', () => {
         expect(stored[0].isEmbedded).toBe(true);
     });
 
+    it('should handle Embed Type change to None', async () => {
+        // Setup with an initially embedded gadget
+        const initialInstances = [
+            { id: 'gadget-id-1', name: 'Test Gadget', kind: 'Pod', isEmbedded: true, isHeadless: true },
+        ];
+        localStorage.setItem('headlamp_embeded_resources', JSON.stringify(initialInstances));
+
+        const user = userEvent.setup();
+        render(
+            <MockProvider>
+                <GadgetDescription {...defaultProps} embedView="Pod" />
+            </MockProvider>
+        );
+
+        const selectTrigger = screen.getByRole('combobox');
+        await user.click(selectTrigger);
+
+        const optionNone = await screen.findByRole('option', { name: 'None' });
+        await user.click(optionNone);
+
+        const stored = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
+        expect(stored[0].kind).toBe('None');
+        expect(stored[0].isEmbedded).toBe(false);
+    });
+
     it('should handle Run on demand switch', async () => {
         const user = userEvent.setup();
         render(
@@ -198,5 +225,126 @@ describe('GadgetDescription', () => {
 
         const switchControl = screen.getByRole('checkbox', { name: /Run on demand/i });
         expect(switchControl).toBeDisabled();
+    });
+
+    it('should default Run on demand (historical data) to true if isHeadless is undefined', () => {
+        const initialInstances = [
+            { id: 'gadget-id-1', name: 'Test Gadget', kind: 'None' }, // isHeadless missing
+        ];
+        localStorage.setItem('headlamp_embeded_resources', JSON.stringify(initialInstances));
+
+        render(
+            <MockProvider>
+                <GadgetDescription {...defaultProps} />
+            </MockProvider>
+        );
+
+        expect(defaultProps.setEnableHistoricalData).toHaveBeenCalledWith(true);
+    });
+
+    it('should handle saving name gracefully if local storage is cleared unexpectedly', async () => {
+        const user = userEvent.setup();
+        render(
+            <MockProvider>
+                <GadgetDescription {...defaultProps} />
+            </MockProvider>
+        );
+
+        const editButton = await screen.findByRole('button', { name: /edit name/i });
+        await user.click(editButton);
+
+        const input = screen.getByPlaceholderText('Enter gadget name');
+        await user.clear(input);
+        await user.type(input, 'New Name');
+
+        // Clear storage to trigger the || '[]' branch in saveEditedName
+        localStorage.clear();
+
+        const saveButton = screen.getAllByRole('button')[0]; // First button is save checkmark
+        await user.click(saveButton);
+
+        expect(input).toBeInTheDocument();
+    });
+
+    it('should handle Embed Type change gracefully if local storage is cleared unexpectedly', async () => {
+        const user = userEvent.setup();
+        render(
+            <MockProvider>
+                <GadgetDescription {...defaultProps} />
+            </MockProvider>
+        );
+
+        // Clear storage to trigger the || '[]' branch in onChange
+        localStorage.clear();
+
+        const selectTrigger = screen.getByRole('combobox');
+        await user.click(selectTrigger);
+
+        const optionPod = await screen.findByRole('option', { name: 'Pod' });
+        await user.click(optionPod);
+
+        // Should update UI state (setEmbedView is called)
+        expect(defaultProps.setEmbedView).toHaveBeenCalledWith('Pod');
+
+        // But local storage should remain empty/unchanged (no crash)
+        expect(localStorage.getItem('headlamp_embeded_resources')).toBeNull();
+    });
+
+    it('should handle missing "id" parameter gracefully', () => {
+        // Mock useParams to return empty id
+        mockUseParams.mockReturnValue({ imageName: 'test-image', id: undefined });
+
+        render(
+            <MockProvider>
+                <GadgetDescription {...defaultProps} />
+            </MockProvider>
+        );
+
+        expect(defaultProps.setEnableHistoricalData).not.toHaveBeenCalled();
+    });
+
+    it('should default "kind" to "None" if missing in instance', () => {
+        const initialInstances = [
+            { id: 'gadget-id-1', name: 'Test Gadget' }, // kind is missing
+        ];
+        localStorage.setItem('headlamp_embeded_resources', JSON.stringify(initialInstances));
+
+        render(
+            <MockProvider>
+                <GadgetDescription {...defaultProps} />
+            </MockProvider>
+        );
+
+        expect(defaultProps.setEmbedView).toHaveBeenCalledWith('None');
+    });
+
+    it('should use empty string if name is missing when cancelling edit', async () => {
+
+        const initialInstances = [
+            { id: 'gadget-id-1', name: '' },
+        ];
+        localStorage.setItem('headlamp_embeded_resources', JSON.stringify(initialInstances));
+
+        const user = userEvent.setup();
+        render(
+            <MockProvider>
+                <GadgetDescription {...defaultProps} />
+            </MockProvider>
+        );
+
+        // Start editing
+        const editButton = await screen.findByRole('button', { name: /edit name/i });
+        await user.click(editButton);
+
+        const input = screen.getByPlaceholderText('Enter gadget name');
+        await user.type(input, 'New Name');
+
+        // Cancel
+        const buttons = screen.getAllByRole('button');
+        const cancelButton = buttons[1];
+        await user.click(cancelButton);
+
+        expect(screen.queryByDisplayValue('New Name')).not.toBeInTheDocument();
+
     });
 });
