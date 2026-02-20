@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { createContext } from 'react';
-import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../helpers';
+import {
+  getVisibleFieldNames,
+  HEADLAMP_KEY,
+  HEADLAMP_METRIC_UNIT,
+  HEADLAMP_VALUE,
+  IS_METRIC,
+} from '../helpers';
 
 // Create a context for sharing gadget-related state
 export const GadgetContext = createContext(null);
@@ -59,6 +65,24 @@ export function useGadgetState() {
 
   const prepareGadgetInfo = info => {
     setIsGadgetInfoFetched(true);
+    const imageName = info?.imageName ?? gadgetConfig?.imageName ?? '';
+    const getVisibilityOverrides =
+      typeof window !== 'undefined'
+        ? (key: string) => {
+            try {
+              const c = JSON.parse(window.localStorage.getItem('ig-configuration') || '{}');
+              const v = c[key];
+              return Array.isArray(v) ? v : undefined;
+            } catch {
+              return undefined;
+            }
+          }
+        : undefined;
+    const visibilityOpts =
+      imageName || getVisibilityOverrides
+        ? { imageName: imageName || undefined, getVisibilityOverrides }
+        : undefined;
+    console.log(imageName, 'imagename')
     const fields = {};
     info.dataSources.forEach((dataSource, index) => {
       const annotations = dataSource.annotations;
@@ -70,25 +94,19 @@ export function useGadgetState() {
         );
 
       if (isMetricAnnotationAvailable) {
-        const fieldsFromDataSource = dataSource.fields
-          .filter(field => (field.flags & 4) === 0)
-          .map(field => field.fullName)
-          .filter(field => field !== 'k8s');
-
+        const fieldsFromDataSource = [...getVisibleFieldNames(dataSource, visibilityOpts)];
         const key = dataSource.fields.find(field => field.tags.includes('role:key'))?.fullName;
         const value = dataSource.fields.find(field => !field.tags.includes('role:key'));
-        const metricUnit = value.annotations['metrics.unit'];
+        const metricUnit = value?.annotations?.['metrics.unit'];
         fieldsFromDataSource.push(`${HEADLAMP_KEY}_${key}`);
         fieldsFromDataSource.push(`${HEADLAMP_VALUE}_${value?.fullName}`);
         fieldsFromDataSource.push(`${HEADLAMP_METRIC_UNIT}_${metricUnit}`);
         fieldsFromDataSource.push(IS_METRIC);
         fields[dataSource.id || index] = fieldsFromDataSource;
       } else {
-        fields[dataSource.id || index] = dataSource.fields
-          .filter(field => (field.flags & 4) === 0)
-          .map(field => field.fullName)
-          .filter(field => field !== 'k8s');
+        fields[dataSource.id || index] = getVisibleFieldNames(dataSource, visibilityOpts);
       }
+      console.log(fields[dataSource], "<<<< frildsFromDS")
     });
 
     setGadgetConfig(info);

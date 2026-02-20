@@ -83,6 +83,7 @@ function GadgetRenderer({
     setGadgetConn,
     ...otherState
   } = useContext(GadgetContext);
+  console.log(dataSources, 'datasources>>>')
   const [error, setError] = useState(null);
   // Track whether we've made the gadget info request
   const [infoRequested, setInfoRequested] = useState(false);

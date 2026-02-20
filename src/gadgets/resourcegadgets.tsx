@@ -13,7 +13,13 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../common/helpers';
+import {
+  getVisibleFieldNames,
+  HEADLAMP_KEY,
+  HEADLAMP_METRIC_UNIT,
+  HEADLAMP_VALUE,
+  IS_METRIC,
+} from '../common/helpers';
 import { MetricChart } from '../common/MetricChart';
 import { isIGPod } from './helper';
 import usePortForward from './igSocket';
@@ -229,8 +235,26 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
 
   const prepareGadgetInfo = info => {
     setIsGadgetInfoFetched(true);
+    const imageName = instance?.gadgetConfig?.imageName ?? '';
+    const getVisibilityOverrides =
+      typeof window !== 'undefined'
+        ? (key: string) => {
+            try {
+              const c = JSON.parse(window.localStorage.getItem('ig-configuration') || '{}');
+              const v = c[key];
+              return Array.isArray(v) ? v : undefined;
+            } catch {
+              return undefined;
+            }
+          }
+        : undefined;
+
     const fields = {};
     info.dataSources.forEach((dataSource, index) => {
+      const visibilityOpts = {
+        imageName,
+        getVisibilityOverrides,
+      };
       const annotations = dataSource.annotations;
       const isMetricAnnotationAvailable =
         annotations &&
@@ -240,24 +264,18 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
         );
 
       if (isMetricAnnotationAvailable) {
-        const fieldsFromDataSource = dataSource.fields
-          .filter(field => (field.flags & 4) === 0)
-          .map(field => field.fullName)
-          .filter(field => field !== 'k8s');
+        const fieldsFromDataSource = [...getVisibleFieldNames(dataSource, visibilityOpts)];
 
         const key = dataSource.fields.find(field => field.tags.includes('role:key'))?.fullName;
         const value = dataSource.fields.find(field => !field.tags.includes('role:key'));
-        const metricUnit = value.annotations['metrics.unit'];
+        const metricUnit = value?.annotations?.['metrics.unit'];
         fieldsFromDataSource.push(`${HEADLAMP_KEY}_${key}`);
         fieldsFromDataSource.push(`${HEADLAMP_VALUE}_${value?.fullName}`);
         fieldsFromDataSource.push(`${HEADLAMP_METRIC_UNIT}_${metricUnit}`);
         fieldsFromDataSource.push(IS_METRIC);
         fields[dataSource.id || index] = fieldsFromDataSource;
       } else {
-        fields[dataSource.id || index] = dataSource.fields
-          .filter(field => (field.flags & 4) === 0)
-          .map(field => field.fullName)
-          .filter(field => field !== 'k8s');
+        fields[dataSource.id || index] = getVisibleFieldNames(dataSource, visibilityOpts);
       }
     });
 
