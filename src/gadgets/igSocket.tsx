@@ -115,11 +115,14 @@ async function getIG(): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
         .then(result => {
           go.run(result.instance)
             .then(() => {
-              // console.log('WebAssembly instance initialized successfully');
-              console.error('Something went wrong while running the WebAssembly instance');
+              console.error(
+                'WebAssembly instance exited unexpectedly. The IG runtime has terminated.'
+              );
+              igPromise = null;
             })
             .catch(err => {
               console.error('Error running WebAssembly instance:', err);
+              igPromise = null;
             });
           return result;
         })
