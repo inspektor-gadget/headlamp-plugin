@@ -73,7 +73,6 @@ interface StreamRef {
 
 // WebAssembly initialization
 let igPromise: Promise<WebAssembly.WebAssemblyInstantiatedSource> | null = null;
-const go = new (window as any).Go();
 const PLUGIN_NAME = 'inspektor-gadget';
 async function fetchWasmWithFallback(pluginName: string): Promise<Response> {
   // Headlamp serves plugins from different paths depending on how they were installed.
@@ -102,6 +101,7 @@ async function fetchWasmWithFallback(pluginName: string): Promise<Response> {
  */
 async function getIG(): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
   if (!igPromise) {
+    const go = new (window as any).Go();
     try {
       const response = await fetchWasmWithFallback(PLUGIN_NAME);
 
@@ -115,11 +115,14 @@ async function getIG(): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
         .then(result => {
           go.run(result.instance)
             .then(() => {
-              // console.log('WebAssembly instance initialized successfully');
-              console.error('Something went wrong while running the WebAssembly instance');
+              console.error(
+                'WebAssembly instance exited unexpectedly. The IG runtime has terminated.'
+              );
+              igPromise = null;
             })
             .catch(err => {
               console.error('Error running WebAssembly instance:', err);
+              igPromise = null;
             });
           return result;
         })
