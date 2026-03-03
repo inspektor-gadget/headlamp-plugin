@@ -8,7 +8,7 @@ import {
   TextField,
   Tooltip,
 } from '@mui/material';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { FILTERS_TYPE } from './filter_types';
 import { removeDuplicates } from './helper';
 import AnnotationFilter from './params/annotation';
@@ -16,6 +16,30 @@ import CheckboxFilter from './params/bool';
 import FilterComponent from './params/filter';
 import SelectFilter from './params/select';
 import SortingFilter from './params/sortingfilter';
+
+/**
+ * Hook that returns a stable config object { get, set } for a given filter param.
+ * This prevents child components from re-rendering due to new object references.
+ */
+function useStableConfig(
+  filters: Record<string, string>,
+  handleFilterChange: (key: string, value: string) => void,
+  prefix: string,
+  key: string
+) {
+  const filterKey = prefix + key;
+  // Use a ref to hold the latest filters so `get` is stable but always reads current value
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
+  const get = useCallback(() => filtersRef.current[filterKey], [filterKey]);
+  const set = useCallback(
+    (value: string) => handleFilterChange(filterKey, value),
+    [filterKey, handleFilterChange]
+  );
+
+  return useMemo(() => ({ get, set }), [get, set]);
+}
 
 // Types for better type safety and documentation
 interface FilterParam {
@@ -169,11 +193,13 @@ export default function GadgetFilters({
       handleFilterChange(namespaceParam.prefix + namespaceParam.key, initialNamespace);
       handleFilterChange(podParam.prefix + podParam.key, initialPod);
     }
-  }, [initialNamespace, initialPod, namespaceParam, allNamespacesParam, podParam]);
+  }, [initialNamespace, initialPod, namespaceParam, allNamespacesParam, podParam, handleFilterChange]);
 
-  const filterComponents = useMemo(
-    () =>
-      uniqueParams.map((param, index) => {
+  if (!config || !uniqueParams.length) return null;
+
+  return (
+    <Box p={2}>
+      {uniqueParams.map((param, index) => {
         // Skip namespace-related params as they're handled separately
         if (param.key === 'all-namespaces' || param?.valueHint?.includes('namespace')) {
           return null;
@@ -192,73 +218,69 @@ export default function GadgetFilters({
           );
         }
 
-        if (param.key === 'sort' || param.key === 'sorting') {
-          return (
-            <Grid item xs={4} key={param.key + index}>
-              <SortingFilter
-                param={param}
-                config={{
-                  get: () => config[param.prefix + param.key],
-                  set: value => handleFilterChange(param.prefix + param.key, value),
-                }}
-                gadgetConfig={config}
-              />
-            </Grid>
-          );
-        }
-        if (param.typeHint === 'bool') {
-          return (
-            <Grid item xs={4}>
-              <CheckboxFilter
-                param={param}
-                config={{
-                  get: () => config[param.prefix + param.key],
-                  set: value => handleFilterChange(param.prefix + param.key, value),
-                }}
-              />
-            </Grid>
-          );
-        }
-
-        if (param.key === 'filter' || param.typeHint === 'filter') {
-          return (
-            <Grid item xs={12} key={param.key + index}>
-              <FilterComponent
-                param={param}
-                config={{
-                  get: () => filters[param.prefix + param.key],
-                  set: value => handleFilterChange(param.prefix + param.key, value),
-                }}
-                gadgetConfig={config}
-              />
-            </Grid>
-          );
-        }
-
-        if (param.possibleValues && param.possibleValues.length > 0) {
-          return (
-            <Grid item md={6} key={param.key + index}>
-              <SelectFilter
-                param={param}
-                config={{
-                  get: () => filters[param.prefix + param.key],
-                  set: value => handleFilterChange(param.prefix + param.key, value),
-                }}
-              />
-            </Grid>
-          );
-        }
-
         return (
-          <Grid item md={6} key={param.key + index}>
-            <FilterInput param={param} onChange={handleFilterChange} />
-          </Grid>
+          <ParamFilterRenderer
+            key={param.key + index}
+            param={param}
+            filters={filters}
+            handleFilterChange={handleFilterChange}
+            gadgetConfig={config}
+          />
         );
-      }),
-    [uniqueParams, handleFilterChange]
+      })}
+    </Box>
   );
+}
 
-  if (!config || !filterComponents.length) return null;
+/**
+ * Renders a single param filter with a stable config object.
+ * Extracted as a component so useStableConfig hook can be called per-param.
+ */
+function ParamFilterRenderer({
+  param,
+  filters,
+  handleFilterChange,
+  gadgetConfig,
+}: {
+  param: FilterParam;
+  filters: Record<string, string>;
+  handleFilterChange: (key: string, value: string) => void;
+  gadgetConfig: any;
+}) {
+  const stableConfig = useStableConfig(filters, handleFilterChange, param.prefix, param.key);
 
-  return <Box p={2}>{filterComponents}</Box>;
+  if (param.key === 'sort' || param.key === 'sorting') {
+    return (
+      <Grid item xs={4}>
+        <SortingFilter param={param} config={stableConfig} gadgetConfig={gadgetConfig} />
+      </Grid>
+    );
+  }
+  if (param.typeHint === 'bool') {
+    return (
+      <Grid item xs={4}>
+        <CheckboxFilter param={param} config={stableConfig} />
+      </Grid>
+    );
+  }
+  if (param.key === 'filter' || param.typeHint === 'filter') {
+    return (
+      <Grid item xs={12}>
+        <FilterComponent param={param} config={stableConfig} gadgetConfig={gadgetConfig} />
+      </Grid>
+    );
+  }
+  if (param.possibleValues && param.possibleValues.length > 0) {
+    return (
+      <Grid item md={6}>
+        <SelectFilter param={param} config={stableConfig} />
+      </Grid>
+    );
+  }
+
+  return (
+    <Grid item md={6}>
+      <FilterInput param={param} onChange={handleFilterChange} />
+    </Grid>
+  );
 }

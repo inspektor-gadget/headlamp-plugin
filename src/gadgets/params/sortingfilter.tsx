@@ -22,7 +22,7 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
       });
     });
     return tmpFields;
-  }, []);
+  }, [gadgetConfig.dataSources]);
 
   useEffect(() => {
     const dataSources = {};
@@ -40,7 +40,7 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
     } else {
       config.set(res);
     }
-  }, [filters, param, config]);
+  }, [filters, config.set]);
 
   const handleFieldChange = (index, newField) => {
     setFilters(prev => prev.map((f, i) => (i === index ? { ...f, field: newField } : f)));

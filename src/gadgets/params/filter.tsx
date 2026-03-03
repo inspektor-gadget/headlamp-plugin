@@ -30,7 +30,6 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
 
   const fields = useMemo(() => {
     const gadgetInfo = gadgetConfig.dataSources;
-    console.log('Gadget info:', gadgetInfo);
     if (!gadgetInfo) return [];
     const tmpFields = [];
     Object.values(gadgetInfo).forEach(ds => {
@@ -48,12 +47,11 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
       })
       .join(',');
     if (filters.length === 0) {
-      // dont' set this
       config.set(undefined);
     } else {
       config.set(res);
     }
-  }, [filters, param, config]);
+  }, [filters, config.set]);
 
   const handleFilterChange = (index, field, value) => {
     setFilters(prevFilters => {
