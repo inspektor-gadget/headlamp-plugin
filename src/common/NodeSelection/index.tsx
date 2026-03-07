@@ -71,7 +71,6 @@ export function NodeSelection(props: NodeSelectionProps) {
     gadgetInstance,
     isInstantRun,
   } = props;
-  const [loading, setLoading] = useState(false);
   const [selectionDisabled, setSelectionDisabled] = useState(false);
 
   // Set all nodes when nodesSelected is empty and nodes are available
@@ -108,7 +107,6 @@ export function NodeSelection(props: NodeSelectionProps) {
         const i = instances?.find(ins => gadgetInstance.id === ins.id);
         if (!i?.nodes) {
           setFinalNodes(nodes);
-          setLoading(false);
           const nodeNames = nodes.map(node => node.metadata.name);
           setNodesSelected(nodeNames);
           setSelectionDisabled(true); // Disable selection when all nodes are set
@@ -127,7 +125,6 @@ export function NodeSelection(props: NodeSelectionProps) {
         const finalNodesCollection = nodes.filter(node => i.nodes?.includes(node.metadata.name));
 
         setFinalNodes(finalNodesCollection);
-        setLoading(false);
 
         const nodeNames = finalNodesCollection.map(
           node => node.jsonData?.metadata.name || node.metadata.name
@@ -152,9 +149,6 @@ export function NodeSelection(props: NodeSelectionProps) {
 
   if (finalNodes === null) {
     return <Loader title="" />;
-  }
-  if (loading) {
-    return <Loader title="Loading" />;
   }
 
   const handleChange = (event: { target: { value: string[] } }) => {
