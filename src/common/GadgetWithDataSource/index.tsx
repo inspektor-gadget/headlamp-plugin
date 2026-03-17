@@ -11,8 +11,12 @@ import {
 } from '@mui/material';
 import React, { useEffect, useMemo } from 'react';
 import GadgetFilters from '../../gadgets/gadgetFilters';
+<<<<<<< HEAD
 import { AllColumnMeta } from '../../gadgets/utility';
 import { IS_METRIC } from '../helpers';
+=======
+import { columnLabels, IS_METRIC } from '../helpers';
+>>>>>>> 4140f8b (fix: add human-readable labels for gadget data table columns)
 import { MetricChart } from '../MetricChart';
 
 interface GadgetWithDataSourceProps {
@@ -82,6 +86,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
 
   const fields = useMemo(
     () =>
+<<<<<<< HEAD
       columns?.map(column => {
         const meta = columnMeta?.[dataSourceID]?.[column];
         const header = meta?.annotations?.['columns.title'] || column;
@@ -92,6 +97,14 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
         };
       }),
     [columns, columnMeta, dataSourceID]
+=======
+      columns?.map(column => ({
+        header: columnLabels[column] || column, // Use label if available, otherwise fallback to column name
+        accessorFn: (data: any) =>
+          column === 'timestamp' ? <DateLabel date={data[column]} /> : data[column],
+      })),
+    [columns]
+>>>>>>> 4140f8b (fix: add human-readable labels for gadget data table columns)
   );
 
   useEffect(() => {

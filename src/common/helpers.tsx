@@ -42,3 +42,21 @@ export function updateInstanceFromStorage(
 
   return null;
 }
+
+// Dictionary to map API column names to human-friendly labels
+export const columnLabels: { [key: string]: string } = {
+  'proc.comm': 'Process Name',
+  'proc.pid': 'Process ID',
+  'proc.tid': 'Thread ID',
+  'proc.parent.tid': 'Parent Thread ID',
+  'fd': 'File Descriptor',
+  'fname': 'File Name',
+  'fpath': 'File Path',
+  'k8s.podName': 'Pod Name',
+  'k8s.namespace': 'Namespace',
+  'k8s.node': 'Node',
+  'k8s.containerName': 'Container Name',
+  'k8s.owner': 'Owner',
+  'error': 'Error',
+  'mode': 'Mode',
+};
