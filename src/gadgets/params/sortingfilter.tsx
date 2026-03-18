@@ -57,6 +57,7 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
   };
 
   const addFilter = () => {
+    if (fields.length === 0) return;
     setFilters(prev => [...prev, { sorting: '', field: fields[0] }]);
   };
 
@@ -91,7 +92,12 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
             </IconButton>
           </Box>
         ))}
-        <Button variant="contained" onClick={addFilter} startIcon={<Typography>+</Typography>}>
+        <Button
+          variant="contained"
+          onClick={addFilter}
+          disabled={fields.length === 0}
+          startIcon={<Typography>+</Typography>}
+        >
           Add Sorting
         </Button>
       </Box>

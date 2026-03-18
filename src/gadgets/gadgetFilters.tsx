@@ -1,6 +1,7 @@
 import { Icon } from '@iconify/react';
 import {
   Box,
+  Button,
   Checkbox,
   FormControlLabel,
   Grid,
@@ -34,7 +35,7 @@ function useStableConfig(
 
   const get = useCallback(() => filtersRef.current[filterKey], [filterKey]);
   const set = useCallback(
-    (value: string) => handleFilterChange(filterKey, value),
+    (value: string | undefined) => handleFilterChange(filterKey, value),
     [filterKey, handleFilterChange]
   );
 
@@ -59,7 +60,7 @@ interface GadgetFiltersProps {
   };
   setFilters: (func: (prev: Record<string, string>) => Record<string, string>) => void;
   filters: Record<string, string>;
-  onApplyFilters: () => void;
+  onApplyFilters?: () => void;
   namespace?: string;
   pod?: string;
 }
@@ -153,9 +154,10 @@ export default function GadgetFilters({
   namespace: initialNamespace,
   pod: initialPod,
   filters,
+  onApplyFilters,
 }: GadgetFiltersProps) {
   const handleFilterChange = useCallback(
-    (key: string, value: string) => {
+    (key: string, value: string | undefined) => {
       if (!value) {
         setFilters(prev => {
           const newFilters = { ...prev };
@@ -228,6 +230,13 @@ export default function GadgetFilters({
           />
         );
       })}
+      {onApplyFilters && (
+        <Box display="flex" justifyContent="flex-end" mt={2}>
+          <Button variant="contained" color="primary" onClick={onApplyFilters}>
+            Apply Filters
+          </Button>
+        </Box>
+      )}
     </Box>
   );
 }
