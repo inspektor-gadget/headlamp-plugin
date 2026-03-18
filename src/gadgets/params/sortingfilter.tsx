@@ -10,6 +10,7 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
   };
 
   const [filters, setFilters] = useState([]);
+  const [initialized, setInitialized] = useState(false);
 
   const fields = React.useMemo(() => {
     const gadgetInfo = gadgetConfig.dataSources;
@@ -25,6 +26,48 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
   }, [gadgetConfig.dataSources]);
 
   useEffect(() => {
+    if (initialized) {
+      return;
+    }
+
+    if (!fields || fields.length === 0) {
+      return;
+    }
+
+    const currentValue = typeof config.get === 'function' ? config.get() : undefined;
+
+    if (!currentValue) {
+      setInitialized(true);
+      return;
+    }
+
+    const parsedFilters = [];
+
+    currentValue.split(';').forEach(part => {
+      if (!part) return;
+      const [ds, fieldsPart] = part.split(':');
+      if (!ds || !fieldsPart) return;
+
+      fieldsPart.split(',').forEach(token => {
+        if (!token) return;
+        const sorting = token.startsWith('-') ? '-' : '';
+        const fieldName = sorting === '-' ? token.slice(1) : token;
+        const fieldObj = fields.find(f => f.ds === ds && f.field === fieldName);
+        if (fieldObj) {
+          parsedFilters.push({ sorting, field: fieldObj });
+        }
+      });
+    });
+
+    setFilters(parsedFilters);
+    setInitialized(true);
+  }, [config, fields, initialized]);
+
+  useEffect(() => {
+    if (!initialized) {
+      return;
+    }
+
     const dataSources = {};
     filters.forEach(f => {
       dataSources[f.field.ds] = [...(dataSources[f.field.ds] || []), f];
@@ -40,7 +83,7 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
     } else {
       config.set(res);
     }
-  }, [filters, config.set]);
+  }, [filters, config, initialized]);
 
   const handleFieldChange = (index, newField) => {
     setFilters(prev => prev.map((f, i) => (i === index ? { ...f, field: newField } : f)));
