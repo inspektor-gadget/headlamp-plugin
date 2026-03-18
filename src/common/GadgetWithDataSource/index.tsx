@@ -147,6 +147,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
                   config={gadgetConfig}
                   setFilters={setFilters}
                   filters={filters}
+                  showApplyButton
                   onApplyFilters={() => {
                     setGadgetData(prev => ({
                       ...prev,

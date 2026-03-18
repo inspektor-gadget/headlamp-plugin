@@ -9,7 +9,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 // Assuming you've converted the Title component to React
 
 const operations = [
@@ -25,6 +25,7 @@ const operations = [
 const FilterComponent = ({ param, config, gadgetConfig }) => {
   const [filters, setFilters] = useState([]);
   const [expanded, setExpanded] = useState(false);
+  const isMounted = useRef(false);
   const maxDescriptionLength = 100; // Characters before collapsing
   const shouldCollapse = param.description && param.description.length > maxDescriptionLength;
 
@@ -41,6 +42,10 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
   }, [gadgetConfig.dataSources]);
 
   useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
     const res = filters
       .map(f => {
         return `${f.key}${f.op}${f.value?.replace(/\\/g, '\\\\').replace(/,/g, '\\,') || ''}`;

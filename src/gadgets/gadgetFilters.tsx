@@ -24,7 +24,7 @@ import SortingFilter from './params/sortingfilter';
  */
 function useStableConfig(
   filters: Record<string, string>,
-  handleFilterChange: (key: string, value: string) => void,
+  handleFilterChange: (key: string, value: string | undefined) => void,
   prefix: string,
   key: string
 ) {
@@ -61,6 +61,7 @@ interface GadgetFiltersProps {
   setFilters: (func: (prev: Record<string, string>) => Record<string, string>) => void;
   filters: Record<string, string>;
   onApplyFilters?: () => void;
+  showApplyButton?: boolean;
   namespace?: string;
   pod?: string;
 }
@@ -155,6 +156,7 @@ export default function GadgetFilters({
   pod: initialPod,
   filters,
   onApplyFilters,
+  showApplyButton = false,
 }: GadgetFiltersProps) {
   const handleFilterChange = useCallback(
     (key: string, value: string | undefined) => {
@@ -230,7 +232,7 @@ export default function GadgetFilters({
           />
         );
       })}
-      {onApplyFilters && (
+      {showApplyButton && onApplyFilters && (
         <Box display="flex" justifyContent="flex-end" mt={2}>
           <Button variant="contained" color="primary" onClick={onApplyFilters}>
             Apply Filters
