@@ -1,0 +1,154 @@
+src/common/GadgetDescription/index.tsx(131,10): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element[]; container: true; spacing: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element[]; container: true; spacing: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element[]' is not assignable to type 'boolean | GridSize'.
+src/common/GadgetDescription/index.tsx(132,12): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; md: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; item: true; xs: number; md: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/common/GadgetDescription/index.tsx(162,12): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; md: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; item: true; xs: number; md: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/common/GadgetWithDataSource/index.tsx(176,29): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Type '"space-between"' is not assignable to type 'boolean | GridSize'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '"space-between"' is not assignable to type 'boolean | GridSize'.
+src/common/GadgetWithDataSource/index.tsx(177,16): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: string[]; item: true; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: string[]; item: true; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'string[]' is not assignable to type 'boolean | GridSize'.
+src/common/GadgetWithDataSource/index.tsx(178,16): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; item: true; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/common/NodeSelection/index.tsx(2,17): error TS2307: Cannot find module '@kinvolk/headlamp-plugin/lib/K8s' or its corresponding type declarations.
+src/common/NodeSelection/index.tsx(177,9): error TS2741: Property 'open' is missing in type '{ PaperProps: { style: { maxHeight: number; width: number; }; }; }' but required in type 'MenuProps'.
+src/common/NodeSelection/index.tsx(211,13): error TS2322: Type '(event: { target: { value: string[]; }; }) => void' is not assignable to type '(event: SelectChangeEvent<string[]>, child: ReactNode) => void'.
+  Types of parameters 'event' and 'event' are incompatible.
+    Type 'SelectChangeEvent<string[]>' is not assignable to type '{ target: { value: string[]; }; }'.
+      Type 'ChangeEvent<HTMLInputElement>' is not assignable to type '{ target: { value: string[]; }; }'.
+        The types of 'target.value' are incompatible between these types.
+          Type 'string' is not assignable to type 'string[]'.
+src/common/gadgetbackgroundinstanceform.tsx(2,17): error TS2307: Cannot find module '@kinvolk/headlamp-plugin/lib/K8s' or its corresponding type declarations.
+src/gadgets/backgroundgadgets.tsx(9,17): error TS2307: Cannot find module '@kinvolk/headlamp-plugin/lib/K8s' or its corresponding type declarations.
+src/gadgets/backgroundgadgets.tsx(93,11): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/gadgets/gadgetDetails.tsx(2,17): error TS2307: Cannot find module '@kinvolk/headlamp-plugin/lib/K8s' or its corresponding type declarations.
+src/gadgets/gadgetDetails.tsx(21,13): error TS2741: Property 'title' is missing in type '{}' but required in type 'LoaderProps'.
+src/gadgets/gadgetDetails.tsx(295,11): error TS2322: Type '(url?: string | URL, target?: string, features?: string) => Window' is not assignable to type 'boolean'.
+src/gadgets/gadgetFilters.tsx(209,14): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; key: any; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; item: true; xs: number; key: any; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/gadgets/gadgetFilters.tsx(254,8): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; item: true; xs: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/gadgets/gadgetFilters.tsx(261,8): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; item: true; xs: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/gadgets/gadgetFilters.tsx(268,8): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; item: true; xs: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/gadgets/gadgetFilters.tsx(275,8): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; md: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; item: true; md: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/gadgets/gadgetFilters.tsx(282,6): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; md: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; item: true; md: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/gadgets/gadgetGrid.tsx(3,17): error TS2307: Cannot find module '@kinvolk/headlamp-plugin/lib/K8s' or its corresponding type declarations.
+src/gadgets/gadgetGrid.tsx(168,14): error TS2741: Property 'title' is missing in type '{}' but required in type 'LoaderProps'.
+src/gadgets/gadgetGrid.tsx(230,15): error TS2322: Type '{ ig: IGConnection; imageName: any; enableEmbed: true; gadgetInfo: any; resource: any; }' is not assignable to type 'IntrinsicAttributes & { resource?: any; gadgetInfo: any; imageName: any; enableEmbed?: boolean; }'.
+  Property 'ig' does not exist on type 'IntrinsicAttributes & { resource?: any; gadgetInfo: any; imageName: any; enableEmbed?: boolean; }'.
+src/gadgets/gadgetGrid.tsx(237,14): error TS2741: Property 'title' is missing in type '{}' but required in type 'LoaderProps'.
+src/gadgets/gadgetGrid.tsx(603,6): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: any[]; container: true; spacing: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: any[]; container: true; spacing: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'any[]' is not assignable to type 'boolean | GridSize'.
+src/gadgets/gadgetGrid.tsx(604,8): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; item: true; xs: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/gadgets/gadgetGrid.tsx(608,10): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; item: true; xs: number; sm: number; md: number; key: any; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; item: true; xs: number; sm: number; md: number; key: any; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/gadgets/gadgetGrid.tsx(677,9): error TS2322: Type '{ gadgetInfo: any; resource: any; ig: IGConnection; imageName: any; }' is not assignable to type 'IntrinsicAttributes & { gadgetInfo: any; resource: any; imageName: any; enableEmbed?: boolean; }'.
+  Property 'ig' does not exist on type 'IntrinsicAttributes & { gadgetInfo: any; resource: any; imageName: any; enableEmbed?: boolean; }'.
+src/gadgets/gadgetcreationinresource.tsx(46,15): error TS2322: Type '{ resource: any; gadgets: any[]; enableEmbed: boolean; onViewSelect: () => void; onEmbedClick: (gadget: any) => void; callbackRunGadget: () => void; }' is not assignable to type 'IntrinsicAttributes & { gadgets: any; onEmbedClick: any; resource?: any; onAddGadget?: (gadget: any) => void; }'.
+  Property 'enableEmbed' does not exist on type 'IntrinsicAttributes & { gadgets: any; onEmbedClick: any; resource?: any; onAddGadget?: (gadget: any) => void; }'.
+src/gadgets/helper.ts(70,15): error TS2339: Property 'ddClient' does not exist on type 'Window & typeof globalThis'.
+src/gadgets/list.tsx(2,17): error TS2307: Cannot find module '@kinvolk/headlamp-plugin/lib/K8s' or its corresponding type declarations.
+src/gadgets/list.tsx(13,13): error TS2741: Property 'title' is missing in type '{}' but required in type 'LoaderProps'.
+src/gadgets/list.tsx(16,13): error TS2741: Property 'title' is missing in type '{}' but required in type 'LoaderProps'.
+src/gadgets/params/annotation.tsx(188,8): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element; container: true; spacing: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element; container: true; spacing: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element' is not assignable to type 'boolean | GridSize'.
+src/gadgets/params/annotation.tsx(189,10): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: { component: ElementType<any, keyof IntrinsicElements>; } & GridOwnProps & CommonProps & Omit<any, string | number>): Element', gave the following error.
+    Property 'component' is missing in type '{ children: Element[]; item: true; xs: number; }' but required in type '{ component: ElementType<any, keyof IntrinsicElements>; }'.
+  Overload 2 of 2, '(props: DefaultComponentProps<GridTypeMap<{}, "div">>): Element', gave the following error.
+    Type '{ children: Element[]; item: true; xs: number; }' is not assignable to type 'GridOwnProps'.
+      Property 'children' is incompatible with index signature.
+        Type 'Element[]' is not assignable to type 'boolean | GridSize'.
+src/gadgets/params/filter.tsx(36,10): error TS2339: Property 'fields' does not exist on type 'unknown'.
+src/gadgets/params/filter.tsx(37,33): error TS2339: Property 'name' does not exist on type 'unknown'.
+src/gadgets/params/sortingfilter.tsx(20,10): error TS2339: Property 'fields' does not exist on type 'unknown'.
+src/gadgets/params/sortingfilter.tsx(21,33): error TS2339: Property 'name' does not exist on type 'unknown'.
+src/gadgets/params/sortingfilter.tsx(21,73): error TS2339: Property 'name' does not exist on type 'unknown'.
+src/gadgets/params/sortingfilter.tsx(34,31): error TS2339: Property 'map' does not exist on type 'unknown'.
+src/gadgets/resourcegadgets.tsx(3,17): error TS2307: Cannot find module '@kinvolk/headlamp-plugin/lib/K8s' or its corresponding type declarations.
+src/gadgets/resourcegadgets.tsx(154,37): error TS2339: Property 'length' does not exist on type 'unknown'.
+src/gadgets/resourcegadgets.tsx(157,23): error TS2339: Property 'map' does not exist on type 'unknown'.
+src/index.tsx(14,17): error TS2307: Cannot find module '@kinvolk/headlamp-plugin/lib/K8s' or its corresponding type declarations.

@@ -15,6 +15,7 @@ import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
 import { Box, Typography } from '@mui/material';
 import { useState } from 'react';
 import { IGNotFound } from './common/NotFound';
+import { DNSDebugView } from './components/DNSDebugView';
 import { GadgetCreation } from './gadgets/gadgetcreationinresource';
 import { GadgetDetails } from './gadgets/gadgetDetails';
 import { isIGPod } from './gadgets/helper';
@@ -35,12 +36,29 @@ registerSidebarEntry({
   label: 'Gadgets',
 });
 
+registerSidebarEntry({
+  name: 'dns-security',
+  parent: 'gadgets',
+  url: '/gadgets/dns',
+  label: 'DNS Security',
+});
+
 registerRoute({
   path: '/gadgets',
   component: GadgetList,
   exact: true,
   sidebar: 'gadgets',
   name: 'gadgets',
+});
+
+// DNS Security route must be registered before the generic /:imageName/:id pattern
+// so that "/gadgets/dns" is not mistakenly captured as imageName="dns" with no id.
+registerRoute({
+  path: '/gadgets/dns',
+  component: DNSDebugView,
+  exact: true,
+  sidebar: 'gadgets',
+  name: 'dns-security',
 });
 
 registerRoute({
