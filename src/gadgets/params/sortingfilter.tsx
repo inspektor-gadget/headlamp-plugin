@@ -1,9 +1,10 @@
 import { Icon } from '@iconify/react';
 import { Box, Button, IconButton, MenuItem, Select, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
-import Title from './title'; // Assuming you've converted the Title component to React
+import Title from './title';
+import { GadgetConfig } from '../types';
 
-const SortingFilter = ({ param, config, gadgetConfig }) => {
+const SortingFilter = ({ param, config, gadgetConfig }: { param: any, config: any, gadgetConfig: GadgetConfig }) => {
   const operations = {
     '-': { icon: 'mdi:arrow-up', title: 'Descending' },
     '': { icon: 'mdi:arrow-down', title: 'Ascending' },
@@ -12,17 +13,25 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
   const [filters, setFilters] = useState([]);
 
   const fields = React.useMemo(() => {
-    const gadgetInfo = gadgetConfig.dataSources;
-    if (!gadgetInfo) return [];
+    const dataSources = gadgetConfig.dataSources;
+    if (!dataSources) return [];
 
-    const tmpFields = [];
-    Object.values(gadgetInfo).forEach(ds => {
-      ds.fields.forEach(f => {
-        tmpFields.push({ ds: ds.name, field: f.fullName, display: `${ds.name}.${f.fullName}` });
+    const tmpFields: any[] = [];
+    if (Array.isArray(dataSources)) {
+      dataSources.forEach(ds => {
+        ds.fields?.forEach(f => {
+          tmpFields.push({ ds: ds.name, field: f.fullName, display: `${ds.name}.${f.fullName}` });
+        });
       });
-    });
+    } else {
+      Object.values(dataSources).forEach((ds: any) => {
+        ds.fields?.forEach((f: any) => {
+          tmpFields.push({ ds: ds.name, field: f.fullName, display: `${ds.name}.${f.fullName}` });
+        });
+      });
+    }
     return tmpFields;
-  }, []);
+  }, [gadgetConfig.dataSources]);
 
   useEffect(() => {
     const dataSources = {};
@@ -30,8 +39,8 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
       dataSources[f.field.ds] = [...(dataSources[f.field.ds] || []), f];
     });
     const res = Object.entries(dataSources)
-      .map(([d, fields]) => {
-        return `${d}:${fields.map(f => `${f.sorting}${f.field.field}`).join(',')}`;
+      .map(([d, flds]: [string, any[]]) => {
+        return `${d}:${flds.map(f => `${f.sorting}${f.field.field}`).join(',')}`;
       })
       .join(';');
 

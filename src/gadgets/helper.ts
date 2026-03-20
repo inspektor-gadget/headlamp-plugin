@@ -67,7 +67,7 @@ export function isElectron() {
 }
 
 export function isDockerDesktop(): boolean {
-  if (window?.ddClient === undefined) {
+  if ((window as any)?.ddClient === undefined) {
     return false;
   }
   return true;

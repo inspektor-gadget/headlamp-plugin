@@ -184,63 +184,59 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
   }, []);
 
   return (
-    <Box>
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <Typography variant="subtitle1">{param.title || param.key}</Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {filterItems.map((filter, idx) => (
-              <Box
-                key={idx}
-                sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center' }}
+    <Box sx={{ p: 2 }}>
+      <Typography variant="subtitle1" sx={{ mb: 1 }}>{param.title || param.key}</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {filterItems.map((filter, idx) => (
+          <Box
+            key={idx}
+            sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center' }}
+          >
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <Select
+                value={filter.field || ''}
+                onChange={e => handleFieldChange(idx, e.target.value)}
+                displayEmpty
+                size="small"
+                fullWidth
               >
-                <FormControl size="small" sx={{ minWidth: 200 }}>
-                  <Select
-                    value={filter.field || ''}
-                    onChange={e => handleFieldChange(idx, e.target.value)}
-                    displayEmpty
-                    size="small"
-                    fullWidth
-                  >
-                    <MenuItem value="">
-                      <em>Select field</em>
-                    </MenuItem>
-                    {fields.map(field => (
-                      <MenuItem key={field.key} value={field.key}>
-                        {field.display}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <MenuItem value="">
+                  <em>Select field</em>
+                </MenuItem>
+                {fields.map(field => (
+                  <MenuItem key={field.key} value={field.key}>
+                    {field.display}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-                <TextField
-                  size="small"
-                  placeholder="Key"
-                  value={filter.key || ''}
-                  onChange={e => handleKeyChange(idx, e.target.value)}
-                  fullWidth
-                />
+            <TextField
+              size="small"
+              placeholder="Key"
+              value={filter.key || ''}
+              onChange={e => handleKeyChange(idx, e.target.value)}
+              fullWidth
+            />
 
-                <TextField
-                  size="small"
-                  placeholder="Value"
-                  value={filter.value || ''}
-                  onChange={e => handleValueChange(idx, e.target.value)}
-                  fullWidth
-                />
-                <IconButton onClick={() => handleDeleteFilter(idx)} color="error">
-                  <Icon icon="mdi:delete" />
-                </IconButton>
-              </Box>
-            ))}
+            <TextField
+              size="small"
+              placeholder="Value"
+              value={filter.value || ''}
+              onChange={e => handleValueChange(idx, e.target.value)}
+              fullWidth
+            />
+            <IconButton onClick={() => handleDeleteFilter(idx)} color="error">
+              <Icon icon="mdi:delete" />
+            </IconButton>
           </Box>
-          <Box mt={1}>
-            <AddButton variant="contained" onClick={handleAddFilter}>
-              Add Annotation
-            </AddButton>
-          </Box>
-        </Grid>
-      </Grid>
+        ))}
+      </Box>
+      <Box mt={1}>
+        <AddButton variant="contained" onClick={handleAddFilter}>
+          Add Annotation
+        </AddButton>
+      </Box>
     </Box>
   );
 };

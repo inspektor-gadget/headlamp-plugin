@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import React, { useEffect, useMemo } from 'react';
 import GadgetFilters from '../../gadgets/gadgetFilters';
+import { GadgetInstance } from '../../gadgets/types';
 import { AllColumnMeta } from '../../gadgets/utility';
 import { IS_METRIC } from '../helpers';
 import { MetricChart } from '../MetricChart';
@@ -31,7 +32,7 @@ interface GadgetWithDataSourceProps {
   columns: string[];
   bufferedGadgetData: Record<string, any[]>;
   renderCreateBackgroundGadget: boolean;
-  gadgetInstance?: any;
+  gadgetInstance?: GadgetInstance;
   gadgetConn: any;
   isRunningInBackground: boolean;
   isInstantRun: boolean;
@@ -179,39 +180,36 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
       )}
       {areAllPodStreamsConnected && (
         <Box mt={2}>
-          <Box m={2}>
-            <Grid container justifyContent="space-between" spacing={2}>
-              <Grid item>Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}</Grid>
-              <Grid item>
-                {gadgetInstance ? (
-                  <>
-                    <Button
-                      // disabled={podsSelected.length === 0 || gadgetRunningStatus}
-                      onClick={() => {
-                        if (gadgetRunningStatus) {
-                          headlessGadgetDeleteCallback(gadgetInstance);
-                        }
-                        headlessGadgetRunCallback(gadgetInstance);
-                      }}
-                      variant="outlined"
-                      disabled={loading}
-                    >
-                      {loading ? 'Processing' : !gadgetRunningStatus ? 'Run' : 'Stop'}
-                    </Button>
-                  </>
-                ) : (
-                  podsSelected.length > 0 && (
-                    <Button
-                      disabled={loading || podsSelected.length === 0}
-                      onClick={handleStartStop}
-                      variant="outlined"
-                    >
-                      {loading ? 'Processing' : !gadgetRunningStatus ? 'Start' : 'Stop'}
-                    </Button>
-                  )
-                )}
-              </Grid>
-            </Grid>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
+            <Typography variant="body2">Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}</Typography>
+            <Box>
+              {gadgetInstance ? (
+                <>
+                  <Button
+                    onClick={() => {
+                      if (gadgetRunningStatus) {
+                        headlessGadgetDeleteCallback(gadgetInstance);
+                      }
+                      headlessGadgetRunCallback(gadgetInstance);
+                    }}
+                    variant="outlined"
+                    disabled={loading}
+                  >
+                    {loading ? 'Processing' : !gadgetRunningStatus ? 'Run' : 'Stop'}
+                  </Button>
+                </>
+              ) : (
+                podsSelected.length > 0 && (
+                  <Button
+                    disabled={loading || podsSelected.length === 0}
+                    onClick={handleStartStop}
+                    variant="outlined"
+                  >
+                    {loading ? 'Processing' : !gadgetRunningStatus ? 'Start' : 'Stop'}
+                  </Button>
+                )
+              )}
+            </Box>
           </Box>
 
           {renderContent()}

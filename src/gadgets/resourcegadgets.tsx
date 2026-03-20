@@ -17,6 +17,7 @@ import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '.
 import { MetricChart } from '../common/MetricChart';
 import { isIGPod } from './helper';
 import usePortForward from './igSocket';
+import { GadgetInstance } from './types';
 import { AllColumnMeta, processGadgetData } from './utility';
 
 function getGadgetPodForThisResourceNode(node, pods) {
@@ -26,7 +27,7 @@ function getGadgetPodForThisResourceNode(node, pods) {
 
 const RunningGadgetsForResource = ({ resource, open }) => {
   const [pods] = K8s.ResourceClasses.Pod.useList();
-  const [gadgetInstances, setGadgetInstances] = useState(null);
+  const [gadgetInstances, setGadgetInstances] = useState<GadgetInstance[] | null>(null);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [instanceToDelete, setInstanceToDelete] = useState(null);
 
@@ -120,10 +121,10 @@ const RunningGadgetsForResource = ({ resource, open }) => {
   };
 
   // Group instances by image name
-  const groupedInstances = useMemo(() => {
+  const groupedInstances = useMemo<Record<string, GadgetInstance[]>>(() => {
     if (!gadgetInstances) return {};
 
-    return gadgetInstances.reduce((acc, instance) => {
+    return gadgetInstances.reduce((acc: Record<string, GadgetInstance[]>, instance) => {
       const imageName = instance.gadgetConfig.imageName;
       if (!acc[imageName]) {
         acc[imageName] = [];

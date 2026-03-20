@@ -10,6 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
+import { GadgetConfig } from '../types';
 // Assuming you've converted the Title component to React
 
 const operations = [
@@ -22,22 +23,29 @@ const operations = [
   { key: '~=', description: 'matches regular expression' },
 ];
 
-const FilterComponent = ({ param, config, gadgetConfig }) => {
+const FilterComponent = ({ param, config, gadgetConfig }: { param: any, config: any, gadgetConfig: GadgetConfig }) => {
   const [filters, setFilters] = useState([]);
   const [expanded, setExpanded] = useState(false);
   const maxDescriptionLength = 100; // Characters before collapsing
   const shouldCollapse = param.description && param.description.length > maxDescriptionLength;
 
   const fields = useMemo(() => {
-    const gadgetInfo = gadgetConfig.dataSources;
-    console.log('Gadget info:', gadgetInfo);
-    if (!gadgetInfo) return [];
-    const tmpFields = [];
-    Object.values(gadgetInfo).forEach(ds => {
-      ds.fields.forEach(f => {
-        tmpFields.push({ ds: ds.name, ...f });
+    const dataSources = gadgetConfig.dataSources;
+    if (!dataSources) return [];
+    const tmpFields: any[] = [];
+    if (Array.isArray(dataSources)) {
+      dataSources.forEach(ds => {
+        ds.fields?.forEach(f => {
+          tmpFields.push({ ds: ds.name, ...f });
+        });
       });
-    });
+    } else {
+      Object.values(dataSources).forEach((ds: any) => {
+        ds.fields?.forEach((f: any) => {
+          tmpFields.push({ ds: ds.name, ...f });
+        });
+      });
+    }
     return tmpFields;
   }, [gadgetConfig.dataSources]);
 

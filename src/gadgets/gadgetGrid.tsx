@@ -165,7 +165,7 @@ export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resou
               height: '100%',
             }}
           >
-            <Loader />
+            <Loader title="Loading Gadget..." />
           </Box>
         </Box>
       </>
@@ -234,7 +234,7 @@ export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resou
               resource={resource}
             />
           ) : (
-            <Loader />
+            <Loader title="Loading Gadget Info..." />
           )}
         </Box>
       </Box>
@@ -355,7 +355,7 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
   );
 };
 
-const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageName }) => {
+const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageName, ig }: { activeStep: number, setActiveStep: any, resource: any, gadgetInfo: any, imageName: any, ig: any }) => {
   const [currentView, setCurrentView] = useState('');
   const [filters, setFilters] = useState({});
   const commonProps = {
@@ -464,7 +464,7 @@ const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageNam
   }
 };
 
-const GadgetCreationStepper = ({ resource = null, gadgetInfo, imageName, enableEmbed = false }) => {
+const GadgetCreationStepper = ({ resource = null, gadgetInfo, imageName, ig, enableEmbed = false }: { resource?: any, gadgetInfo: any, imageName: any, ig: any, enableEmbed?: boolean }) => {
   const [activeStep, setActiveStep] = useState(0);
 
   const steps = enableEmbed
@@ -486,19 +486,21 @@ const GadgetCreationStepper = ({ resource = null, gadgetInfo, imageName, enableE
         resource={resource}
         gadgetInfo={gadgetInfo}
         imageName={imageName}
+        ig={ig}
       />
     </Box>
   );
 };
 
 // Update CreateGadgetInstance to pass enableEmbed
-function CreateGadgetInstance({ gadgetInfo, resource, imageName, enableEmbed = false }) {
+function CreateGadgetInstance({ gadgetInfo, resource, imageName, ig, enableEmbed = false }: { gadgetInfo: any, resource?: any, imageName: any, ig: any, enableEmbed?: boolean }) {
   return (
     <GadgetCreationStepper
       resource={resource}
       gadgetInfo={gadgetInfo}
       imageName={imageName}
       enableEmbed={enableEmbed}
+      ig={ig}
     />
   );
 }
@@ -507,6 +509,10 @@ const GadgetGrid = ({
   gadgets,
   onEmbedClick,
   resource = null,
+}: {
+  gadgets: any[];
+  onEmbedClick: (gadget: any) => void;
+  resource?: any;
 }) => {
   if (gadgets.length === 0) {
     return (
@@ -519,13 +525,26 @@ const GadgetGrid = ({
   }
 
   return (
-    <Grid container spacing={3}>
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: {
+          xs: '1fr',
+          sm: 'repeat(2, 1fr)',
+          md: 'repeat(3, 1fr)',
+        },
+        gap: 3,
+      }}
+    >
       {gadgets.map(gadget => (
-        <Grid item xs={12} sm={6} md={4} key={gadget.package_id}>
-          <GadgetCard gadget={gadget} onEmbedClick={onEmbedClick} resource={resource} />
-        </Grid>
+        <GadgetCard
+          key={gadget.package_id}
+          gadget={gadget}
+          onEmbedClick={onEmbedClick}
+          resource={resource}
+        />
       ))}
-    </Grid>
+    </Box>
   );
 };
 
