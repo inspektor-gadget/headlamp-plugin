@@ -6,14 +6,18 @@ import {
   AccordionSummary,
   Box,
   Button,
+  Chip,
   Grid,
+  IconButton,
+  Tooltip,
   Typography,
 } from '@mui/material';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import GadgetFilters from '../../gadgets/gadgetFilters';
 import { AllColumnMeta } from '../../gadgets/utility';
 import { IS_METRIC } from '../helpers';
 import { MetricChart } from '../MetricChart';
+import { EventDetailPanel } from '../EventDetailPanel';
 
 interface GadgetWithDataSourceProps {
   podsSelected: any[];
@@ -61,7 +65,6 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
     bufferedGadgetData,
     podsSelected,
     gadgetInstance,
-
     isInstantRun,
     error,
     headlessGadgetDeleteCallback = () => {},
@@ -69,7 +72,9 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
     handleRun = () => {},
     columnMeta,
   } = props;
+
   const areAllPodStreamsConnected = podStreamsConnected === podsSelected.length;
+  const [inspectedRow, setInspectedRow] = useState<Record<string, any> | null>(null);
 
   useEffect(() => {
     if (gadgetInstance) {
@@ -79,6 +84,32 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
       return () => clearTimeout(timer);
     }
   }, [JSON.stringify(gadgetInstance || {})]);
+
+  // Inspect action column — renders a small icon button in each row
+  const inspectColumn = useMemo(
+    () => ({
+      id: 'inspect-action',
+      header: '',
+      accessorFn: (data: any) => data,
+      Cell: ({ cell }: { cell: any }) => (
+        <Tooltip title="Inspect event">
+          <IconButton
+            size="small"
+            onClick={e => {
+              e.stopPropagation();
+              setInspectedRow(cell.row.original);
+            }}
+          >
+            <Icon icon="mdi:magnify" width={16} />
+          </IconButton>
+        </Tooltip>
+      ),
+      gridTemplate: 'min-content',
+      enableSorting: false,
+      enableColumnFilter: false,
+    }),
+    []
+  );
 
   const fields = useMemo(
     () =>
@@ -94,8 +125,13 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
     [columns, columnMeta, dataSourceID]
   );
 
+  // Merge data columns with the inspect action column
+  const allFields = useMemo(
+    () => (fields ? [...fields, inspectColumn] : undefined),
+    [fields, inspectColumn]
+  );
+
   useEffect(() => {
-    // also bufferedGadgetData[dataSourceID] can be an object as well
     if (bufferedGadgetData[dataSourceID]) {
       setGadgetData(bufferedGadgetData);
     }
@@ -103,19 +139,11 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
 
   function handleStartStop() {
     if (!gadgetRunningStatus) {
-      setGadgetData(prev => ({
-        ...prev,
-        [dataSourceID]: [],
-      }));
-      setBufferedGadgetData(prev => ({
-        ...prev,
-        [dataSourceID]: [],
-      }));
+      setGadgetData(prev => ({ ...prev, [dataSourceID]: [] }));
+      setBufferedGadgetData(prev => ({ ...prev, [dataSourceID]: [] }));
       handleRun();
     }
-
     setGadgetRunningStatus(prev => !prev);
-    // Reset data when starting
   }
 
   const renderContent = () => {
@@ -135,13 +163,55 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
       });
     }
 
+    const rows = gadgetData[dataSourceID] || [];
     return (
-      fields && <Table columns={fields} data={gadgetData[dataSourceID] || []} loading={loading} />
+      allFields && (
+        <>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5, px: 1 }}>
+            <Chip label={`${rows.length} events`} size="small" variant="outlined" />
+          </Box>
+          <Table columns={allFields} data={rows} loading={loading} />
+        </>
+      )
     );
   };
 
   return (
     <>
+      {/* Side panel overlay — plain divs because MUI Drawer doesn't render inside Headlamp's plugin host */}
+      {inspectedRow && (
+        <>
+          <div
+            onClick={() => setInspectedRow(null)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              backgroundColor: 'rgba(0,0,0,0.4)',
+              zIndex: 1298,
+            }}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              width: '420px',
+              height: '100vh',
+              zIndex: 1299,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '-4px 0 24px rgba(0,0,0,0.5)',
+              backgroundColor: '#1e1e2e',
+            }}
+          >
+            <EventDetailPanel row={inspectedRow} onClose={() => setInspectedRow(null)} />
+          </div>
+        </>
+      )}
       {isInstantRun && (
         <Box mb={1}>
           <Accordion>
@@ -155,16 +225,8 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
                   setFilters={setFilters}
                   filters={filters}
                   onApplyFilters={() => {
-                    setGadgetData(prev => ({
-                      ...prev,
-                      [dataSourceID]: [],
-                    }));
-                    setBufferedGadgetData(prev => ({
-                      ...prev,
-                      [dataSourceID]: [],
-                    }));
-
-                    // Toggle running status
+                    setGadgetData(prev => ({ ...prev, [dataSourceID]: [] }));
+                    setBufferedGadgetData(prev => ({ ...prev, [dataSourceID]: [] }));
                     setGadgetRunningStatus(prev => !prev);
                   }}
                 />
@@ -184,21 +246,18 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
               <Grid item>Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}</Grid>
               <Grid item>
                 {gadgetInstance ? (
-                  <>
-                    <Button
-                      // disabled={podsSelected.length === 0 || gadgetRunningStatus}
-                      onClick={() => {
-                        if (gadgetRunningStatus) {
-                          headlessGadgetDeleteCallback(gadgetInstance);
-                        }
-                        headlessGadgetRunCallback(gadgetInstance);
-                      }}
-                      variant="outlined"
-                      disabled={loading}
-                    >
-                      {loading ? 'Processing' : !gadgetRunningStatus ? 'Run' : 'Stop'}
-                    </Button>
-                  </>
+                  <Button
+                    onClick={() => {
+                      if (gadgetRunningStatus) {
+                        headlessGadgetDeleteCallback(gadgetInstance);
+                      }
+                      headlessGadgetRunCallback(gadgetInstance);
+                    }}
+                    variant="outlined"
+                    disabled={loading}
+                  >
+                    {loading ? 'Processing' : !gadgetRunningStatus ? 'Run' : 'Stop'}
+                  </Button>
                 ) : (
                   podsSelected.length > 0 && (
                     <Button
@@ -213,7 +272,6 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
               </Grid>
             </Grid>
           </Box>
-
           {renderContent()}
         </Box>
       )}

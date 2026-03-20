@@ -98,6 +98,8 @@ export const processGadgetData = (
       },
     }));
   } else {
+    // keep raw event for the detail inspector
+    massagedData.__raw = data;
     setBufferedGadgetData(prevData => {
       const newData = [...(prevData[dsID] || []), massagedData];
       return {
