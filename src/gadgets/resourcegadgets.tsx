@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { columnLabels,HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../common/helpers';
+import { columnLabels, HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../common/helpers';
 import { MetricChart } from '../common/MetricChart';
 import { isIGPod } from './helper';
 import usePortForward from './igSocket';
@@ -488,6 +488,7 @@ const GadgetDataView = ({ resource, dataSourceID, dataColumns, gadgetData, loadi
   const fields = useMemo(() => {
     return (
       dataColumns?.[dataSourceID]?.map(column => ({
+        id: column, // Use column name as ID
         header: columnLabels[column] || column, // Use label if available, otherwise fallback to column name
         accessorFn: data =>
           column === 'timestamp' ? <DateLabel date={data[column]} /> : data[column],
@@ -495,7 +496,7 @@ const GadgetDataView = ({ resource, dataSourceID, dataColumns, gadgetData, loadi
     );
   }, [dataSourceID, dataColumns]);
 
-  const hasMetricField = fields.some(field => field.header === 'isMetric');
+  const hasMetricField = fields.some(field => field.id === 'isMetric');
 
   if (hasMetricField) {
     const node =

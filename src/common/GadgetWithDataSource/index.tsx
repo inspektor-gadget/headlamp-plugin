@@ -99,6 +99,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
     [columns, columnMeta, dataSourceID]
 =======
       columns?.map(column => ({
+        id: column, // Use column name as ID
         header: columnLabels[column] || column, // Use label if available, otherwise fallback to column name
         accessorFn: (data: any) =>
           column === 'timestamp' ? <DateLabel date={data[column]} /> : data[column],
@@ -132,7 +133,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
   }
 
   const renderContent = () => {
-    const hasMetricField = fields?.some(field => field.header === IS_METRIC);
+    const hasMetricField = fields?.some(field => field.id === IS_METRIC);
     if (hasMetricField) {
       return podsSelected.map(pod => {
         const node = pod?.spec.nodeName;
