@@ -85,3 +85,5 @@ To test this plugin locally with a development instance of Headlamp:
     ```
 
 This will build the plugin and make it available in your local Headlamp instance at runtime.
+
+For how to contribute (pull requests, checks and workflow), see [CONTRIBUTING.md](CONTRIBUTING.md).
