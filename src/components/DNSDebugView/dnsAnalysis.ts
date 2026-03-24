@@ -144,7 +144,7 @@ export function detectRetryStorms(events: any[]): RetryStorm[] {
   // Group events by (dnName, podName)
   const grouped = new Map<string, any[]>();
   for (const ev of events) {
-    const dnName = extractString(ev['dnName']);
+    const dnName = extractString(ev['name']);
     const podName = extractString(ev['k8s.podName']);
     if (!dnName) continue;
     const key = `${dnName}\x00${podName}`;
@@ -245,7 +245,7 @@ export function groupFailedLookups(events: any[]): FailedLookupGroup[] {
     const rcode = extractString(ev['rcode']);
     if (!isFailure(rcode)) continue;
 
-    const dnName = extractString(ev['dnName']);
+    const dnName = extractString(ev['name']);
     if (!dnName) continue;
 
     const podName = extractString(ev['k8s.podName']);
@@ -304,7 +304,7 @@ function computeTopDomains(
   const counts = new Map<string, { total: number; success: number }>();
 
   for (const ev of events) {
-    const dnName = extractString(ev['dnName']);
+    const dnName = extractString(ev['name']);
     if (!dnName) continue;
     const rcode = extractString(ev['rcode']);
     let c = counts.get(dnName);
@@ -354,7 +354,7 @@ function computeUnexpectedDomains(events: any[]): UnexpectedDomain[] {
   const domainMeta = new Map<string, { ts: number; podName: string; namespace: string; count: number }>();
 
   for (const ev of events) {
-    const dnName = extractString(ev['dnName']);
+    const dnName = extractString(ev['name']);
     if (!dnName) continue;
     const ts = extractTimestampNs(ev['timestamp']);
     const podName = extractString(ev['k8s.podName']);
