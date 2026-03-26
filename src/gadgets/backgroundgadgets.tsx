@@ -19,10 +19,21 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const [runningInstances, setRunningInstances] = React.useState(null);
   const [openConfirmDialog, setOpenConfirmDialog] = React.useState(false);
-  const [tableInstance, setTableInstance] = useState(null);
+  const tableInstanceRef = React.useRef<any>(null);
   const isIGInstallationFound = isIGInstalled(pods);
   const [selectedCount, setSelectedCount] = useState(0);
   const ig = useGadgetConn(nodes, pods);
+
+  useEffect(() => {
+    if (!tableInstanceRef.current) return;
+    const count = tableInstanceRef.current.getSelectedRowModel().rows.length;
+    if (selectedCount !== count) {
+      setSelectedCount(count);
+    }
+  }, [tableInstanceRef.current?.getSelectedRowModel().rows.length, selectedCount]);
+
+
+
   const cluster = getCluster();
 
   useEffect(() => {
@@ -71,10 +82,11 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   }, [ig, embedDialogOpen]);
 
   const handleDeleteInstances = () => {
-    if (!tableInstance) return;
+    if (!tableInstanceRef.current) return;
 
-    const selectedRows = tableInstance.getSelectedRowModel().rows;
-    const selectedIds = new Set(selectedRows.map(r => r.original.id)) as Set<string>;
+    const selectedRows = tableInstanceRef.current.getSelectedRowModel().rows;
+    const selectedIds = new Set<string>(selectedRows.map((r: any) => r.original.id as string));
+
     const localStorageInstances = JSON.parse(
       localStorage.getItem('headlamp_embeded_resources') || '[]'
     );
@@ -91,7 +103,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
       } else {
         ig.deleteGadgetInstance(
           id,
-          () => {},
+          () => { },
           err => {
             console.error('Error deleting instance:', err);
           }
@@ -104,7 +116,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
 
     localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
     setRunningInstances(updatedDisplayInstances);
-    tableInstance.resetRowSelection(); // Reset row selection after updating data
+    tableInstanceRef.current.resetRowSelection(); // Reset row selection after updating data
     setOpenConfirmDialog(false);
   };
 
@@ -199,8 +211,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
             enableRowSelection
             positionToolbarAlertBanner="top"
             renderTopToolbarCustomActions={({ table }) => {
-              setTableInstance(table);
-              setSelectedCount(table.getSelectedRowModel().rows.length);
+              tableInstanceRef.current = table;
               return null;
             }}
           />
@@ -270,8 +281,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
               );
             }}
             renderTopToolbarCustomActions={({ table }) => {
-              setTableInstance(table);
-              setSelectedCount(table.getSelectedRowModel().rows.length);
+              tableInstanceRef.current = table;
               return null;
             }}
           />
