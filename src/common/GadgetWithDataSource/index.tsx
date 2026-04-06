@@ -76,6 +76,18 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
   const areAllPodStreamsConnected = podStreamsConnected === podsSelected.length;
   const [inspectedRow, setInspectedRow] = useState<Record<string, any> | null>(null);
 
+  // Lock body scroll while the panel is open to prevent scrollbar-width oscillation
+  useEffect(() => {
+    if (inspectedRow) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [inspectedRow]);
+
   useEffect(() => {
     if (gadgetInstance) {
       const timer = setTimeout(() => {
@@ -181,35 +193,35 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
       {/* Side panel overlay — plain divs because MUI Drawer doesn't render inside Headlamp's plugin host */}
       {inspectedRow && (
         <>
-          <div
+          <Box
             onClick={() => setInspectedRow(null)}
-            style={{
+            sx={{
               position: 'fixed',
               top: 0,
               left: 0,
-              width: '100vw',
-              height: '100vh',
+              width: '100%',
+              height: '100%',
               backgroundColor: 'rgba(0,0,0,0.4)',
               zIndex: 1298,
             }}
           />
-          <div
-            style={{
+          <Box
+            sx={{
               position: 'fixed',
               top: 0,
               right: 0,
-              width: '420px',
-              height: '100vh',
+              width: 'min(420px, 100%)',
+              height: '100%',
               zIndex: 1299,
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              boxShadow: '-4px 0 24px rgba(0,0,0,0.5)',
-              backgroundColor: '#1e1e2e',
+              boxShadow: 8,
+              bgcolor: 'background.paper',
             }}
           >
             <EventDetailPanel row={inspectedRow} onClose={() => setInspectedRow(null)} />
-          </div>
+          </Box>
         </>
       )}
       {isInstantRun && (

@@ -1,8 +1,7 @@
 import { Icon } from '@iconify/react';
 import { NameValueTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { Box, ButtonGroup, Button, IconButton, Tooltip, Typography } from '@mui/material';
-import React, { useState } from 'react';
-import JSONPretty from 'react-json-pretty';
+import React, { useEffect, useState } from 'react';
 
 interface EventDetailPanelProps {
   row: Record<string, any>;
@@ -84,8 +83,19 @@ export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
   const rawData = row.__raw ?? row;
   const subtitle = getEventSubtitle(rawData);
 
+  // Close on Escape key
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   function handleCopy() {
-    navigator.clipboard.writeText(JSON.stringify(rawData, null, 2));
+    navigator.clipboard.writeText(JSON.stringify(rawData, null, 2)).catch(() => {
+      // clipboard not available (e.g. non-HTTPS) — silently ignore
+    });
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -137,7 +147,7 @@ export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
       >
         {/* Left: title & subtitle */}
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="subtitle1" fontWeight={600} noWrap>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }} noWrap>
             Event Details
           </Typography>
           {subtitle && (
@@ -180,14 +190,21 @@ export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
       <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', p: 2 }}>
         {showRaw ? (
           <Box
+            component="pre"
             sx={{
               borderRadius: 1,
               fontSize: '0.8rem',
-              bgcolor: '#272822',
+              fontFamily: 'monospace',
+              bgcolor: 'action.hover',
+              color: 'text.primary',
               p: 1.5,
+              m: 0,
+              overflowX: 'auto',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all',
             }}
           >
-            <JSONPretty data={rawData} />
+            {JSON.stringify(rawData, null, 2)}
           </Box>
         ) : tableRows.length > 0 ? (
           <NameValueTable rows={tableRows} />
