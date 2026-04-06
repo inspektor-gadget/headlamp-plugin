@@ -150,7 +150,19 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
     {
       id: 'Status',
       header: 'Status',
-      accessorFn: row => (row.isHeadless ? 'Running In Background' : 'Not Running'),
+      accessorFn: row => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box
+            sx={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              backgroundColor: row.isHeadless ? '#4caf50' : '#9e9e9e',
+            }}
+          />
+          {row.isHeadless ? 'Running' : 'Stopped'}
+        </Box>
+      ),
     },
     {
       id: 'embedded',

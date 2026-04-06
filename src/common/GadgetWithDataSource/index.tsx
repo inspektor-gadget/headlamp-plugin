@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import React, { useEffect, useMemo } from 'react';
 import GadgetFilters from '../../gadgets/gadgetFilters';
+import { AllColumnMeta } from '../../gadgets/utility';
 import { IS_METRIC } from '../helpers';
 import { MetricChart } from '../MetricChart';
 
@@ -40,6 +41,7 @@ interface GadgetWithDataSourceProps {
   headlessGadgetRunCallback: (success: any) => void;
   headlessGadgetDeleteCallback: (success: any) => void;
   handleRun: () => void;
+  columnMeta?: AllColumnMeta;
 }
 
 export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
@@ -65,6 +67,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
     headlessGadgetDeleteCallback = () => {},
     headlessGadgetRunCallback = () => {},
     handleRun = () => {},
+    columnMeta,
   } = props;
   const areAllPodStreamsConnected = podStreamsConnected === podsSelected.length;
 
@@ -79,12 +82,16 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
 
   const fields = useMemo(
     () =>
-      columns?.map(column => ({
-        header: column,
-        accessorFn: (data: any) =>
-          column === 'timestamp' ? <DateLabel date={data[column]} /> : data[column],
-      })),
-    [columns]
+      columns?.map(column => {
+        const meta = columnMeta?.[dataSourceID]?.[column];
+        const header = meta?.annotations?.['columns.title'] || column;
+        return {
+          header,
+          accessorFn: (data: any) =>
+            column === 'timestamp' ? <DateLabel date={data[column]} /> : data[column],
+        };
+      }),
+    [columns, columnMeta, dataSourceID]
   );
 
   useEffect(() => {

@@ -358,10 +358,13 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
 const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageName }) => {
   const [currentView, setCurrentView] = useState('');
   const [filters, setFilters] = useState({});
+  const isNamespaceResoruce = resource?.jsonData?.kind === 'Namespace';
   const commonProps = {
     config: gadgetInfo,
-    namespace: resource?.jsonData?.metadata?.namespace,
-    pod: resource?.jsonData?.metadata?.name,
+    namespace: isNamespaceResoruce
+      ? resource?.jsonData?.metadata?.name
+      : resource?.jsonData?.metadata?.namespace,
+    pod: resource?.jsonData?.kind === 'Pod' ? resource?.jsonData?.metadata?.name : undefined,
   };
   switch (activeStep) {
     case 0:
@@ -503,95 +506,14 @@ function CreateGadgetInstance({ gadgetInfo, resource, imageName, enableEmbed = f
   );
 }
 
-function GadgetInput({ resource, onAddGadget }) {
-  const [imageURL, setImageURL] = useState('');
-  const history = useHistory();
-  const { enqueueSnackbar } = useSnackbar();
-  const encodedImageURL = encodeURIComponent(imageURL);
-
-  const handleRun = () => {
-    const row: {
-      id: string;
-      isHeadless: boolean;
-      gadgetConfig: {
-        imageName: string;
-        version: number;
-        paramValues: object;
-      };
-      name: string;
-      cluster: string;
-      isEmbedded: boolean;
-      kind?: string;
-    } = {
-      id: encodedImageURL + '-custom-' + generateRandomString(),
-      isHeadless: undefined,
-      gadgetConfig: {
-        imageName: encodedImageURL,
-        version: 1,
-        paramValues: {},
-      },
-      name: 'gadget-custom-' + generateRandomString(),
-      cluster: getCluster(),
-      isEmbedded: !!resource,
-    };
-    if (resource) {
-      row.kind = resource.jsonData.kind;
-    }
-    const instances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
-    instances.push(row);
-    localStorage.setItem('headlamp_embeded_resources', JSON.stringify(instances));
-    if (resource) {
-      onAddGadget(row);
-      enqueueSnackbar(`Added gadget ${imageURL}`, {
-        variant: 'success',
-      });
-      setImageURL('');
-    }
-    if (!resource) {
-      history.push({
-        pathname: `/c/${getCluster()}/gadgets/${encodedImageURL}/${row.id}`,
-      });
-    }
-  };
-
-  return (
-    <Box mt={2} display="flex" alignItems="center">
-      <TextField
-        label="Gadget Image URL"
-        variant="outlined"
-        size="small"
-        fullWidth
-        value={imageURL}
-        onChange={e => setImageURL(e.target.value)}
-      />
-      <Box ml={1}>
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<Icon icon="mdi:plus" />}
-          onClick={() => handleRun()}
-          sx={{ ml: 2 }}
-          disabled={!imageURL}
-        >
-          Add
-        </Button>
-      </Box>
-    </Box>
-  );
-}
-
 const GadgetGrid = ({
   gadgets,
   onEmbedClick,
   resource = null,
-  onAddGadget = gadget => {
-    console.log('Gadget added:', gadget);
-  },
 }) => {
   if (gadgets.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-        {!resource && <GadgetInput resource={resource} onAddGadget={() => {}} />}
         <Typography variant="h5" color="textSecondary">
           No gadgets available
         </Typography>
@@ -601,9 +523,6 @@ const GadgetGrid = ({
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
-        <GadgetInput resource={resource} onAddGadget={onAddGadget} />
-      </Grid>
       {gadgets.map(gadget => (
         <Grid item xs={12} sm={6} md={4} key={gadget.package_id}>
           <GadgetCard gadget={gadget} onEmbedClick={onEmbedClick} resource={resource} />

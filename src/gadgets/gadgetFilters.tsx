@@ -4,17 +4,19 @@ import {
   Button,
   Checkbox,
   FormControlLabel,
-  Grid,
   InputAdornment,
   TextField,
   Tooltip,
+  Typography,
 } from '@mui/material';
+import Divider from '@mui/material/Divider';
 import React, { useCallback, useMemo, useRef } from 'react';
 import { FILTERS_TYPE } from './filter_types';
 import { removeDuplicates } from './helper';
 import AnnotationFilter from './params/annotation';
 import CheckboxFilter from './params/bool';
 import FilterComponent from './params/filter';
+import K8sFilterComponent from './params/k8sfilter';
 import SelectFilter from './params/select';
 import SortingFilter from './params/sortingfilter';
 
@@ -52,6 +54,7 @@ interface FilterParam {
   description?: string;
   defaultValue?: string;
   possibleValues?: string[];
+  tags?: string[];
 }
 
 interface GadgetFiltersProps {
@@ -129,6 +132,7 @@ const FilterInput: React.FC<{
             defaultValue={param.defaultValue}
             onChange={e => handleChange(e.target.value)}
             inputProps={{ min: filter.min, max: filter.max }}
+            InputProps={{ endAdornment: infoAdornment }}
           />
         </Box>
       );
@@ -192,44 +196,116 @@ export default function GadgetFilters({
 
   // Set initial values for namespace and pod if provided
   React.useEffect(() => {
-    if (initialNamespace && initialPod && namespaceParam && allNamespacesParam && podParam) {
+    if (
+      initialNamespace &&
+      namespaceParam &&
+      filters[namespaceParam.prefix + namespaceParam.key] !== initialNamespace
+    ) {
+      handleFilterChange(namespaceParam.prefix + namespaceParam.key, initialNamespace as string);
+    }
+    if (initialPod && podParam && filters[podParam.prefix + podParam.key] !== initialPod) {
+      handleFilterChange(podParam.prefix + podParam.key, initialPod as string);
+    }
+    if (
+      (initialNamespace || initialPod) &&
+      filters[allNamespacesParam.prefix + allNamespacesParam.key] !== 'false'
+    ) {
       handleFilterChange(allNamespacesParam.prefix + allNamespacesParam.key, 'false');
-      handleFilterChange(namespaceParam.prefix + namespaceParam.key, initialNamespace);
-      handleFilterChange(podParam.prefix + podParam.key, initialPod);
     }
   }, [initialNamespace, initialPod, namespaceParam, allNamespacesParam, podParam, handleFilterChange]);
 
-  if (!config || !uniqueParams.length) return null;
+  const groupedParams = useMemo(() => {
+    const groups: Record<string, FilterParam[]> = {};
+
+    // params that are missing typeHint from config
+    const otelMetricPrintIntervalParam = uniqueParams.find(
+      p => p.key === 'otel-metrics-print-interval'
+    );
+    const runtimeContainerNameParam = uniqueParams.find(p => p.key === 'runtime-containername');
+    if (runtimeContainerNameParam) runtimeContainerNameParam.typeHint = 'string';
+    if (otelMetricPrintIntervalParam) otelMetricPrintIntervalParam.typeHint = 'string';
+
+    uniqueParams.forEach(param => {
+      if (param.key === 'all-namespaces') return;
+
+      const groupTag = param.tags?.find(tag => tag.startsWith('group:'));
+      const groupName = groupTag ? groupTag.replace('group:', '') : 'Other';
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(param);
+    });
+
+    return groups;
+  }, [uniqueParams]);
+
+  const groupOrder = [
+    'Other',
+    'Data Collection',
+    'Data Filtering',
+    'eBPF',
+    'OCI',
+    'OpenTelemetry Metrics',
+    'Process',
+  ];
+
+  const hasParams = groupOrder.some(g => groupedParams[g]?.length);
+
+  if (!config || (!hasParams && !(!initialNamespace && allNamespacesParam))) return null;
 
   return (
     <Box p={2}>
-      {uniqueParams.map((param, index) => {
-        // Skip namespace-related params as they're handled separately
-        if (param.key === 'all-namespaces' || param?.valueHint?.includes('namespace')) {
-          return null;
-        }
-        if (param.key === 'annotation' || param.key === 'annotate') {
-          return (
-            <Grid item xs={12} key={param.key + index}>
-              <AnnotationFilter
-                param={param}
-                setFilters={setFilters}
-                filters={filters}
-                // @ts-ignore
-                dataSources={config.dataSources}
-              />
-            </Grid>
-          );
-        }
-
-        return (
+      {!initialNamespace && allNamespacesParam && (
+        <Box key={allNamespacesParam.key}>
           <ParamFilterRenderer
-            key={param.key + index}
-            param={param}
+            param={allNamespacesParam}
             filters={filters}
             handleFilterChange={handleFilterChange}
             gadgetConfig={config}
+            initialNamespace={initialNamespace}
+            initialPod={initialPod}
           />
+        </Box>
+      )}
+      {groupOrder.map(groupName => {
+        const paramsInGroup = groupedParams[groupName];
+        if (!paramsInGroup?.length) return null;
+        return (
+          <Box key={groupName} mt={2}>
+            {groupName !== 'Other' && (
+              <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 800 }}>
+                {groupName}
+              </Typography>
+            )}
+            <Box>
+              {paramsInGroup.map((param, index) => {
+                if (param.key === 'annotation' || param.key === 'annotate') {
+                  return (
+                    <Box key={param.key + index}>
+                      <AnnotationFilter
+                        param={param}
+                        setFilters={setFilters}
+                        filters={filters}
+                        // @ts-ignore
+                        dataSources={config.dataSources}
+                      />
+                    </Box>
+                  );
+                }
+                return (
+                  <Box key={param.key + index}>
+                    <ParamFilterRenderer
+                      param={param}
+                      filters={filters}
+                      handleFilterChange={handleFilterChange}
+                      gadgetConfig={config}
+                      initialNamespace={initialNamespace}
+                      initialPod={initialPod}
+                    />
+                  </Box>
+                );
+              })}
+            </Box>
+            <Divider sx={{ my: 2 }} />
+          </Box>
         );
       })}
       {showApplyButton && onApplyFilters && (
@@ -252,46 +328,41 @@ function ParamFilterRenderer({
   filters,
   handleFilterChange,
   gadgetConfig,
+  initialNamespace,
+  initialPod,
 }: {
   param: FilterParam;
   filters: Record<string, string>;
-  handleFilterChange: (key: string, value: string) => void;
+  handleFilterChange: (key: string, value: string | undefined) => void;
   gadgetConfig: any;
+  initialNamespace?: string;
+  initialPod?: string;
 }) {
   const stableConfig = useStableConfig(filters, handleFilterChange, param.prefix, param.key);
 
   if (param.key === 'sort' || param.key === 'sorting') {
-    return (
-      <Grid item xs={4}>
-        <SortingFilter param={param} config={stableConfig} gadgetConfig={gadgetConfig} />
-      </Grid>
-    );
+    return <SortingFilter param={param} config={stableConfig} gadgetConfig={gadgetConfig} />;
   }
   if (param.typeHint === 'bool') {
-    return (
-      <Grid item xs={4}>
-        <CheckboxFilter param={param} config={stableConfig} />
-      </Grid>
-    );
+    return <CheckboxFilter param={param} config={stableConfig} />;
   }
   if (param.key === 'filter' || param.typeHint === 'filter') {
+    return <FilterComponent param={param} config={stableConfig} gadgetConfig={gadgetConfig} />;
+  }
+  if (param.valueHint?.startsWith('k8s:')) {
     return (
-      <Grid item xs={12}>
-        <FilterComponent param={param} config={stableConfig} gadgetConfig={gadgetConfig} />
-      </Grid>
+      <K8sFilterComponent
+        param={param}
+        config={stableConfig}
+        namespace={initialNamespace ?? ''}
+        pod={initialPod ?? ''}
+        gadgetConfig={gadgetConfig}
+      />
     );
   }
   if (param.possibleValues && param.possibleValues.length > 0) {
-    return (
-      <Grid item md={6}>
-        <SelectFilter param={param} config={stableConfig} />
-      </Grid>
-    );
+    return <SelectFilter param={param} config={stableConfig} />;
   }
 
-  return (
-    <Grid item md={6}>
-      <FilterInput param={param} onChange={handleFilterChange} />
-    </Grid>
-  );
+  return <FilterInput param={param} onChange={handleFilterChange} />;
 }
