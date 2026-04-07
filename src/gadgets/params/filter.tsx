@@ -62,7 +62,10 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
           const idx = part.indexOf(op);
           if (idx > 0) {
             const key = part.slice(0, idx);
-            const value = part.slice(idx + op.length).replace(/\\,/g, ',').replace(/\\\\/g, '\\');
+            const value = part
+              .slice(idx + op.length)
+              .replace(/\\,/g, ',')
+              .replace(/\\\\/g, '\\');
             if (fields.find(f => `${f.ds}:${f.fullName}` === key)) {
               return { key, op, value };
             }

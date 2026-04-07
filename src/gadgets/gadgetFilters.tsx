@@ -213,7 +213,14 @@ export default function GadgetFilters({
     ) {
       handleFilterChange(allNamespacesParam.prefix + allNamespacesParam.key, 'false');
     }
-  }, [initialNamespace, initialPod, namespaceParam, allNamespacesParam, podParam, handleFilterChange]);
+  }, [
+    initialNamespace,
+    initialPod,
+    namespaceParam,
+    allNamespacesParam,
+    podParam,
+    handleFilterChange,
+  ]);
 
   const groupedParams = useMemo(() => {
     const groups: Record<string, FilterParam[]> = {};
