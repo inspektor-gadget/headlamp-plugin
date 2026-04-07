@@ -9,7 +9,7 @@ const CheckboxFilter = ({ param, config }) => {
   return (
     <Box display="flex" flexDirection="row" gap={2}>
       <FormControlLabel
-        control={<Checkbox onChange={handleChange} />}
+        control={<Checkbox defaultChecked={config.get?.() === 'true'} onChange={handleChange} />}
         label={<Title param={param} />}
       />
     </Box>
