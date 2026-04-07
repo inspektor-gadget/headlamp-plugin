@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 import { NameValueTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import { Box, ButtonGroup, Button, IconButton, Tooltip, Typography } from '@mui/material';
+import { Box, Button, ButtonGroup, IconButton, Tooltip, Typography } from '@mui/material';
 import React, { useEffect, useRef, useState } from 'react';
 
 interface EventDetailPanelProps {
@@ -21,10 +21,7 @@ function isHiddenKey(key: string): boolean {
  * - Arrays of primitives: join with ", "
  * - Arrays of objects: flatten each element with "field.0.key", "field.1.key"
  */
-function flattenEvent(
-  data: Record<string, any>,
-  prefix = ''
-): [string, string][] {
+function flattenEvent(data: Record<string, any>, prefix = ''): [string, string][] {
   const result: [string, string][] = [];
 
   for (const [key, val] of Object.entries(data)) {
@@ -39,14 +36,20 @@ function flattenEvent(
         result.push([fullKey, '[]']);
       } else if (val.every(v => typeof v !== 'object' || v === null)) {
         // array of primitives
-        result.push([fullKey, val.map(v => (v === null || v === undefined ? '—' : String(v))).join(', ')]);
+        result.push([
+          fullKey,
+          val.map(v => (v === null || v === undefined ? '—' : String(v))).join(', '),
+        ]);
       } else {
         // array of objects — flatten each with index
         val.forEach((item, i) => {
           if (item !== null && typeof item === 'object') {
             result.push(...flattenEvent(item, `${fullKey}.${i}`));
           } else {
-            result.push([`${fullKey}.${i}`, item === null || item === undefined ? '—' : String(item)]);
+            result.push([
+              `${fullKey}.${i}`,
+              item === null || item === undefined ? '—' : String(item),
+            ]);
           }
         });
       }
@@ -142,7 +145,15 @@ export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
   }));
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', bgcolor: 'background.paper' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        overflow: 'hidden',
+        bgcolor: 'background.paper',
+      }}
+    >
       {/* Header: title + subtitle on left, toggle + copy + close on right */}
       <Box
         sx={{
@@ -189,7 +200,11 @@ export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
             </Button>
           </ButtonGroup>
           <Tooltip title={copied ? 'Copied!' : 'Copy JSON'}>
-            <IconButton size="small" onClick={handleCopy} aria-label={copied ? 'Copied!' : 'Copy JSON'}>
+            <IconButton
+              size="small"
+              onClick={handleCopy}
+              aria-label={copied ? 'Copied!' : 'Copy JSON'}
+            >
               <Icon icon={copied ? 'mdi:check' : 'mdi:content-copy'} width={16} />
             </IconButton>
           </Tooltip>

@@ -15,9 +15,9 @@ import {
 import React, { useEffect, useMemo, useState } from 'react';
 import GadgetFilters from '../../gadgets/gadgetFilters';
 import { AllColumnMeta } from '../../gadgets/utility';
+import { EventDetailPanel } from '../EventDetailPanel';
 import { IS_METRIC } from '../helpers';
 import { MetricChart } from '../MetricChart';
-import { EventDetailPanel } from '../EventDetailPanel';
 
 interface GadgetWithDataSourceProps {
   podsSelected: any[];
