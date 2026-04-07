@@ -63,9 +63,9 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
 
     isInstantRun,
     error,
-    headlessGadgetDeleteCallback = () => { },
-    headlessGadgetRunCallback = () => { },
-    handleRun = () => { },
+    headlessGadgetDeleteCallback = () => {},
+    headlessGadgetRunCallback = () => {},
+    handleRun = () => {},
     columnMeta,
   } = props;
   const areAllPodStreamsConnected = podStreamsConnected === podsSelected.length;

@@ -10,7 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
-import { DataSource } from 'src/types';
+import { DataSource } from '../../types';
 // Assuming you've converted the Title component to React
 
 const operations = [

@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   FormControl,
-  Grid,
   IconButton,
   MenuItem,
   Select,
@@ -119,7 +118,7 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
 
   // Generate fields from data sources
   const fields = React.useMemo(() => {
-    const tmpFields = [];
+    const tmpFields: { key: string; display: string }[] = [];
 
     Object.values(dataSources).forEach((ds: any) => {
       if (!ds) return;
@@ -185,8 +184,8 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
 
   return (
     <Box>
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box>
           <Typography variant="subtitle1">{param.title || param.key}</Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {filterItems.map((filter, idx) => (
@@ -197,7 +196,7 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
                 <FormControl size="small" sx={{ minWidth: 200 }}>
                   <Select
                     value={filter.field || ''}
-                    onChange={e => handleFieldChange(idx, e.target.value)}
+                    onChange={e => handleFieldChange(idx, e.target.value as string)}
                     displayEmpty
                     size="small"
                     fullWidth
@@ -239,8 +238,8 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
               Add Annotation
             </AddButton>
           </Box>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   );
 };

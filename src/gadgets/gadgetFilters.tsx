@@ -364,9 +364,7 @@ export default function GadgetFilters({
 
   return (
     <Box p={2}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', m: -1 }}>
-        {filterComponents}
-      </Box>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', m: -1 }}>{filterComponents}</Box>
     </Box>
   );
 }

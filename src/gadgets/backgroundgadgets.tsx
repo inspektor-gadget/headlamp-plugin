@@ -19,31 +19,17 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const [runningInstances, setRunningInstances] = React.useState(null);
   const [openConfirmDialog, setOpenConfirmDialog] = React.useState(false);
-  const tableInstanceRef = React.useRef<any>(null);
   const isIGInstallationFound = isIGInstalled(pods);
-  const [selectedCount, setSelectedCount] = useState(0);
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const ig = useGadgetConn(nodes, pods);
 
-  useEffect(() => {
-    const syncSelectedCount = () => {
-      if (!tableInstanceRef.current) return;
-      const count = tableInstanceRef.current.getSelectedRowModel().rows.length;
-      if (selectedCount !== count) {
-        setSelectedCount(count);
-      }
-    };
-
-    syncSelectedCount();
-    const intervalId = window.setInterval(syncSelectedCount, 200);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [selectedCount]);
-
-
-
   const cluster = getCluster();
+
+  const tableData = React.useMemo(() => {
+    return runningInstances?.filter(instance => instance.cluster === cluster) || [];
+  }, [runningInstances, cluster]);
+
+  const selectedCount = Object.keys(rowSelection).filter(key => rowSelection[key]).length;
 
   useEffect(() => {
     if (!ig) return;
@@ -91,10 +77,8 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   }, [ig, embedDialogOpen]);
 
   const handleDeleteInstances = () => {
-    if (!tableInstanceRef.current) return;
-
-    const selectedRows = tableInstanceRef.current.getSelectedRowModel().rows;
-    const selectedIds = new Set<string>(selectedRows.map((r: any) => r.original.id as string));
+    const selectedRows = tableData.filter((_, index) => rowSelection[index]);
+    const selectedIds = new Set<string>(selectedRows.map((r: any) => r.id as string));
 
     const localStorageInstances = JSON.parse(
       localStorage.getItem('headlamp_embeded_resources') || '[]'
@@ -112,7 +96,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
       } else {
         ig.deleteGadgetInstance(
           id,
-          () => { },
+          () => {},
           err => {
             console.error('Error deleting instance:', err);
           }
@@ -125,7 +109,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
 
     localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
     setRunningInstances(updatedDisplayInstances);
-    tableInstanceRef.current.resetRowSelection(); // Reset row selection after updating data
+    setRowSelection({}); // Reset row selection after updating data
     setOpenConfirmDialog(false);
   };
 
@@ -211,90 +195,75 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
         }}
       />
       <SectionBox>
-        {selectedCount === 0 ? (
-          <Table
-            data={runningInstances?.filter(instance => instance.cluster === cluster) || []}
-            columns={columns}
-            loading={runningInstances === null}
-            emptyMessage="No Embedded Instances"
-            enableRowSelection
-            positionToolbarAlertBanner="top"
-            renderTopToolbarCustomActions={({ table }) => {
-              tableInstanceRef.current = table;
-              return null;
-            }}
-          />
-        ) : (
-          <Table
-            data={runningInstances?.filter(instance => instance.cluster === cluster) || []}
-            columns={columns}
-            loading={runningInstances === null}
-            emptyMessage="No Embedded Instances"
-            enableRowSelection
-            enableToolbarInternalActions={false}
-            positionToolbarAlertBanner="top"
-            renderToolbarAlertBannerContent={({ table }) => {
-              const selectedCount = table.getSelectedRowModel().rows.length;
-              const totalCount = table.getRowModel().rows.length;
-              return (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    paddingX: '1rem',
-                    paddingY: '0rem',
-                    width: '100%',
-                    height: '50px',
-                  }}
-                >
-                  {/* Left: X of Y selected + Clear */}
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      width: '100%',
-                    }}
-                  >
-                    <Box>
-                      {selectedCount} of {totalCount} row{totalCount > 1 ? 's' : ''} selected
-                    </Box>
-                    <Box>
-                      <Button
+        <Table
+          data={tableData}
+          columns={columns}
+          loading={runningInstances === null}
+          emptyMessage="No Embedded Instances"
+          enableRowSelection
+          onRowSelectionChange={setRowSelection}
+          state={{ rowSelection }}
+          positionToolbarAlertBanner="top"
+          enableToolbarInternalActions={selectedCount === 0}
+          {...(selectedCount > 0
+            ? {
+                renderToolbarAlertBannerContent: ({ table }) => {
+                  const totalCount = table.getRowModel().rows.length;
+                  return (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingX: '1rem',
+                        paddingY: '0rem',
+                        width: '100%',
+                        height: '50px',
+                      }}
+                    >
+                      <Box
                         sx={{
-                          cursor: 'pointer',
-                          color: '#3393DC',
-                          fontWeight: 500,
-                          textTransform: 'none',
-                          padding: 0,
-                          minWidth: 'unset',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%',
                         }}
-                        onClick={() => table.resetRowSelection()}
                       >
-                        CLEAR SELECTION
-                      </Button>
+                        <Box>
+                          {selectedCount} of {totalCount} row{totalCount > 1 ? 's' : ''} selected
+                        </Box>
+                        <Box>
+                          <Button
+                            sx={{
+                              cursor: 'pointer',
+                              color: '#3393DC',
+                              fontWeight: 500,
+                              textTransform: 'none',
+                              padding: 0,
+                              minWidth: 'unset',
+                            }}
+                            onClick={() => table.resetRowSelection()}
+                          >
+                            CLEAR SELECTION
+                          </Button>
+                        </Box>
+                      </Box>
+                      <Box ml={2}>
+                        <Tooltip title="Delete Instances">
+                          <Icon
+                            icon="mdi:delete"
+                            width="22px"
+                            height="22px"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => setOpenConfirmDialog(true)}
+                          />
+                        </Tooltip>
+                      </Box>
                     </Box>
-                  </Box>
-                  <Box ml={2}>
-                    <Tooltip title="Delete Instances">
-                      <Icon
-                        icon="mdi:delete"
-                        width="22px"
-                        height="22px"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => setOpenConfirmDialog(true)}
-                      />
-                    </Tooltip>
-                  </Box>
-                </Box>
-              );
-            }}
-            renderTopToolbarCustomActions={({ table }) => {
-              tableInstanceRef.current = table;
-              return null;
-            }}
-          />
-        )}
+                  );
+                },
+              }
+            : {})}
+        />
       </SectionBox>
     </>
   );

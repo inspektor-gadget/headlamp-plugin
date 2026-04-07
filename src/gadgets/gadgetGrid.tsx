@@ -587,13 +587,7 @@ function Gadget({ gadget, nodes, pods, resource }) {
   }
   return (
     gadgetInfo &&
-    ig && (
-      <CreateGadgetInstance
-        gadgetInfo={gadgetInfo}
-        resource={resource}
-        imageName={imageName}
-      />
-    )
+    ig && <CreateGadgetInstance gadgetInfo={gadgetInfo} resource={resource} imageName={imageName} />
   );
 }
 
@@ -639,7 +633,7 @@ const ModalGadgetList = ({ open, onClose, gadgets, resource }) => {
         <Box sx={{ overflow: 'auto', flexGrow: 1, maxHeight: 'calc(90vh - 100px)' }}>
           {activeTab === 0 && (
             <List sx={{ p: 2 }}>
-              <GadgetGrid gadgets={gadgets} onEmbedClick={() => { }} />
+              <GadgetGrid gadgets={gadgets} onEmbedClick={() => {}} />
             </List>
           )}
           {activeTab === 1 && selectedGadget && (
