@@ -1,7 +1,7 @@
 import { Icon } from '@iconify/react';
 import { NameValueTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { Box, ButtonGroup, Button, IconButton, Tooltip, Typography } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface EventDetailPanelProps {
   row: Record<string, any>;
@@ -79,6 +79,7 @@ function getEventSubtitle(data: Record<string, any>): string | null {
 export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
   const [showRaw, setShowRaw] = useState(false);
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const rawData = row.__raw ?? row;
   const subtitle = getEventSubtitle(rawData);
@@ -92,12 +93,24 @@ export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  // Clear copy timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
   function handleCopy() {
-    navigator.clipboard.writeText(JSON.stringify(rawData, null, 2)).catch(() => {
-      // clipboard not available (e.g. non-HTTPS) — silently ignore
-    });
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    navigator.clipboard
+      .writeText(JSON.stringify(rawData, null, 2))
+      .then(() => {
+        setCopied(true);
+        if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+        copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        // clipboard not available (e.g. non-HTTPS) — silently ignore
+      });
   }
 
   const tableRows = flattenEvent(rawData).map(([key, value]) => ({
@@ -176,11 +189,11 @@ export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
             </Button>
           </ButtonGroup>
           <Tooltip title={copied ? 'Copied!' : 'Copy JSON'}>
-            <IconButton size="small" onClick={handleCopy}>
+            <IconButton size="small" onClick={handleCopy} aria-label={copied ? 'Copied!' : 'Copy JSON'}>
               <Icon icon={copied ? 'mdi:check' : 'mdi:content-copy'} width={16} />
             </IconButton>
           </Tooltip>
-          <IconButton size="small" onClick={onClose}>
+          <IconButton size="small" onClick={onClose} aria-label="Close">
             <Icon icon="mdi:close" width={18} />
           </IconButton>
         </Box>

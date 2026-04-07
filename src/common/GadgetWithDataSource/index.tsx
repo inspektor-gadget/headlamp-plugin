@@ -78,13 +78,11 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
 
   // Lock body scroll while the panel is open to prevent scrollbar-width oscillation
   useEffect(() => {
-    if (inspectedRow) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (!inspectedRow) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = prevOverflow;
     };
   }, [inspectedRow]);
 
@@ -107,6 +105,7 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
         <Tooltip title="Inspect event">
           <IconButton
             size="small"
+            aria-label="Inspect event"
             onClick={e => {
               e.stopPropagation();
               setInspectedRow(cell.row.original);
