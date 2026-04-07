@@ -208,6 +208,7 @@ export default function GadgetFilters({
     }
     if (
       (initialNamespace || initialPod) &&
+      allNamespacesParam &&
       filters[allNamespacesParam.prefix + allNamespacesParam.key] !== 'false'
     ) {
       handleFilterChange(allNamespacesParam.prefix + allNamespacesParam.key, 'false');
@@ -217,21 +218,22 @@ export default function GadgetFilters({
   const groupedParams = useMemo(() => {
     const groups: Record<string, FilterParam[]> = {};
 
-    // params that are missing typeHint from config
-    const otelMetricPrintIntervalParam = uniqueParams.find(
-      p => p.key === 'otel-metrics-print-interval'
-    );
-    const runtimeContainerNameParam = uniqueParams.find(p => p.key === 'runtime-containername');
-    if (runtimeContainerNameParam) runtimeContainerNameParam.typeHint = 'string';
-    if (otelMetricPrintIntervalParam) otelMetricPrintIntervalParam.typeHint = 'string';
+    // Derive new param objects for params missing typeHint — do not mutate originals
+    const typeHintOverrides: Record<string, string> = {
+      'otel-metrics-print-interval': 'string',
+      'runtime-containername': 'string',
+    };
 
     uniqueParams.forEach(param => {
       if (param.key === 'all-namespaces') return;
 
-      const groupTag = param.tags?.find(tag => tag.startsWith('group:'));
+      const override = typeHintOverrides[param.key];
+      const resolvedParam = override ? { ...param, typeHint: override } : param;
+
+      const groupTag = resolvedParam.tags?.find(tag => tag.startsWith('group:'));
       const groupName = groupTag ? groupTag.replace('group:', '') : 'Other';
       if (!groups[groupName]) groups[groupName] = [];
-      groups[groupName].push(param);
+      groups[groupName].push(resolvedParam);
     });
 
     return groups;

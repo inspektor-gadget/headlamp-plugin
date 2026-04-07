@@ -9,7 +9,8 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { DataSource } from 'src/types';
 // Assuming you've converted the Title component to React
 
 const operations = [
@@ -25,7 +26,7 @@ const operations = [
 const FilterComponent = ({ param, config, gadgetConfig }) => {
   const [filters, setFilters] = useState([]);
   const [expanded, setExpanded] = useState(false);
-  const isMounted = useRef(false);
+  const [initialized, setInitialized] = useState(false);
   const maxDescriptionLength = 100; // Characters before collapsing
   const shouldCollapse = param.description && param.description.length > maxDescriptionLength;
 
@@ -33,7 +34,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
     const gadgetInfo = gadgetConfig.dataSources;
     if (!gadgetInfo) return [];
     const tmpFields = [];
-    Object.values(gadgetInfo).forEach(ds => {
+    Object.values(gadgetInfo).forEach((ds: DataSource) => {
       ds.fields.forEach(f => {
         tmpFields.push({ ds: ds.name, ...f });
       });
@@ -41,11 +42,45 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
     return tmpFields;
   }, [gadgetConfig.dataSources]);
 
+  // Initialization effect: parse existing config value into local state so the UI
+  // reflects any filter that was already set before this component mounted.
   useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
+    if (initialized) return;
+    if (!fields || fields.length === 0) return;
+
+    const currentValue = config.get();
+    if (!currentValue) {
+      setInitialized(true);
       return;
     }
+
+    const ops = ['==', '!=', '<=', '>=', '~=', '<', '>'];
+    const parts = currentValue.split(/(?<!\\),/);
+    const parsedFilters = parts
+      .map(part => {
+        for (const op of ops) {
+          const idx = part.indexOf(op);
+          if (idx > 0) {
+            const key = part.slice(0, idx);
+            const value = part.slice(idx + op.length).replace(/\\,/g, ',').replace(/\\\\/g, '\\');
+            if (fields.find(f => `${f.ds}:${f.fullName}` === key)) {
+              return { key, op, value };
+            }
+          }
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    if (parsedFilters.length > 0) {
+      setFilters(parsedFilters);
+    }
+    setInitialized(true);
+  }, [config.get, fields, initialized]);
+
+  // Sync effect: serialize local filter state back to config whenever user edits.
+  useEffect(() => {
+    if (!initialized) return;
     const res = filters
       .map(f => {
         return `${f.key}${f.op}${f.value?.replace(/\\/g, '\\\\').replace(/,/g, '\\,') || ''}`;
@@ -56,7 +91,7 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
     } else {
       config.set(res);
     }
-  }, [filters, config.set]);
+  }, [filters, config.set, initialized]);
 
   const handleFilterChange = (index, field, value) => {
     setFilters(prevFilters => {

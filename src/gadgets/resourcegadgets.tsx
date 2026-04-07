@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 import { ConfirmDialog, DateLabel, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import {
   Accordion,
@@ -148,7 +148,7 @@ const RunningGadgetsForResource = ({ resource, open }) => {
       />
 
       {/* Grouped Instances */}
-      {Object.entries(groupedInstances).map(([imageName, instances]) => (
+      {Object.entries(groupedInstances).map(([imageName, instances]: [string, any[]]) => (
         <Box key={imageName} sx={{ mb: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
             {imageName} ({instances.length})

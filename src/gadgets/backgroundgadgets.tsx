@@ -6,7 +6,7 @@ import {
   SectionBox,
   Table,
 } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Button } from '@mui/material';
 import { Box, Tooltip } from '@mui/material';
@@ -74,7 +74,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
     if (!tableInstance) return;
 
     const selectedRows = tableInstance.getSelectedRowModel().rows;
-    const selectedIds = new Set(selectedRows.map(r => r.original.id));
+    const selectedIds = new Set(selectedRows.map(r => r.original.id)) as Set<string>;
     const localStorageInstances = JSON.parse(
       localStorage.getItem('headlamp_embeded_resources') || '[]'
     );
