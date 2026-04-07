@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 import { ConfirmDialog, DateLabel, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import {
   Accordion,
@@ -17,7 +17,7 @@ import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '.
 import { MetricChart } from '../common/MetricChart';
 import { isIGPod } from './helper';
 import usePortForward from './igSocket';
-import { AllColumnMeta, processGadgetData } from './utility';
+import { AllColumnMeta, processGadgetData, getSortedColumns } from './utility';
 
 function getGadgetPodForThisResourceNode(node, pods) {
   if (!node || !pods) return null;
@@ -148,7 +148,7 @@ const RunningGadgetsForResource = ({ resource, open }) => {
       />
 
       {/* Grouped Instances */}
-      {Object.entries(groupedInstances).map(([imageName, instances]) => (
+      {Object.entries(groupedInstances).map(([imageName, instances]: [string, any[]]) => (
         <Box key={imageName} sx={{ mb: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
             {imageName} ({instances.length})
@@ -273,10 +273,11 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
         fieldsFromDataSource.push(IS_METRIC);
         fields[dsID] = fieldsFromDataSource;
       } else {
-        fields[dsID] = dataSource.fields
+        const extractedFields = dataSource.fields
           .filter(field => (field.flags & 4) === 0)
           .map(field => field.fullName)
           .filter(field => field !== 'k8s');
+        fields[dsID] = getSortedColumns(extractedFields, dataSource.annotations);
       }
     });
 

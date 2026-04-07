@@ -1,5 +1,5 @@
 import { Loader } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { Box } from '@mui/material';
 import { IGNotFound } from '../common/NotFound';
 import Gadget from '.';
@@ -10,10 +10,10 @@ export default function GadgetList() {
   const isIGInstallationFound = isIGInstalled(pods);
 
   if (pods === null) {
-    return <Loader />;
+    return <Loader title="" />;
   }
   if (isIGInstallationFound === null) {
-    return <Loader />;
+    return <Loader title="" />;
   }
 
   if (!isIGInstallationFound) {

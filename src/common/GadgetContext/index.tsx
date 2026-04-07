@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createContext } from 'react';
 import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../helpers';
-import { AllColumnMeta } from '../../gadgets/utility';
+import { AllColumnMeta, getSortedColumns } from '../../gadgets/utility';
 
 // Create a context for sharing gadget-related state
 export const GadgetContext = createContext(null);
@@ -100,10 +100,11 @@ export function useGadgetState() {
         fieldsFromDataSource.push(IS_METRIC);
         fields[dsID] = fieldsFromDataSource;
       } else {
-        fields[dsID] = dataSource.fields
+        const extractedFields = dataSource.fields
           .filter(field => (field.flags & 4) === 0)
           .map(field => field.fullName)
           .filter(field => field !== 'k8s');
+        fields[dsID] = getSortedColumns(extractedFields, dataSource.annotations);
       }
     });
 

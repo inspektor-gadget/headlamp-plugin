@@ -16,10 +16,19 @@ function GadgetRendererWithTabs() {
   const [selectedGadget, setSelectedGadget] = useState(null);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
 
   useEffect(() => {
     fetchInspektorGadgetFromArtifactHub().then(data => setGadgets([...data])); // Wrap single item in array if needed
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const { dynamicTabs, activeTabIndex, setActiveTabIndex } = gadgetState;
 
@@ -32,8 +41,9 @@ function GadgetRendererWithTabs() {
 
   // Filter gadgets based on search query
   const filteredGadgets = gadgets.filter(gadget => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
+    if (!debouncedQuery) return true;
+    const query = debouncedQuery.toLowerCase();
+
     return (
       gadget.display_name?.toLowerCase().includes(query) ||
       gadget.description?.toLowerCase().includes(query)
@@ -45,7 +55,7 @@ function GadgetRendererWithTabs() {
       <SectionBox title="Gadgets (beta)">
         <Box sx={{ width: '100%', typography: 'body1', my: 2 }}>
           <Box>
-            <Box sx={{ mb:8, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ mb: 8, display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Typography variant="caption" sx={{ fontSize: '1rem' }}>
                 Enter a gadget image URL or discover gadgets from ArtifactHub
               </Typography>
