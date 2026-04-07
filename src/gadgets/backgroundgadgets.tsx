@@ -25,12 +25,21 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   const ig = useGadgetConn(nodes, pods);
 
   useEffect(() => {
-    if (!tableInstanceRef.current) return;
-    const count = tableInstanceRef.current.getSelectedRowModel().rows.length;
-    if (selectedCount !== count) {
-      setSelectedCount(count);
-    }
-  }, [tableInstanceRef.current?.getSelectedRowModel().rows.length, selectedCount]);
+    const syncSelectedCount = () => {
+      if (!tableInstanceRef.current) return;
+      const count = tableInstanceRef.current.getSelectedRowModel().rows.length;
+      if (selectedCount !== count) {
+        setSelectedCount(count);
+      }
+    };
+
+    syncSelectedCount();
+    const intervalId = window.setInterval(syncSelectedCount, 200);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [selectedCount]);
 
 
 
