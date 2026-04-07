@@ -9,7 +9,6 @@ import {
   CardContent,
   Chip,
   FormControl,
-  Grid,
   IconButton,
   InputLabel,
   List,
@@ -163,7 +162,7 @@ export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resou
               height: '100%',
             }}
           >
-            <Loader title="" />
+            <Loader title="Loading gadget info..." />
           </Box>
         </Box>
       </>
@@ -231,7 +230,7 @@ export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resou
               resource={resource}
             />
           ) : (
-            <Loader title="Loading Gadget Info" />
+            <Loader title="Loading..." />
           )}
         </Box>
       </Box>
@@ -515,13 +514,19 @@ const GadgetGrid = ({ gadgets, onEmbedClick, resource = null }) => {
   }
 
   return (
-    <Grid container spacing={3}>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', m: -1.5 }}>
       {gadgets.map(gadget => (
-        <Grid item xs={12} sm={6} md={4} key={gadget.package_id}>
+        <Box
+          key={gadget.package_id}
+          sx={{
+            width: { xs: '100%', sm: '50%', md: '33.33%' },
+            p: 1.5,
+          }}
+        >
           <GadgetCard gadget={gadget} onEmbedClick={onEmbedClick} resource={resource} />
-        </Grid>
+        </Box>
       ))}
-    </Grid>
+    </Box>
   );
 };
 
@@ -582,7 +587,13 @@ function Gadget({ gadget, nodes, pods, resource }) {
   }
   return (
     gadgetInfo &&
-    ig && <CreateGadgetInstance gadgetInfo={gadgetInfo} resource={resource} imageName={imageName} />
+    ig && (
+      <CreateGadgetInstance
+        gadgetInfo={gadgetInfo}
+        resource={resource}
+        imageName={imageName}
+      />
+    )
   );
 }
 
@@ -628,7 +639,7 @@ const ModalGadgetList = ({ open, onClose, gadgets, resource }) => {
         <Box sx={{ overflow: 'auto', flexGrow: 1, maxHeight: 'calc(90vh - 100px)' }}>
           {activeTab === 0 && (
             <List sx={{ p: 2 }}>
-              <GadgetGrid gadgets={gadgets} onEmbedClick={() => {}} />
+              <GadgetGrid gadgets={gadgets} onEmbedClick={() => { }} />
             </List>
           )}
           {activeTab === 1 && selectedGadget && (
