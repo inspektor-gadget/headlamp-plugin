@@ -1,3 +1,5 @@
+import { IG_CONTAINER_KEY, IG_CONTAINER_VALUE } from '../../gadgets/helper';
+
 export type CheckStatus = 'pass' | 'warn' | 'fail' | 'loading';
 
 export interface CheckResult {
@@ -9,8 +11,8 @@ export interface CheckResult {
 }
 
 export const IG_NAMESPACE = 'gadget';
-export const IG_DAEMONSET_LABEL_KEY = 'k8s-app';
-export const IG_DAEMONSET_LABEL_VALUE = 'gadget';
+export const IG_DAEMONSET_LABEL_KEY = IG_CONTAINER_KEY;
+export const IG_DAEMONSET_LABEL_VALUE = IG_CONTAINER_VALUE;
 
 export function checkNamespace(namespaces: any[] | null): CheckResult {
   if (namespaces === null) {
@@ -53,8 +55,13 @@ export function checkDaemonSet(daemonSets: any[] | null): CheckResult {
   }
 
   const ds = daemonSets.find(d => {
-    const labels = d.jsonData?.metadata?.labels || d.metadata?.labels || {};
-    return labels[IG_DAEMONSET_LABEL_KEY] === IG_DAEMONSET_LABEL_VALUE;
+    const meta = d.jsonData || d;
+    const metadataLabels = meta?.metadata?.labels || {};
+    const selectorLabels = meta?.spec?.selector?.matchLabels || {};
+    return (
+      metadataLabels[IG_DAEMONSET_LABEL_KEY] === IG_DAEMONSET_LABEL_VALUE ||
+      selectorLabels[IG_DAEMONSET_LABEL_KEY] === IG_DAEMONSET_LABEL_VALUE
+    );
   });
 
   if (!ds) {
@@ -218,12 +225,14 @@ export function checkNodeCoverage(pods: any[] | null, nodes: any[] | null): Chec
   }
 
   const schedulableNodes = nodes.filter(node => {
-    const spec = node.jsonData?.spec || node.spec || {};
+    const nodeData = node.jsonData || node;
+    const spec = nodeData.spec || {};
     const taints = spec.taints || [];
     if (spec.unschedulable === true) return false;
-    return !taints.some(
-      (t: any) => t.effect === 'NoSchedule' && t.key === 'node.kubernetes.io/unschedulable'
-    );
+    if (taints.some((t: any) => t.effect === 'NoSchedule')) return false;
+    const conditions: any[] = nodeData.status?.conditions || [];
+    const readyCondition = conditions.find((c: any) => c.type === 'Ready');
+    return readyCondition?.status === 'True';
   });
 
   const igPods = pods.filter(pod => {
@@ -308,7 +317,13 @@ export function formatDiagnostics(checks: CheckResult[]): string {
   ];
 
   for (const check of checks) {
-    const icon = check.status === 'pass' ? 'PASS' : check.status === 'warn' ? 'WARN' : 'FAIL';
+    const statusMap: Record<CheckStatus, string> = {
+      pass: 'PASS',
+      warn: 'WARN',
+      fail: 'FAIL',
+      loading: 'LOAD',
+    };
+    const icon = statusMap[check.status] ?? 'FAIL';
     lines.push(`[${icon}] ${check.name}: ${check.message}`);
     if (check.details) {
       lines.push(`       Details: ${check.details}`);

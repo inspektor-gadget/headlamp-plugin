@@ -15,7 +15,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   checkDaemonSet,
   checkNamespace,
@@ -173,14 +173,13 @@ function OverallBanner({ status }: { status: ReturnType<typeof getOverallStatus>
   );
 }
 
-export function InstallationStatus() {
+function InstallationStatusPanel({ onRetry }: { onRetry: () => void }) {
   const [namespaces] = K8s.ResourceClasses.Namespace.useList();
   const [daemonSets] = K8s.ResourceClasses.DaemonSet.useList({ namespace: IG_NAMESPACE });
   const [pods] = K8s.ResourceClasses.Pod.useList({ namespace: IG_NAMESPACE });
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [snackOpen, setSnackOpen] = useState(false);
   const [snackError, setSnackError] = useState(false);
-  const [retryKey, setRetryKey] = useState(0);
 
   const checks: CheckResult[] = useMemo(
     () => [
@@ -189,8 +188,7 @@ export function InstallationStatus() {
       checkPodHealth(pods),
       checkNodeCoverage(pods, nodes),
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [namespaces, daemonSets, pods, nodes, retryKey]
+    [namespaces, daemonSets, pods, nodes]
   );
 
   const overall = useMemo(() => getOverallStatus(checks), [checks]);
@@ -210,10 +208,6 @@ export function InstallationStatus() {
         setSnackError(true);
       });
   }, [checks]);
-
-  const handleRetry = useCallback(() => {
-    setRetryKey(prev => prev + 1);
-  }, []);
 
   if (overall === 'loading') {
     return <Loader title="Running installation checks..." />;
@@ -241,10 +235,10 @@ export function InstallationStatus() {
           <Button
             variant="outlined"
             size="small"
-            onClick={handleRetry}
+            onClick={onRetry}
             startIcon={<Icon icon="mdi:refresh" />}
           >
-            Recalculate
+            Re-run Checks
           </Button>
           <Button
             variant="outlined"
@@ -296,5 +290,12 @@ export function InstallationStatus() {
         message="Failed to copy diagnostics to clipboard"
       />
     </SectionBox>
+  );
+}
+
+export function InstallationStatus() {
+  const [retryKey, setRetryKey] = useState(0);
+  return (
+    <InstallationStatusPanel key={retryKey} onRetry={() => setRetryKey(k => k + 1)} />
   );
 }
