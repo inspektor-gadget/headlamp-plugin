@@ -77,7 +77,8 @@ export function checkDaemonSet(daemonSets: any[] | null): CheckResult {
       name: 'DaemonSet',
       status: 'warn',
       message: 'DaemonSet found but desired replicas is 0.',
-      details: 'The DaemonSet exists but is not scheduling any pods. Check node selectors or taints.',
+      details:
+        'The DaemonSet exists but is not scheduling any pods. Check node selectors or taints.',
     };
   }
 
@@ -104,8 +105,7 @@ export function checkDaemonSet(daemonSets: any[] | null): CheckResult {
     name: 'DaemonSet',
     status: 'fail',
     message: `DaemonSet found but 0/${desired} replicas ready.`,
-    details:
-      'The DaemonSet exists but no pods are running. Check pod events and logs for errors.',
+    details: 'The DaemonSet exists but no pods are running. Check pod events and logs for errors.',
     docsHint: 'Run "kubectl describe ds -n gadget" to see scheduling failures.',
   };
 }
@@ -122,7 +122,9 @@ export function checkPodHealth(pods: any[] | null): CheckResult {
   const igPods = pods.filter(pod => {
     const labels = pod.jsonData?.metadata?.labels || pod.metadata?.labels || {};
     const namespace = pod.jsonData?.metadata?.namespace || pod.metadata?.namespace;
-    return labels[IG_DAEMONSET_LABEL_KEY] === IG_DAEMONSET_LABEL_VALUE && namespace === IG_NAMESPACE;
+    return (
+      labels[IG_DAEMONSET_LABEL_KEY] === IG_DAEMONSET_LABEL_VALUE && namespace === IG_NAMESPACE
+    );
   });
 
   if (igPods.length === 0) {
@@ -159,9 +161,7 @@ export function checkPodHealth(pods: any[] | null): CheckResult {
             cs.state?.waiting?.reason === 'ImagePullBackOff' ||
             cs.state?.waiting?.reason === 'ErrImagePull'
         )?.state?.waiting?.reason || 'Unknown';
-      podStatuses.push(
-        `${podData.metadata?.name || 'unknown'}: ${reason}`
-      );
+      podStatuses.push(`${podData.metadata?.name || 'unknown'}: ${reason}`);
       crashingCount++;
     } else if (phase === 'Pending') {
       podStatuses.push(`${podData.metadata?.name || 'unknown'}: Pending`);
@@ -221,13 +221,17 @@ export function checkNodeCoverage(pods: any[] | null, nodes: any[] | null): Chec
     const spec = node.jsonData?.spec || node.spec || {};
     const taints = spec.taints || [];
     if (spec.unschedulable === true) return false;
-    return !taints.some((t: any) => t.effect === 'NoSchedule' && t.key === 'node.kubernetes.io/unschedulable');
+    return !taints.some(
+      (t: any) => t.effect === 'NoSchedule' && t.key === 'node.kubernetes.io/unschedulable'
+    );
   });
 
   const igPods = pods.filter(pod => {
     const labels = pod.jsonData?.metadata?.labels || pod.metadata?.labels || {};
     const namespace = pod.jsonData?.metadata?.namespace || pod.metadata?.namespace;
-    return labels[IG_DAEMONSET_LABEL_KEY] === IG_DAEMONSET_LABEL_VALUE && namespace === IG_NAMESPACE;
+    return (
+      labels[IG_DAEMONSET_LABEL_KEY] === IG_DAEMONSET_LABEL_VALUE && namespace === IG_NAMESPACE
+    );
   });
 
   const coveredNodes = new Set(
@@ -270,7 +274,9 @@ export function checkNodeCoverage(pods: any[] | null, nodes: any[] | null): Chec
     return {
       name: 'Node Coverage',
       status: 'warn',
-      message: `${covered}/${totalSchedulable} nodes covered. Missing: ${uncoveredNames.join(', ')}`,
+      message: `${covered}/${totalSchedulable} nodes covered. Missing: ${uncoveredNames.join(
+        ', '
+      )}`,
       details:
         'Gadgets will not capture events from uncovered nodes. This may cause blind spots in observability.',
       docsHint: 'Check DaemonSet tolerations and node taints.',
@@ -285,7 +291,9 @@ export function checkNodeCoverage(pods: any[] | null, nodes: any[] | null): Chec
   };
 }
 
-export function getOverallStatus(checks: CheckResult[]): 'healthy' | 'degraded' | 'failed' | 'loading' {
+export function getOverallStatus(
+  checks: CheckResult[]
+): 'healthy' | 'degraded' | 'failed' | 'loading' {
   if (checks.some(c => c.status === 'loading')) return 'loading';
   if (checks.every(c => c.status === 'pass')) return 'healthy';
   if (checks.some(c => c.status === 'fail')) return 'failed';

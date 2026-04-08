@@ -32,13 +32,26 @@ function StatusIcon({ status }: { status: CheckStatus }) {
   const theme = useTheme();
   switch (status) {
     case 'pass':
-      return <Icon icon="mdi:check-circle" width="24" height="24" color={theme.palette.success.main} />;
+      return (
+        <Icon icon="mdi:check-circle" width="24" height="24" color={theme.palette.success.main} />
+      );
     case 'warn':
-      return <Icon icon="mdi:alert-circle" width="24" height="24" color={theme.palette.warning.main} />;
+      return (
+        <Icon icon="mdi:alert-circle" width="24" height="24" color={theme.palette.warning.main} />
+      );
     case 'fail':
-      return <Icon icon="mdi:close-circle" width="24" height="24" color={theme.palette.error.main} />;
+      return (
+        <Icon icon="mdi:close-circle" width="24" height="24" color={theme.palette.error.main} />
+      );
     case 'loading':
-      return <Icon icon="mdi:progress-clock" width="24" height="24" color={theme.palette.text.secondary} />;
+      return (
+        <Icon
+          icon="mdi:progress-clock"
+          width="24"
+          height="24"
+          color={theme.palette.text.secondary}
+        />
+      );
     default:
       return null;
   }
@@ -79,24 +92,22 @@ function CheckItem({ check }: { check: CheckResult }) {
           <StatusIcon status={check.status} />
         </ListItemIcon>
         <ListItemText
-          primary={
-            <Typography variant="subtitle2">{check.name}</Typography>
-          }
+          primary={<Typography variant="subtitle2">{check.name}</Typography>}
           secondary={check.message}
         />
         {hasDetails && (
-          <Icon
-            icon={expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'}
-            width="20"
-            height="20"
-          />
+          <Icon icon={expanded ? 'mdi:chevron-up' : 'mdi:chevron-down'} width="20" height="20" />
         )}
       </Box>
       {hasDetails && (
         <Collapse in={expanded} sx={{ width: '100%', pl: 5 }}>
           <Box mt={1} mb={1}>
             {check.details && (
-              <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line', mb: 1 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ whiteSpace: 'pre-line', mb: 1 }}
+              >
                 {check.details}
               </Typography>
             )}
@@ -191,7 +202,8 @@ export function InstallationStatus() {
       setSnackError(true);
       return;
     }
-    navigator.clipboard.writeText(text)
+    navigator.clipboard
+      .writeText(text)
       .then(() => setSnackOpen(true))
       .catch(err => {
         console.error('Clipboard write failed:', err);
@@ -226,7 +238,12 @@ export function InstallationStatus() {
         </List>
 
         <Box display="flex" gap={2} mt={3} flexWrap="wrap">
-          <Button variant="outlined" size="small" onClick={handleRetry} startIcon={<Icon icon="mdi:refresh" />}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleRetry}
+            startIcon={<Icon icon="mdi:refresh" />}
+          >
             Recalculate
           </Button>
           <Button
