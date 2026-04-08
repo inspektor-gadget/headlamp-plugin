@@ -295,7 +295,5 @@ function InstallationStatusPanel({ onRetry }: { onRetry: () => void }) {
 
 export function InstallationStatus() {
   const [retryKey, setRetryKey] = useState(0);
-  return (
-    <InstallationStatusPanel key={retryKey} onRetry={() => setRetryKey(k => k + 1)} />
-  );
+  return <InstallationStatusPanel key={retryKey} onRetry={() => setRetryKey(k => k + 1)} />;
 }
