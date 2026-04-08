@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 import { Box, Button, IconButton, MenuItem, Select, Typography } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { DataSource } from 'src/types';
 import Title from './title'; // Assuming you've converted the Title component to React
 
@@ -12,6 +12,9 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
 
   const [filters, setFilters] = useState([]);
   const [initialized, setInitialized] = useState(false);
+  // Tracks when init parsing found a non-empty config value but zero recognized fields.
+  // Prevents the sync effect from wiping the stored config on mount.
+  const parseFailed = useRef(false);
 
   const fields = React.useMemo(() => {
     const gadgetInfo = gadgetConfig.dataSources;
@@ -60,7 +63,13 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
       });
     });
 
-    setFilters(parsedFilters);
+    if (parsedFilters.length > 0) {
+      setFilters(parsedFilters);
+    } else {
+      // currentValue was non-empty but no stored fields matched the current fields list.
+      // Mark so the sync effect does not wipe the original config value on mount.
+      parseFailed.current = true;
+    }
     setInitialized(true);
   }, [config, fields, initialized]);
 
@@ -80,8 +89,14 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
       .join(';');
 
     if (filters.length === 0) {
-      config.set(undefined);
+      // Only clear the stored config when the user explicitly removed all sorts.
+      // If parseFailed, the empty state is from init failing to match field names —
+      // the original config value should be preserved.
+      if (!parseFailed.current) {
+        config.set(undefined);
+      }
     } else {
+      parseFailed.current = false;
       config.set(res);
     }
   }, [filters, config, initialized]);

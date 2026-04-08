@@ -9,7 +9,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DataSource } from 'src/types';
 // Assuming you've converted the Title component to React
 
@@ -27,6 +27,9 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
   const [filters, setFilters] = useState([]);
   const [expanded, setExpanded] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  // Tracks when init parsing found a non-empty config value but zero recognized fields.
+  // Prevents the sync effect from wiping the stored config on mount.
+  const parseFailed = useRef(false);
   const maxDescriptionLength = 100; // Characters before collapsing
   const shouldCollapse = param.description && param.description.length > maxDescriptionLength;
 
@@ -77,6 +80,10 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
 
     if (parsedFilters.length > 0) {
       setFilters(parsedFilters);
+    } else {
+      // currentValue was non-empty but no field keys matched — mark so the sync
+      // effect does not wipe the original config value on mount.
+      parseFailed.current = true;
     }
     setInitialized(true);
   }, [config.get, fields, initialized]);
@@ -90,8 +97,14 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
       })
       .join(',');
     if (filters.length === 0) {
-      config.set(undefined);
+      // Only clear the stored config when the user explicitly removed all filters.
+      // If parseFailed, the empty state is from init failing to match field keys —
+      // the original config value should be preserved.
+      if (!parseFailed.current) {
+        config.set(undefined);
+      }
     } else {
+      parseFailed.current = false;
       config.set(res);
     }
   }, [filters, config.set, initialized]);
