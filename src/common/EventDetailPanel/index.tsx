@@ -10,7 +10,13 @@ interface EventDetailPanelProps {
 }
 
 /** Internal keys that should never appear in the detail view */
-const HIDDEN_KEYS = new Set(['__raw', IS_METRIC, HEADLAMP_KEY, HEADLAMP_VALUE, HEADLAMP_METRIC_UNIT]);
+const HIDDEN_KEYS = new Set([
+  '__raw',
+  IS_METRIC,
+  HEADLAMP_KEY,
+  HEADLAMP_VALUE,
+  HEADLAMP_METRIC_UNIT,
+]);
 
 function isHiddenKey(key: string): boolean {
   return HIDDEN_KEYS.has(key) || key.startsWith('_');
