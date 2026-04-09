@@ -19,6 +19,7 @@ interface GenericGadgetRendererProps {
   setPodStreamsConnected: React.Dispatch<React.SetStateAction<number>>;
   imageName: string;
   columnMeta?: AllColumnMeta;
+  setStreamError?: (msg: string) => void;
 }
 
 export default function GenericGadgetRenderer({
@@ -37,6 +38,7 @@ export default function GenericGadgetRenderer({
   setPodStreamsConnected,
   imageName,
   columnMeta,
+  setStreamError,
 }: GenericGadgetRendererProps) {
   const { ig, isConnected } = usePortForward(
     `api/v1/namespaces/gadget/pods/${podSelected}/portforward?ports=8080`
@@ -46,6 +48,7 @@ export default function GenericGadgetRenderer({
   const attachTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attachStopRef = useRef<{ stop?: () => void } | null>(null);
   const mountedRef = useRef(true);
+  const wasConnectedRef = useRef(false);
   const decodedImageName = decodeURIComponent(imageName || '');
   function gadgetStartStopHandler() {
     if (!ig) return;
@@ -58,7 +61,8 @@ export default function GenericGadgetRenderer({
       setGadgetData,
       setBufferedGadgetData,
       prepareGadgetInfo,
-      columnMeta
+      columnMeta,
+      setStreamError
     );
     if (gadgetInstance) {
       // Clear any pending attachment timeout
@@ -101,7 +105,10 @@ export default function GenericGadgetRenderer({
             }
           },
         },
-        err => console.error('Gadget run error:', err)
+        err => {
+          console.error('Gadget run error:', err);
+          setStreamError?.(String(err));
+        }
       );
     }
   }
@@ -111,6 +118,15 @@ export default function GenericGadgetRenderer({
       setPodStreamsConnected(prev => (podsSelected.length < prev + 1 ? prev : prev + 1));
     }
   }, [isConnected, podsSelected.length, setPodStreamsConnected]);
+
+  useEffect(() => {
+    if (isConnected) {
+      wasConnectedRef.current = true;
+    } else if (wasConnectedRef.current && gadgetRunningStatus) {
+      setStreamError?.('Connection to gadget pod lost');
+      wasConnectedRef.current = false;
+    }
+  }, [isConnected, gadgetRunningStatus]);
 
   useEffect(() => {
     setLoading(false);

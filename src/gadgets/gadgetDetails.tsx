@@ -1,7 +1,7 @@
 import { ConfirmDialog, Loader, SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
 import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { getCluster, getClusterPrefixedPath } from '@kinvolk/headlamp-plugin/lib/Utils';
-import { Box, Typography } from '@mui/material';
+import { Alert, Box, Typography } from '@mui/material';
 import { useContext, useEffect, useState } from 'react';
 import { generatePath, useHistory, useParams } from 'react-router-dom';
 import { GadgetContext, useGadgetState } from '../common/GadgetContext';
@@ -85,6 +85,7 @@ function GadgetRenderer({
     ...otherState
   } = useContext(GadgetContext);
   const [error, setError] = useState(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
   // Track whether we've made the gadget info request
   const [infoRequested, setInfoRequested] = useState(false);
   const history = useHistory();
@@ -145,11 +146,13 @@ function GadgetRenderer({
 
   function headlessGadgetRunCallback() {
     // i am trying to run now what's my embedded state, also this is a run in background callback so i now isHeadless is true
+    setStreamError(null);
     otherState.setGadgetRunningStatus(true);
     updateInstanceFromStorage(id, embedView, true);
   }
 
   const handleRun = () => {
+    setStreamError(null);
     // but lets first check if it's not enableHistoricalData and embedView is not None
     // if embedView is not None we need to set the instance as embedded
     if (embedView !== 'None' && !enableHistoricalData) {
@@ -323,8 +326,17 @@ function GadgetRenderer({
               podStreamsConnected={podStreamsConnected}
               setPodStreamsConnected={setPodStreamsConnected}
               imageName={imageName}
+              setStreamError={setStreamError}
             />
           ))}
+
+        {streamError && (
+          <Box mt={1}>
+            <Alert severity="error" onClose={() => setStreamError(null)}>
+              Gadget stream error: {streamError}
+            </Alert>
+          </Box>
+        )}
 
         {error ? (
           <Typography variant="body1" color="error">
