@@ -1,7 +1,8 @@
 import { Icon } from '@iconify/react';
 import { NameValueTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import { Box, Button, ButtonGroup, IconButton, Tooltip, Typography } from '@mui/material';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../helpers';
 
 interface EventDetailPanelProps {
   row: Record<string, any>;
@@ -9,7 +10,7 @@ interface EventDetailPanelProps {
 }
 
 /** Internal keys that should never appear in the detail view */
-const HIDDEN_KEYS = new Set(['__raw', 'IS_METRIC', 'HEADLAMP_KEY', 'HEADLAMP_VALUE']);
+const HIDDEN_KEYS = new Set(['__raw', IS_METRIC, HEADLAMP_KEY, HEADLAMP_VALUE, HEADLAMP_METRIC_UNIT]);
 
 function isHiddenKey(key: string): boolean {
   return HIDDEN_KEYS.has(key) || key.startsWith('_');
@@ -87,6 +88,48 @@ export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
   const rawData = row.__raw ?? row;
   const subtitle = getEventSubtitle(rawData);
 
+  // Memoize serialized JSON so both the raw view and copy handler share one serialization
+  const rawJson = useMemo(() => {
+    try {
+      return JSON.stringify(rawData, null, 2);
+    } catch {
+      return null;
+    }
+  }, [rawData]);
+
+  // Memoize flattened rows so toggle / copy state changes don't recompute the full object tree
+  const tableRows = useMemo(
+    () =>
+      flattenEvent(rawData).map(([key, value]) => ({
+        name: (
+          <Typography
+            variant="body2"
+            sx={{
+              fontFamily: 'monospace',
+              fontSize: '0.8rem',
+              color: 'text.secondary',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {key}
+          </Typography>
+        ),
+        value: (
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: '0.875rem',
+              color: 'text.primary',
+              wordBreak: 'break-all',
+            }}
+          >
+            {value}
+          </Typography>
+        ),
+      })),
+    [rawData]
+  );
+
   // Close on Escape key
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -104,45 +147,18 @@ export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
   }, []);
 
   function handleCopy() {
+    if (!navigator.clipboard || rawJson === null) return;
     navigator.clipboard
-      .writeText(JSON.stringify(rawData, null, 2))
+      .writeText(rawJson)
       .then(() => {
         setCopied(true);
         if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
         copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
       })
       .catch(() => {
-        // clipboard not available (e.g. non-HTTPS) — silently ignore
+        // clipboard write failed (e.g. permission denied) — silently ignore
       });
   }
-
-  const tableRows = flattenEvent(rawData).map(([key, value]) => ({
-    name: (
-      <Typography
-        variant="body2"
-        sx={{
-          fontFamily: 'monospace',
-          fontSize: '0.8rem',
-          color: 'text.secondary',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {key}
-      </Typography>
-    ),
-    value: (
-      <Typography
-        variant="body2"
-        sx={{
-          fontSize: '0.875rem',
-          color: 'text.primary',
-          wordBreak: 'break-all',
-        }}
-      >
-        {value}
-      </Typography>
-    ),
-  }));
 
   return (
     <Box
@@ -232,7 +248,7 @@ export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
               wordBreak: 'break-all',
             }}
           >
-            {JSON.stringify(rawData, null, 2)}
+            {rawJson ?? '(unserializable event)'}
           </Box>
         ) : tableRows.length > 0 ? (
           <NameValueTable rows={tableRows} />
