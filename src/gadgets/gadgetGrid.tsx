@@ -31,6 +31,7 @@ import { GadgetBackgroundInstanceForm } from '../common/gadgetbackgroundinstance
 import { generateRandomString } from '../common/helpers';
 import { useGadgetConn } from './conn';
 import GadgetFilters from './gadgetFilters';
+import { IG_CONTAINER_KEY, IG_CONTAINER_VALUE } from './helper';
 
 // ... (keep existing imports)
 
@@ -40,7 +41,9 @@ const KUBERNETES_VIEWS = [
 ];
 
 export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resource = null }) {
-  const [pods] = K8s.ResourceClasses.Pod.useList();
+  const [pods] = K8s.ResourceClasses.Pod.useList({
+    labelSelector: `${IG_CONTAINER_KEY}=${IG_CONTAINER_VALUE}`,
+  });
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const ig = useGadgetConn(nodes, pods);
   const [open, setOpen] = useState(embedDialogOpen);
@@ -526,7 +529,9 @@ const GadgetGrid = ({ gadgets, onEmbedClick, resource = null }) => {
 };
 
 const RunGadgetPanel = ({ gadget, resource }) => {
-  const [pods] = K8s.ResourceClasses.Pod.useList();
+  const [pods] = K8s.ResourceClasses.Pod.useList({
+    labelSelector: `${IG_CONTAINER_KEY}=${IG_CONTAINER_VALUE}`,
+  });
   const [nodes] = K8s.ResourceClasses.Node.useList();
   if (!gadget) return null;
 

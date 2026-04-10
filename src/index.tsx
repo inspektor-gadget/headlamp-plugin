@@ -18,6 +18,7 @@ import { IGNotFound } from './common/NotFound';
 import { GadgetCreation } from './gadgets/gadgetcreationinresource';
 import { GadgetDetails } from './gadgets/gadgetDetails';
 import { isIGPod } from './gadgets/helper';
+import { IG_CONTAINER_KEY, IG_CONTAINER_VALUE } from './gadgets/helper';
 import GadgetList from './gadgets/list';
 import RunningGadgetsForResource from './gadgets/resourcegadgets';
 
@@ -55,7 +56,9 @@ registerDetailsViewSection(({ resource }: DetailsViewSectionProps) => {
   const embeddedResources = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
   const [open, setOpen] = useState(false);
   const isResourceEmbedded = embeddedResources.find((r: any) => r.kind === resource?.jsonData.kind);
-  const [pods] = K8s.ResourceClasses.Pod.useList();
+  const [pods] = K8s.ResourceClasses.Pod.useList({
+    labelSelector: `${IG_CONTAINER_KEY}=${IG_CONTAINER_VALUE}`,
+  });
 
   const isIGInstalled = pods?.find((pod: any) => isIGPod(pod));
 

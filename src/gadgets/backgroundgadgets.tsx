@@ -14,10 +14,13 @@ import { useSnackbar } from 'notistack';
 import React, { useEffect, useState } from 'react';
 import { IGNotFound } from '../common/NotFound';
 import { isIGInstalled, useGadgetConn } from './conn';
+import { IG_CONTAINER_KEY, IG_CONTAINER_VALUE } from './helper';
 
 export function BackgroundRunning({ embedDialogOpen = false }) {
   const [nodes] = K8s.ResourceClasses.Node.useList();
-  const [pods] = K8s.ResourceClasses.Pod.useList();
+  const [pods] = K8s.ResourceClasses.Pod.useList({
+    labelSelector: `${IG_CONTAINER_KEY}=${IG_CONTAINER_VALUE}`,
+  });
   const [runningInstances, setRunningInstances] = React.useState<any[] | null>(null);
   const [openConfirmDialog, setOpenConfirmDialog] = React.useState(false);
   const [tableInstance, setTableInstance] = useState<any>(null);
