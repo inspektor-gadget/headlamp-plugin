@@ -100,8 +100,75 @@ export const processDataColumn = (
   }
 };
 
+export class GadgetDataBuffer {
+  private pendingUpdates: Record<string, any[]> = {};
+  private metricUpdates: Record<string, Record<string, any>> = {};
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
+  private readonly UPDATE_INTERVAL = 300;
+
+  constructor(
+    private setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>
+  ) {}
+
+  public pushData(dsID: string, node: string, massagedData: any, isMetric: boolean) {
+    if (isMetric) {
+      if (!this.metricUpdates[dsID]) this.metricUpdates[dsID] = {};
+      this.metricUpdates[dsID][node] = massagedData;
+    } else {
+      if (!this.pendingUpdates[dsID]) this.pendingUpdates[dsID] = [];
+      this.pendingUpdates[dsID].push(massagedData);
+    }
+
+    if (!this.timeoutId) {
+      this.timeoutId = setTimeout(() => this.flush(), this.UPDATE_INTERVAL);
+    }
+  }
+
+  public flush() {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+
+    if (
+      Object.keys(this.pendingUpdates).length === 0 &&
+      Object.keys(this.metricUpdates).length === 0
+    ) {
+      return;
+    }
+
+    const currentPendingUpdates = this.pendingUpdates;
+    const currentMetricUpdates = this.metricUpdates;
+
+    this.pendingUpdates = {};
+    this.metricUpdates = {};
+
+    this.setBufferedGadgetData(prevData => {
+      const newData = { ...prevData };
+      let hasChanges = false;
+
+      for (const dsID of Object.keys(currentMetricUpdates)) {
+        newData[dsID] = {
+          ...(newData[dsID] || {}),
+          ...currentMetricUpdates[dsID],
+        } as any;
+        hasChanges = true;
+      }
+
+      for (const dsID of Object.keys(currentPendingUpdates)) {
+        const existingData = newData[dsID] || [];
+        const combined = [...existingData, ...currentPendingUpdates[dsID]];
+        newData[dsID] = combined.slice(-MAX_DATA_LIMIT);
+        hasChanges = true;
+      }
+
+      return hasChanges ? newData : prevData;
+    });
+  }
+}
+
 /**
- * Process gadget data and update state
+ * Process gadget data and update state through the buffer
  */
 export const processGadgetData = (
   data: any,
@@ -109,12 +176,13 @@ export const processGadgetData = (
   columns: string[],
   node: string,
   setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>,
-  setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>,
+  bufferOrSetter: GadgetDataBuffer | React.Dispatch<React.SetStateAction<Record<string, any[]>>>,
   columnMetaForDs?: ColumnMeta
 ) => {
   if (columns.length === 0) return;
 
-  const massagedData: Record<string, any> = columns.includes(IS_METRIC)
+  const isMetric = columns.includes(IS_METRIC);
+  const massagedData: Record<string, any> = isMetric
     ? data
     : columns.reduce((acc, column) => {
         const processedValue = processDataColumn(data, column, columnMetaForDs?.[column]);
@@ -124,27 +192,32 @@ export const processGadgetData = (
         return acc;
       }, {});
 
-  if (columns.includes(IS_METRIC)) {
-    setBufferedGadgetData(prevData => ({
-      ...prevData,
-      [dsID]: {
-        ...prevData[dsID],
-        [node]: massagedData,
-      },
-    }));
+  if (bufferOrSetter instanceof GadgetDataBuffer) {
+    bufferOrSetter.pushData(dsID, node, massagedData, isMetric);
   } else {
-    setBufferedGadgetData(prevData => {
-      const newData = [...(prevData[dsID] || []), massagedData];
-      return {
+    // Fallback for legacy calls bypassing the buffer
+    if (isMetric) {
+      bufferOrSetter(prevData => ({
         ...prevData,
-        [dsID]: newData.slice(-MAX_DATA_LIMIT),
-      };
-    });
+        [dsID]: {
+          ...(prevData[dsID] || {}),
+          [node]: massagedData,
+        } as any,
+      }));
+    } else {
+      bufferOrSetter(prevData => {
+        const newData = [...(prevData[dsID] || []), massagedData];
+        return {
+          ...prevData,
+          [dsID]: newData.slice(-MAX_DATA_LIMIT),
+        };
+      });
+    }
   }
 };
 
 /**
- * Setup gadget callbacks
+ * Setup gadget callbacks utilizing batched buffering
  */
 export const createGadgetCallbacks = (
   node: string,
@@ -155,10 +228,15 @@ export const createGadgetCallbacks = (
   prepareGadgetInfo?: (info: any) => void,
   columnMeta?: AllColumnMeta
 ) => {
+  const buffer = new GadgetDataBuffer(setBufferedGadgetData);
+
   return {
     onGadgetInfo: prepareGadgetInfo || (() => {}),
     onReady: () => setLoading(false),
-    onDone: () => setLoading(false),
+    onDone: () => {
+      setLoading(false);
+      buffer.flush(); // Flush remaining items when gadget stops
+    },
     onError: (error: any) => console.error('Gadget error:', error),
     onData: (dsID: string, dataFromGadget: any) => {
       const dataToProcess = Array.isArray(dataFromGadget) ? dataFromGadget : [dataFromGadget];
@@ -170,7 +248,7 @@ export const createGadgetCallbacks = (
           dataColumns[dsID] || [],
           node,
           setGadgetData,
-          setBufferedGadgetData,
+          buffer,
           columnMeta?.[dsID]
         )
       );

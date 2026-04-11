@@ -18,7 +18,7 @@ import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '.
 import { MetricChart } from '../common/MetricChart';
 import { isIGPod } from './helper';
 import usePortForward from './igSocket';
-import { AllColumnMeta, getSortedColumns, processGadgetData } from './utility';
+import { AllColumnMeta, GadgetDataBuffer, getSortedColumns, processGadgetData } from './utility';
 
 function getGadgetPodForThisResourceNode(node, pods) {
   if (!node || !pods) return null;
@@ -108,8 +108,7 @@ const RunningGadgetsForResource = ({ resource, open }) => {
         },
         (err: Error) => {
           enqueueSnackbar(
-            `Failed to delete "${instance.name || instanceToDelete.slice(-8)}": ${
-              err?.message ?? String(err)
+            `Failed to delete "${instance.name || instanceToDelete.slice(-8)}": ${err?.message ?? String(err)
             }`,
             { variant: 'error' }
           );
@@ -298,6 +297,7 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
     let runTimeoutId: ReturnType<typeof setTimeout> | null = null;
     let attachStopFn: { stop?: () => void } | null = null;
     let runStopFn: { stop?: () => void } | null = null;
+    const buffer = new GadgetDataBuffer(setBufferedGadgetData);
 
     const setupGadget = () => {
       if (!ig || !instance || !isComponentMounted) return;
@@ -357,7 +357,7 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
                     dataColumnsRef.current[dsID] || [],
                     node,
                     setGadgetData,
-                    setBufferedGadgetData,
+                    buffer,
                     columnMetaRef.current[dsID]
                   )
                 );
@@ -404,7 +404,7 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
                     dataColumnsRef.current[dsID] || [],
                     node,
                     setGadgetData,
-                    setBufferedGadgetData,
+                    buffer,
                     columnMetaRef.current[dsID]
                   )
                 );
@@ -428,6 +428,7 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
     // Cleanup function
     return () => {
       isComponentMounted = false;
+      buffer.flush();
 
       // Clear pending timeouts
       if (attachTimeoutId) {

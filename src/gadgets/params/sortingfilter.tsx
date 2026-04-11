@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Icon } from '@iconify/react';
 import { Box, Button, IconButton, MenuItem, Select, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';

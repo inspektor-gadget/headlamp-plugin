@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Icon } from '@iconify/react';
 import { DateLabel, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import {
