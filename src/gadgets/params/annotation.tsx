@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   FormControl,
-  Grid,
   IconButton,
   MenuItem,
   Select,
@@ -185,8 +184,8 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
 
   return (
     <Box>
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box>
           <Typography variant="subtitle1">{param.title || param.key}</Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {filterItems.map((filter, idx) => (
@@ -239,8 +238,8 @@ export const AnnotationFilter: React.FC<AnnotationFilterProps> = ({
               Add Annotation
             </AddButton>
           </Box>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   );
 };

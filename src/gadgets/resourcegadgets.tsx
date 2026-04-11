@@ -18,7 +18,13 @@ import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '.
 import { MetricChart } from '../common/MetricChart';
 import { isIGPod } from './helper';
 import usePortForward from './igSocket';
-import { AllColumnMeta, getSortedColumns, processGadgetData } from './utility';
+import {
+  AllColumnMeta,
+  BufferedGadgetState,
+  GadgetDataBuffer,
+  getSortedColumns,
+  processGadgetData,
+} from './utility';
 
 function getGadgetPodForThisResourceNode(node, pods) {
   if (!node || !pods) return null;
@@ -220,8 +226,7 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
   const [dataColumns, setDataColumns] = useState({});
   const [dataSources, setDataSources] = useState([]);
   const [, setGadgetConfig] = useState({});
-  const [, setGadgetData] = useState({});
-  const [bufferedGadgetData, setBufferedGadgetData] = useState({});
+  const [bufferedGadgetData, setBufferedGadgetData] = useState<BufferedGadgetState>({});
   const [isGadgetInfoFetched, setIsGadgetInfoFetched] = useState(false);
   const dataColumnsRef = useRef(dataColumns); // Create a ref to store dataColumns
   const stopAttachmentRef = useRef(null); // Reference to store the stop function
@@ -298,6 +303,7 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
     let runTimeoutId: ReturnType<typeof setTimeout> | null = null;
     let attachStopFn: { stop?: () => void } | null = null;
     let runStopFn: { stop?: () => void } | null = null;
+    const buffer = new GadgetDataBuffer(setBufferedGadgetData);
 
     const setupGadget = () => {
       if (!ig || !instance || !isComponentMounted) return;
@@ -311,7 +317,6 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
         };
       }
 
-      setGadgetData({});
       setBufferedGadgetData({});
       setDataColumns({});
       setIsGadgetInfoFetched(false);
@@ -356,8 +361,7 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
                     dsID,
                     dataColumnsRef.current[dsID] || [],
                     node,
-                    setGadgetData,
-                    setBufferedGadgetData,
+                    buffer,
                     columnMetaRef.current[dsID]
                   )
                 );
@@ -403,8 +407,7 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
                     dsID,
                     dataColumnsRef.current[dsID] || [],
                     node,
-                    setGadgetData,
-                    setBufferedGadgetData,
+                    buffer,
                     columnMetaRef.current[dsID]
                   )
                 );
@@ -428,6 +431,7 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
     // Cleanup function
     return () => {
       isComponentMounted = false;
+      buffer.dispose();
 
       // Clear pending timeouts
       if (attachTimeoutId) {
@@ -458,7 +462,6 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
       }
 
       // Reset state
-      setGadgetData({});
       setBufferedGadgetData({});
     };
   }, [ig, instance, resource, node]);

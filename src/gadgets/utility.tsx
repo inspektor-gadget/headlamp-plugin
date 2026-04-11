@@ -100,21 +100,105 @@ export const processDataColumn = (
   }
 };
 
+/** Buffered state can hold either row arrays or metric per-node objects. */
+export type BufferedGadgetState = Record<string, any[] | Record<string, any>>;
+
+export class GadgetDataBuffer {
+  private pendingUpdates: Record<string, any[]> = {};
+  private metricUpdates: Record<string, Record<string, any>> = {};
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
+  private disposed = false;
+  private readonly UPDATE_INTERVAL = 300;
+
+  constructor(
+    private setBufferedGadgetData: React.Dispatch<React.SetStateAction<BufferedGadgetState>>
+  ) {}
+
+  public pushData(dsID: string, node: string, massagedData: any, isMetric: boolean) {
+    if (isMetric) {
+      if (!this.metricUpdates[dsID]) this.metricUpdates[dsID] = {};
+      this.metricUpdates[dsID][node] = massagedData;
+    } else {
+      if (!this.pendingUpdates[dsID]) this.pendingUpdates[dsID] = [];
+      this.pendingUpdates[dsID].push(massagedData);
+    }
+
+    if (!this.timeoutId) {
+      this.timeoutId = setTimeout(() => this.flush(), this.UPDATE_INTERVAL);
+    }
+  }
+
+  public flush() {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+
+    if (this.disposed) return;
+
+    if (
+      Object.keys(this.pendingUpdates).length === 0 &&
+      Object.keys(this.metricUpdates).length === 0
+    ) {
+      return;
+    }
+
+    const currentPendingUpdates = this.pendingUpdates;
+    const currentMetricUpdates = this.metricUpdates;
+
+    this.pendingUpdates = {};
+    this.metricUpdates = {};
+
+    this.setBufferedGadgetData(prevData => {
+      const newData: BufferedGadgetState = { ...prevData };
+      let hasChanges = false;
+
+      for (const dsID of Object.keys(currentMetricUpdates)) {
+        const existing = newData[dsID];
+        const prev = existing && !Array.isArray(existing) ? existing : {};
+        newData[dsID] = { ...prev, ...currentMetricUpdates[dsID] };
+        hasChanges = true;
+      }
+
+      for (const dsID of Object.keys(currentPendingUpdates)) {
+        const existing = newData[dsID];
+        const prev = Array.isArray(existing) ? existing : [];
+        const combined = [...prev, ...currentPendingUpdates[dsID]];
+        newData[dsID] = combined.slice(-MAX_DATA_LIMIT);
+        hasChanges = true;
+      }
+
+      return hasChanges ? newData : prevData;
+    });
+  }
+
+  /** Cancel any pending timeout and drop queued updates without calling setState. */
+  public dispose() {
+    this.disposed = true;
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    this.pendingUpdates = {};
+    this.metricUpdates = {};
+  }
+}
+
 /**
- * Process gadget data and update state
+ * Process gadget data and update state through the buffer
  */
 export const processGadgetData = (
   data: any,
   dsID: string,
   columns: string[],
   node: string,
-  setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>,
-  setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>,
+  bufferOrSetter: GadgetDataBuffer | React.Dispatch<React.SetStateAction<BufferedGadgetState>>,
   columnMetaForDs?: ColumnMeta
 ) => {
   if (columns.length === 0) return;
 
-  const massagedData: Record<string, any> = columns.includes(IS_METRIC)
+  const isMetric = columns.includes(IS_METRIC);
+  const massagedData: Record<string, any> = isMetric
     ? data
     : columns.reduce((acc, column) => {
         const processedValue = processDataColumn(data, column, columnMetaForDs?.[column]);
@@ -124,55 +208,60 @@ export const processGadgetData = (
         return acc;
       }, {});
 
-  if (columns.includes(IS_METRIC)) {
-    setBufferedGadgetData(prevData => ({
-      ...prevData,
-      [dsID]: {
-        ...prevData[dsID],
-        [node]: massagedData,
-      },
-    }));
+  if (bufferOrSetter instanceof GadgetDataBuffer) {
+    bufferOrSetter.pushData(dsID, node, massagedData, isMetric);
   } else {
-    setBufferedGadgetData(prevData => {
-      const newData = [...(prevData[dsID] || []), massagedData];
-      return {
-        ...prevData,
-        [dsID]: newData.slice(-MAX_DATA_LIMIT),
-      };
-    });
+    // Fallback for legacy calls bypassing the buffer
+    if (isMetric) {
+      bufferOrSetter(prevData => {
+        const existing = prevData[dsID];
+        const prev = existing && !Array.isArray(existing) ? existing : {};
+        return {
+          ...prevData,
+          [dsID]: { ...prev, [node]: massagedData },
+        };
+      });
+    } else {
+      bufferOrSetter(prevData => {
+        const existing = prevData[dsID];
+        const prev = Array.isArray(existing) ? existing : [];
+        const newData = [...prev, massagedData];
+        return {
+          ...prevData,
+          [dsID]: newData.slice(-MAX_DATA_LIMIT),
+        };
+      });
+    }
   }
 };
 
 /**
- * Setup gadget callbacks
+ * Setup gadget callbacks utilizing batched buffering
  */
 export const createGadgetCallbacks = (
   node: string,
   dataColumns: Record<string, string[]>,
   setLoading: (loading: boolean) => void,
-  setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>,
-  setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>,
+  setBufferedGadgetData: React.Dispatch<React.SetStateAction<BufferedGadgetState>>,
   prepareGadgetInfo?: (info: any) => void,
   columnMeta?: AllColumnMeta
 ) => {
+  const buffer = new GadgetDataBuffer(setBufferedGadgetData);
+
   return {
+    buffer,
     onGadgetInfo: prepareGadgetInfo || (() => {}),
     onReady: () => setLoading(false),
-    onDone: () => setLoading(false),
+    onDone: () => {
+      setLoading(false);
+      buffer.flush(); // Flush remaining items when gadget stops
+    },
     onError: (error: any) => console.error('Gadget error:', error),
     onData: (dsID: string, dataFromGadget: any) => {
       const dataToProcess = Array.isArray(dataFromGadget) ? dataFromGadget : [dataFromGadget];
       setLoading(false);
       dataToProcess.forEach(data =>
-        processGadgetData(
-          data,
-          dsID,
-          dataColumns[dsID] || [],
-          node,
-          setGadgetData,
-          setBufferedGadgetData,
-          columnMeta?.[dsID]
-        )
+        processGadgetData(data, dsID, dataColumns[dsID] || [], node, buffer, columnMeta?.[dsID])
       );
     },
   };

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import usePortForward from '../../gadgets/igSocket';
-import { AllColumnMeta, createGadgetCallbacks } from '../../gadgets/utility';
+import { AllColumnMeta, BufferedGadgetState, createGadgetCallbacks } from '../../gadgets/utility';
 
 interface GenericGadgetRendererProps {
   podsSelected: string[];
@@ -10,10 +10,9 @@ interface GenericGadgetRendererProps {
   dataColumns: Record<string, string[]>;
   gadgetRunningStatus: boolean;
   filters: Record<string, any>;
-  setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
+  setBufferedGadgetData: React.Dispatch<React.SetStateAction<BufferedGadgetState>>;
   setLoading: (loading: boolean) => void;
   gadgetInstance?: { id: string; gadgetConfig: { version: number } };
-  setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   node: string;
   prepareGadgetInfo: (info: any) => void;
   setPodStreamsConnected: React.Dispatch<React.SetStateAction<number>>;
@@ -31,7 +30,6 @@ export default function GenericGadgetRenderer({
   setBufferedGadgetData,
   setLoading,
   gadgetInstance,
-  setGadgetData,
   node,
   prepareGadgetInfo,
   setPodStreamsConnected,
@@ -46,20 +44,23 @@ export default function GenericGadgetRenderer({
   const attachTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attachStopRef = useRef<{ stop?: () => void } | null>(null);
   const mountedRef = useRef(true);
+  const bufferRef = useRef<{ dispose: () => void } | null>(null);
   const decodedImageName = decodeURIComponent(imageName || '');
   function gadgetStartStopHandler() {
     if (!ig) return;
     setLoading(true);
 
-    const callbacks = createGadgetCallbacks(
+    const { buffer, ...callbacks } = createGadgetCallbacks(
       node,
       dataColumns,
       setLoading,
-      setGadgetData,
       setBufferedGadgetData,
       prepareGadgetInfo,
       columnMeta
     );
+    // Store buffer ref for cleanup
+    bufferRef.current?.dispose();
+    bufferRef.current = buffer;
     if (gadgetInstance) {
       // Clear any pending attachment timeout
       if (attachTimeoutRef.current) {
@@ -156,6 +157,9 @@ export default function GenericGadgetRenderer({
       }
       // Stop runGadget if active
       gadgetRef.current?.stop();
+      // Dispose buffer to prevent setState after unmount
+      bufferRef.current?.dispose();
+      bufferRef.current = null;
     };
   }, []);
 

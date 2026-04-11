@@ -6,7 +6,6 @@ import {
   AccordionSummary,
   Box,
   Button,
-  Grid,
   Typography,
 } from '@mui/material';
 import React, { useEffect, useMemo } from 'react';
@@ -180,9 +179,9 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
       {areAllPodStreamsConnected && (
         <Box mt={2}>
           <Box m={2}>
-            <Grid container justifyContent="space-between" spacing={2}>
-              <Grid item>Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}</Grid>
-              <Grid item>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+              <Box>Status: {gadgetRunningStatus ? 'Running' : 'Stopped'}</Box>
+              <Box>
                 {gadgetInstance ? (
                   <>
                     <Button
@@ -210,8 +209,8 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
                     </Button>
                   )
                 )}
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </Box>
 
           {renderContent()}
