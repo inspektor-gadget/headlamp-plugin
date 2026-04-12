@@ -42,7 +42,8 @@ Run these from the repository root so your change matches what maintainers expec
 | `npm run tsc` | TypeScript typecheck. |
 | `npm test` | [Vitest](https://vitest.dev/) via `headlamp-plugin test`. Add files such as `Something.test.tsx` or `Something.spec.ts` when you introduce or change behavior worth covering. If no matching files exist yet, Vitest exits with “No test files found”. |
 
-Also run `npm run build` when your change touches the build or anything that must ship in `dist/` (including the `main.wasm.gz` copy step in `package.json`). For UI work in isolation, `npm run storybook` is available.
+Also run `npm run build` when your change touches the build or anything that must ship in `dist/` (including the `main.wasm.gz` copy step in `package.json`).
+`npm run storybook` - for UI work in isolation (Storybook via the Headlamp plugin toolchain).
 
 If a command fails, fix the reported issues before submitting. That keeps review focused on your change rather than on tooling noise.
 
