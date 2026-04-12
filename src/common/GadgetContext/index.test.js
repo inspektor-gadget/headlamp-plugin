@@ -12,7 +12,7 @@ describe('useGadgetState', () => {
     expect(result.current.activeTabIndex).toBe(0);
   });
 
-  it('adds new dynamic tab and sets it as active', () => {
+  it('adds new dynamic tab and sets it as active (index offsets two static tabs)', () => {
     const { result } = renderHook(() => useGadgetState());
     const row = { id: 'tab1', data: 'test' };
 
@@ -26,7 +26,7 @@ describe('useGadgetState', () => {
       label: 'tab1',
       content: row,
     });
-    expect(result.current.activeTabIndex).toBe(0);
+    expect(result.current.activeTabIndex).toBe(2);
   });
 
   it('sets existing tab as active when adding duplicate', () => {
