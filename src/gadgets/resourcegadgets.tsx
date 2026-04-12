@@ -17,7 +17,7 @@ import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '.
 import { MetricChart } from '../common/MetricChart';
 import { isIGPod } from './helper';
 import usePortForward from './igSocket';
-import { AllColumnMeta, processGadgetData, getSortedColumns } from './utility';
+import { AllColumnMeta, getSortedColumns, processGadgetData } from './utility';
 
 function getGadgetPodForThisResourceNode(node, pods) {
   if (!node || !pods) return null;
