@@ -9,7 +9,10 @@ export type FieldMeta = { type?: string; annotations?: Record<string, string> };
 export type ColumnMeta = Record<string, FieldMeta>;
 export type AllColumnMeta = Record<string, ColumnMeta>;
 
-export function getSortedColumns(columns: string[], annotations?: Record<string, string>): string[] {
+export function getSortedColumns(
+  columns: string[],
+  annotations?: Record<string, string>
+): string[] {
   const preferredOrderStr = annotations?.['columns'];
   if (preferredOrderStr) {
     const preferredOrder = preferredOrderStr.split(',').map(s => s.trim());
@@ -114,12 +117,12 @@ export const processGadgetData = (
   const massagedData: Record<string, any> = columns.includes(IS_METRIC)
     ? data
     : columns.reduce((acc, column) => {
-      const processedValue = processDataColumn(data, column, columnMetaForDs?.[column]);
-      if (processedValue !== null) {
-        acc[column] = processedValue;
-      }
-      return acc;
-    }, {});
+        const processedValue = processDataColumn(data, column, columnMetaForDs?.[column]);
+        if (processedValue !== null) {
+          acc[column] = processedValue;
+        }
+        return acc;
+      }, {});
 
   if (columns.includes(IS_METRIC)) {
     setBufferedGadgetData(prevData => ({
@@ -153,7 +156,7 @@ export const createGadgetCallbacks = (
   columnMeta?: AllColumnMeta
 ) => {
   return {
-    onGadgetInfo: prepareGadgetInfo || (() => { }),
+    onGadgetInfo: prepareGadgetInfo || (() => {}),
     onReady: () => setLoading(false),
     onDone: () => setLoading(false),
     onError: (error: any) => console.error('Gadget error:', error),
