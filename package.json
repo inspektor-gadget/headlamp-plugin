@@ -1,6 +1,6 @@
 {
   "name": "inspektor-gadget",
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.3",
   "description": "An easy way to run gadgets from the Inspektor Gadget project and configure views for them.",
   "scripts": {
     "start": "headlamp-plugin start",
@@ -15,6 +15,8 @@
     "test:run": "vitest run -c node_modules/@kinvolk/headlamp-plugin/config/vite.config.mjs",
     "test:coverage": "vitest run -c node_modules/@kinvolk/headlamp-plugin/config/vite.config.mjs --coverage --coverage.provider=istanbul",
     "storybook-build": "headlamp-plugin storybook-build"
+    "storybook-build": "headlamp-plugin storybook-build",
+    "i18n": "headlamp-plugin i18n"
   },
   "keywords": [
     "headlamp",
@@ -38,7 +40,7 @@
     ]
   },
   "devDependencies": {
-    "@kinvolk/headlamp-plugin": "^0.11.4"
+    "@kinvolk/headlamp-plugin": "^0.13.1"
   },
   "dependencies": {
     "pako": "^2.1.0",

@@ -1,12 +1,13 @@
 import './wasm.js';
 import { Icon } from '@iconify/react';
-import { ActionButton, SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import { Box, IconButton, Link, Modal, Paper, Typography } from '@mui/material';
+import { SectionBox } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
+import { Box, Button, IconButton, Link, Modal, Paper, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { fetchInspektorGadgetFromArtifactHub } from '../api/artifacthub';
 import { GadgetContext, useGadgetState } from '../common/GadgetContext';
 import { BackgroundRunning } from './backgroundgadgets';
 import { GadgetCardEmbedWrapper, GadgetGrid } from './gadgetGrid';
+import GadgetInput from './gadgetInput';
 
 function GadgetRendererWithTabs() {
   const gadgetState = useGadgetState();
@@ -14,12 +15,22 @@ function GadgetRendererWithTabs() {
   const [gadgets, setGadgets] = useState([]);
   const [selectedGadget, setSelectedGadget] = useState(null);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
 
   useEffect(() => {
     fetchInspektorGadgetFromArtifactHub().then(data => setGadgets([...data])); // Wrap single item in array if needed
   }, []);
 
-  const { dynamicTabs, activeTabIndex, setActiveTabIndex, addDynamicTab } = gadgetState;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { dynamicTabs, activeTabIndex, setActiveTabIndex } = gadgetState;
 
   // Ensure we default to the "Running Instances" tab (index 0) when there are no dynamic tabs
   useEffect(() => {
@@ -28,25 +39,43 @@ function GadgetRendererWithTabs() {
     }
   }, [dynamicTabs, activeTabIndex, setActiveTabIndex]);
 
+  // Filter gadgets based on search query
+  const filteredGadgets = gadgets.filter(gadget => {
+    if (!debouncedQuery) return true;
+    const query = debouncedQuery.toLowerCase();
+
+    return (
+      gadget.display_name?.toLowerCase().includes(query) ||
+      gadget.description?.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <GadgetContext.Provider value={{ ...gadgetState }}>
-      <SectionBox
-        title="Gadgets (beta)"
-        headerProps={{
-          titleSideActions: [
-            <ActionButton
-              color="primary"
-              description={'Add Gadget'}
-              icon={'mdi:plus-circle'}
-              onClick={() => {
-                setOpenConfirmDialog(true);
-              }}
-            />,
-          ],
-        }}
-      >
-        <Box sx={{ width: '100%', typography: 'body1' }}>
-          <Box mt={2}>
+      <SectionBox title="Gadgets (beta)">
+        <Box sx={{ width: '100%', typography: 'body1', my: 2 }}>
+          <Box>
+            <Box sx={{ mb: 8, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Typography variant="caption" sx={{ fontSize: '1rem' }}>
+                Enter a gadget image URL or discover gadgets from ArtifactHub
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Button
+                  color="secondary"
+                  variant="contained"
+                  size="medium"
+                  sx={{ marginTop: '1rem' }}
+                  startIcon={<Icon icon="mdi:apps" />}
+                  onClick={() => setOpenConfirmDialog(true)}
+                >
+                  Discover
+                </Button>
+
+                <Box sx={{ flexGrow: 1 }}>
+                  <GadgetInput resource={''} onAddGadget={() => {}} />
+                </Box>
+              </Box>
+            </Box>
             <Modal open={openConfirmDialog} onClose={() => setOpenConfirmDialog(false)}>
               <Paper
                 sx={{
@@ -65,11 +94,27 @@ function GadgetRendererWithTabs() {
                 }}
               >
                 <Box
-                  sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1 }}
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                    mb: 1,
+                    gap: 2,
+                  }}
                 >
                   <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                    Add Gadget
+                    Gadget Gallery
                   </Typography>
+                  <TextField
+                    size="small"
+                    placeholder="Search gadgets..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    sx={{ width: '300px' }}
+                    InputProps={{
+                      startAdornment: <Icon icon="mdi:magnify" style={{ marginRight: 8 }} />,
+                    }}
+                  />
                   <IconButton onClick={() => setOpenConfirmDialog(false)} size="small">
                     <Icon icon="mdi:close" />
                   </IconButton>
@@ -77,14 +122,10 @@ function GadgetRendererWithTabs() {
 
                 <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
                   <GadgetGrid
-                    gadgets={gadgets}
+                    gadgets={filteredGadgets}
                     onEmbedClick={row => {
                       setSelectedGadget(row);
                       setEmbedDialogOpen(true);
-                    }}
-                    onAddGadget={gadget => {
-                      addDynamicTab(gadget);
-                      setOpenConfirmDialog(false);
                     }}
                   />
                   {embedDialogOpen && (

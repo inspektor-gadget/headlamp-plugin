@@ -75,6 +75,27 @@ interface StreamRef {
 let igPromise: Promise<WebAssembly.WebAssemblyInstantiatedSource> | null = null;
 const go = new (window as any).Go();
 const PLUGIN_NAME = 'inspektor-gadget';
+async function fetchWasmWithFallback(pluginName: string): Promise<Response> {
+  // Headlamp serves plugins from different paths depending on how they were installed.
+  // We try all possible prefixes to find the correct one.
+  const prefixes = ['plugins', 'user-plugins', 'static-plugins'];
+  const isDesktop = isElectron() || isDockerDesktop();
+  const baseUrl = isDesktop ? getServerURL() : '';
+
+  for (const prefix of prefixes) {
+    const url = `${baseUrl}/${prefix}/${pluginName}/main.wasm.gz`;
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        return response;
+      }
+    } catch (e) {
+      // Ignore error and try the next prefix
+    }
+  }
+  throw new Error(`Failed to fetch WASM for ${pluginName}. Checked paths: ${prefixes.join(', ')}`);
+}
+
 /**
  * Initializes and returns the WebAssembly instance
  * Implements singleton pattern to ensure only one instance is created
@@ -82,15 +103,7 @@ const PLUGIN_NAME = 'inspektor-gadget';
 async function getIG(): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
   if (!igPromise) {
     try {
-      let response;
-      if (isElectron() || isDockerDesktop()) {
-        response = await fetch(getServerURL() + `/plugins/${PLUGIN_NAME}/main.wasm.gz`);
-      } else {
-        response = await fetch(`/plugins/${PLUGIN_NAME}/main.wasm.gz`);
-      }
-      if (!response.ok) {
-        throw new Error(`Failed to fetch WASM: ${response.statusText}`);
-      }
+      const response = await fetchWasmWithFallback(PLUGIN_NAME);
 
       const gzippedData = await response.arrayBuffer();
       const decompressedData = pako.inflate(gzippedData);
@@ -102,7 +115,6 @@ async function getIG(): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
         .then(result => {
           go.run(result.instance)
             .then(() => {
-              // console.log('WebAssembly instance initialized successfully');
               console.error('Something went wrong while running the WebAssembly instance');
             })
             .catch(err => {
@@ -182,7 +194,7 @@ const usePortForward = (url: string | null): PortForwardState => {
           clearTimeout(timeoutId);
           resolve(socket);
         } else if (mountedRef.current) {
-          setTimeout(checkSocket, 100);
+          setTimeout(checkSocket, 10);
         } else {
           clearTimeout(timeoutId);
           reject(new Error('Component unmounted while waiting for socket'));

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createContext } from 'react';
 import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../helpers';
+import { AllColumnMeta, getSortedColumns } from '../../gadgets/utility';
 
 // Create a context for sharing gadget-related state
 export const GadgetContext = createContext(null);
@@ -24,6 +25,7 @@ export function useGadgetState() {
   const [isRunningInBackground, setIsRunningInBackground] = useState(false);
   const [dynamicTabs, setDynamicTabs] = useState([]);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const [columnMeta, setColumnMeta] = useState<AllColumnMeta>({});
 
   // Method to add a new dynamic tab
   const addDynamicTab = row => {
@@ -60,7 +62,9 @@ export function useGadgetState() {
   const prepareGadgetInfo = info => {
     setIsGadgetInfoFetched(true);
     const fields = {};
+    const meta: AllColumnMeta = {};
     info.dataSources.forEach((dataSource, index) => {
+      const dsID = dataSource.id || index;
       const annotations = dataSource.annotations;
       const isMetricAnnotationAvailable =
         annotations &&
@@ -68,6 +72,18 @@ export function useGadgetState() {
           annotationKey =>
             annotationKey === 'metrics.print' && annotations[annotationKey] === 'true'
         );
+
+      // Build per-field metadata map for this datasource
+      meta[dsID] = {};
+      dataSource.fields
+        .filter(field => (field.flags & 4) === 0)
+        .filter(field => field.fullName !== 'k8s')
+        .forEach(field => {
+          meta[dsID][field.fullName] = {
+            type: field.type,
+            annotations: field.annotations,
+          };
+        });
 
       if (isMetricAnnotationAvailable) {
         const fieldsFromDataSource = dataSource.fields
@@ -82,18 +98,20 @@ export function useGadgetState() {
         fieldsFromDataSource.push(`${HEADLAMP_VALUE}_${value?.fullName}`);
         fieldsFromDataSource.push(`${HEADLAMP_METRIC_UNIT}_${metricUnit}`);
         fieldsFromDataSource.push(IS_METRIC);
-        fields[dataSource.id || index] = fieldsFromDataSource;
+        fields[dsID] = fieldsFromDataSource;
       } else {
-        fields[dataSource.id || index] = dataSource.fields
+        const extractedFields = dataSource.fields
           .filter(field => (field.flags & 4) === 0)
           .map(field => field.fullName)
           .filter(field => field !== 'k8s');
+        fields[dsID] = getSortedColumns(extractedFields, dataSource.annotations);
       }
     });
 
     setGadgetConfig(info);
     setDataSources(info.dataSources);
     setDataColumns({ ...fields });
+    setColumnMeta(meta);
   };
 
   return {
@@ -134,5 +152,7 @@ export function useGadgetState() {
     setActiveTabIndex,
     addDynamicTab,
     removeDynamicTab,
+    columnMeta,
+    setColumnMeta,
   };
 }

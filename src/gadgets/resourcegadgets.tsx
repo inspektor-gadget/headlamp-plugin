@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 import { ConfirmDialog, DateLabel, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import {
   Accordion,
@@ -17,7 +17,7 @@ import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '.
 import { MetricChart } from '../common/MetricChart';
 import { isIGPod } from './helper';
 import usePortForward from './igSocket';
-import { processGadgetData } from './utility';
+import { AllColumnMeta, processGadgetData, getSortedColumns } from './utility';
 
 function getGadgetPodForThisResourceNode(node, pods) {
   if (!node || !pods) return null;
@@ -148,7 +148,7 @@ const RunningGadgetsForResource = ({ resource, open }) => {
       />
 
       {/* Grouped Instances */}
-      {Object.entries(groupedInstances).map(([imageName, instances]) => (
+      {Object.entries(groupedInstances).map(([imageName, instances]: [string, any[]]) => (
         <Box key={imageName} sx={{ mb: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
             {imageName} ({instances.length})
@@ -223,14 +223,21 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
   const dataColumnsRef = useRef(dataColumns); // Create a ref to store dataColumns
   const stopAttachmentRef = useRef(null); // Reference to store the stop function
   const [error, setError] = useState(null);
+  const [columnMeta, setColumnMeta] = useState<AllColumnMeta>({});
+  const columnMetaRef = useRef<AllColumnMeta>({});
   useEffect(() => {
     dataColumnsRef.current = dataColumns; // Update the ref whenever dataColumns changes
   }, [dataColumns]);
+  useEffect(() => {
+    columnMetaRef.current = columnMeta;
+  }, [columnMeta]);
 
   const prepareGadgetInfo = info => {
     setIsGadgetInfoFetched(true);
     const fields = {};
+    const meta: AllColumnMeta = {};
     info.dataSources.forEach((dataSource, index) => {
+      const dsID = dataSource.id || index;
       const annotations = dataSource.annotations;
       const isMetricAnnotationAvailable =
         annotations &&
@@ -238,6 +245,18 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
           annotationKey =>
             annotationKey === 'metrics.print' && annotations[annotationKey] === 'true'
         );
+
+      // Build per-field metadata map for this datasource
+      meta[dsID] = {};
+      dataSource.fields
+        .filter(field => (field.flags & 4) === 0)
+        .filter(field => field.fullName !== 'k8s')
+        .forEach(field => {
+          meta[dsID][field.fullName] = {
+            type: field.type,
+            annotations: field.annotations,
+          };
+        });
 
       if (isMetricAnnotationAvailable) {
         const fieldsFromDataSource = dataSource.fields
@@ -252,26 +271,33 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
         fieldsFromDataSource.push(`${HEADLAMP_VALUE}_${value?.fullName}`);
         fieldsFromDataSource.push(`${HEADLAMP_METRIC_UNIT}_${metricUnit}`);
         fieldsFromDataSource.push(IS_METRIC);
-        fields[dataSource.id || index] = fieldsFromDataSource;
+        fields[dsID] = fieldsFromDataSource;
       } else {
-        fields[dataSource.id || index] = dataSource.fields
+        const extractedFields = dataSource.fields
           .filter(field => (field.flags & 4) === 0)
           .map(field => field.fullName)
           .filter(field => field !== 'k8s');
+        fields[dsID] = getSortedColumns(extractedFields, dataSource.annotations);
       }
     });
 
     setGadgetConfig(info);
     setDataSources(info.dataSources);
     setDataColumns({ ...fields });
+    setColumnMeta(meta);
+    columnMetaRef.current = meta;
   };
 
   // Effect for gadget attachment/running
   useEffect(() => {
     let isComponentMounted = true;
+    let attachTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    let runTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    let attachStopFn: { stop?: () => void } | null = null;
+    let runStopFn: { stop?: () => void } | null = null;
 
     const setupGadget = () => {
-      if (!ig || !instance || !isComponentMounted) return null;
+      if (!ig || !instance || !isComponentMounted) return;
 
       let paramValues = { ...instance.gadgetConfig.paramValues };
       if (instance.kind === 'Pod') {
@@ -287,62 +313,72 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
       setDataColumns({});
       setIsGadgetInfoFetched(false);
 
-      let stopFunction;
-
       if (instance.isHeadless) {
-        setTimeout(
-          () =>
-            ig.attachGadgetInstance(
-              {
-                id: instance.id,
-                version: instance.gadgetConfig.version,
+        attachTimeoutId = setTimeout(() => {
+          // Guard: ensure component is still mounted and ig is still valid
+          if (!isComponentMounted || !ig) {
+            return;
+          }
+          // Note: attachGadgetInstance returns a stop handle but the interface types it as void
+          attachStopFn = ig.attachGadgetInstance(
+            {
+              id: instance.id,
+              version: instance.gadgetConfig.version,
+            },
+            {
+              onGadgetInfo: info => {
+                if (isComponentMounted) prepareGadgetInfo(info);
               },
-              {
-                onGadgetInfo: info => {
-                  if (isComponentMounted) prepareGadgetInfo(info);
-                },
-                onData: (dsID, dataFromGadget) => {
-                  if (!isComponentMounted) return;
+              onData: (dsID, dataFromGadget) => {
+                if (!isComponentMounted) return;
 
-                  const dataToProcess = Array.isArray(dataFromGadget)
-                    ? dataFromGadget
-                    : [dataFromGadget];
-                  // filter out the data that is not for this pod
-                  const filteredData = dataToProcess.filter(data => {
-                    if (instance.kind !== 'Pod') return true;
-                    const podName = data?.['k8s']?.podName;
-                    const podNamespace = data?.['k8s']?.namespace;
-                    return (
-                      podName &&
-                      podName.includes(resource.jsonData.metadata.name) &&
-                      podNamespace &&
-                      podNamespace.includes(resource.jsonData.metadata.namespace)
-                    );
-                  });
-                  filteredData.forEach(data =>
-                    processGadgetData(
-                      data,
-                      dsID,
-                      dataColumnsRef.current[dsID] || [],
-                      node,
-                      setGadgetData,
-                      setBufferedGadgetData
-                    )
+                const dataToProcess = Array.isArray(dataFromGadget)
+                  ? dataFromGadget
+                  : [dataFromGadget];
+                // filter out the data that is not for this pod
+                const filteredData = dataToProcess.filter(data => {
+                  if (instance.kind !== 'Pod') return true;
+                  const podName = data?.['k8s']?.podName;
+                  const podNamespace = data?.['k8s']?.namespace;
+                  return (
+                    podName &&
+                    podName.includes(resource.jsonData.metadata.name) &&
+                    podNamespace &&
+                    podNamespace.includes(resource.jsonData.metadata.namespace)
                   );
-                },
+                });
+                filteredData.forEach(data =>
+                  processGadgetData(
+                    data,
+                    dsID,
+                    dataColumnsRef.current[dsID] || [],
+                    node,
+                    setGadgetData,
+                    setBufferedGadgetData,
+                    columnMetaRef.current[dsID]
+                  )
+                );
               },
-              err => {
+            },
+            err => {
+              if (isComponentMounted) {
                 setError(err);
-                if (isComponentMounted) console.error('Gadget attach error:', err);
+                console.error('Gadget attach error:', err);
               }
-            ),
-          2000
-        );
+            }
+          ) as unknown as { stop?: () => void };
+          // Store in ref for external access if needed
+          stopAttachmentRef.current = attachStopFn;
+        }, 2000);
       } else {
-        const timeoutId = setTimeout(() => {
-          if (!isComponentMounted) return;
+        runTimeoutId = setTimeout(() => {
+          // Guard: ensure component is still mounted and ig is still valid
+          if (!isComponentMounted || !ig) {
+            return;
+          }
 
-          stopFunction = ig.runGadget(
+          // Note: runGadget returns a stop handle but the interface types it as void
+          runStopFn = ig.runGadget(
             {
               imageName: instance.gadgetConfig.imageName,
               paramValues,
@@ -365,47 +401,57 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
                     dataColumnsRef.current[dsID] || [],
                     node,
                     setGadgetData,
-                    setBufferedGadgetData
+                    setBufferedGadgetData,
+                    columnMetaRef.current[dsID]
                   )
                 );
               },
             },
             err => {
-              setError(err);
-              if (isComponentMounted) console.error('Gadget run error:', err);
+              if (isComponentMounted) {
+                setError(err);
+                console.error('Gadget run error:', err);
+              }
             }
-          );
+          ) as unknown as { stop?: () => void };
+          // Store in ref for external access if needed
+          stopAttachmentRef.current = runStopFn;
         }, 1000);
-
-        // Return a function that clears the timeout if component unmounts before timeout completes
-        return () => {
-          clearTimeout(timeoutId);
-        };
       }
-
-      if (stopFunction) {
-        stopAttachmentRef.current = stopFunction;
-        return stopFunction;
-      }
-
-      return null;
     };
 
-    const stopFunction = setupGadget();
+    setupGadget();
 
     // Cleanup function
     return () => {
       isComponentMounted = false;
 
-      // Clean up the gadget connection
+      // Clear pending timeouts
+      if (attachTimeoutId) {
+        clearTimeout(attachTimeoutId);
+        attachTimeoutId = null;
+      }
+      if (runTimeoutId) {
+        clearTimeout(runTimeoutId);
+        runTimeoutId = null;
+      }
+
+      // Stop attachment if active
+      if (attachStopFn && typeof attachStopFn.stop === 'function') {
+        attachStopFn.stop();
+        attachStopFn = null;
+      }
+
+      // Stop runGadget if active
+      if (runStopFn && typeof runStopFn.stop === 'function') {
+        runStopFn.stop();
+        runStopFn = null;
+      }
+
+      // Clean up via ref as fallback
       if (stopAttachmentRef.current && typeof stopAttachmentRef.current.stop === 'function') {
         stopAttachmentRef.current.stop();
         stopAttachmentRef.current = null;
-      }
-
-      // If setupGadget returned a function (from setTimeout), call it
-      if (typeof stopFunction === 'function') {
-        stopFunction();
       }
 
       // Reset state

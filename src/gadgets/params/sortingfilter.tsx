@@ -1,6 +1,7 @@
 import { Icon } from '@iconify/react';
 import { Box, Button, IconButton, MenuItem, Select, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
+import { DataSource } from 'src/types';
 import Title from './title'; // Assuming you've converted the Title component to React
 
 const SortingFilter = ({ param, config, gadgetConfig }) => {
@@ -16,7 +17,7 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
     if (!gadgetInfo) return [];
 
     const tmpFields = [];
-    Object.values(gadgetInfo).forEach(ds => {
+    Object.values(gadgetInfo).forEach((ds: DataSource) => {
       ds.fields.forEach(f => {
         tmpFields.push({ ds: ds.name, field: f.fullName, display: `${ds.name}.${f.fullName}` });
       });
@@ -30,7 +31,7 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
       dataSources[f.field.ds] = [...(dataSources[f.field.ds] || []), f];
     });
     const res = Object.entries(dataSources)
-      .map(([d, fields]) => {
+      .map(([d, fields]: [string, any[]]) => {
         return `${d}:${fields.map(f => `${f.sorting}${f.field.field}`).join(',')}`;
       })
       .join(';');

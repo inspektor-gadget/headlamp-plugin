@@ -11,7 +11,7 @@ import {
   SectionBox,
 } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { DetailsViewSectionProps } from '@kinvolk/headlamp-plugin/lib/components/DetailsViewSection/DetailsViewSection';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { Box, Typography } from '@mui/material';
 import { useState } from 'react';
 import { IGNotFound } from './common/NotFound';
