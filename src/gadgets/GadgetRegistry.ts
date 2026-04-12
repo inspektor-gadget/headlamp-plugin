@@ -14,7 +14,7 @@ class GadgetRegistry {
   private instances: Map<string, GadgetInstanceStatus> = new Map();
   private listeners: Set<() => void> = new Set();
 
-  private constructor() { }
+  private constructor() {}
 
   public static getInstance(): GadgetRegistry {
     if (!GadgetRegistry.instance) {

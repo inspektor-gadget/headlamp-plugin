@@ -120,7 +120,7 @@ export class GadgetDataBuffer {
 
   constructor(
     private setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>
-  ) { }
+  ) {}
 
   public pushData(dsID: string, node: string, massagedData: any, isMetric: boolean) {
     if (isMetric) {
@@ -196,12 +196,12 @@ export const processGadgetData = (
   const massagedData: Record<string, any> = isMetric
     ? data
     : columns.reduce((acc, column) => {
-      const processedValue = processDataColumn(data, column);
-      if (processedValue !== null) {
-        acc[column] = processedValue;
-      }
-      return acc;
-    }, {});
+        const processedValue = processDataColumn(data, column);
+        if (processedValue !== null) {
+          acc[column] = processedValue;
+        }
+        return acc;
+      }, {});
 
   if (bufferOrSetter instanceof GadgetDataBuffer) {
     bufferOrSetter.pushData(dsID, node, massagedData, isMetric);
@@ -241,7 +241,7 @@ export const createGadgetCallbacks = (
   const buffer = new GadgetDataBuffer(setBufferedGadgetData);
 
   return {
-    onGadgetInfo: prepareGadgetInfo || (() => { }),
+    onGadgetInfo: prepareGadgetInfo || (() => {}),
     onReady: () => setLoading(false),
     onDone: () => {
       setLoading(false);
