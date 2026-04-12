@@ -1,10 +1,10 @@
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { useGadgetState } from './index';
 
 describe('useGadgetState', () => {
   it('initializes with default values', () => {
     const { result } = renderHook(() => useGadgetState());
-    
+
     expect(result.current.podsSelected).toEqual([]);
     expect(result.current.gadgetData).toEqual({});
     expect(result.current.gadgetRunningStatus).toBe(false);
@@ -86,16 +86,18 @@ describe('useGadgetState', () => {
   it('prepares gadget info with metric annotations', () => {
     const { result } = renderHook(() => useGadgetState());
     const info = {
-      dataSources: [{
-        id: 'ds1',
-        annotations: { 'metrics.print': 'true' },
-        fields: [
-          { fullName: 'keyField', flags: 0, tags: ['role:key'] },
-          { fullName: 'valueField', flags: 0, tags: [], annotations: { 'metrics.unit': 'ms' } },
-          { fullName: 'k8s', flags: 0, tags: [] },
-          { fullName: 'hiddenField', flags: 4, tags: [] },
-        ],
-      }],
+      dataSources: [
+        {
+          id: 'ds1',
+          annotations: { 'metrics.print': 'true' },
+          fields: [
+            { fullName: 'keyField', flags: 0, tags: ['role:key'] },
+            { fullName: 'valueField', flags: 0, tags: [], annotations: { 'metrics.unit': 'ms' } },
+            { fullName: 'k8s', flags: 0, tags: [] },
+            { fullName: 'hiddenField', flags: 4, tags: [] },
+          ],
+        },
+      ],
     };
 
     act(() => {
@@ -114,12 +116,14 @@ describe('useGadgetState', () => {
   it('prepares gadget info without metric annotations', () => {
     const { result } = renderHook(() => useGadgetState());
     const info = {
-      dataSources: [{
-        fields: [
-          { fullName: 'field1', flags: 0 },
-          { fullName: 'k8s', flags: 0 },
-        ],
-      }],
+      dataSources: [
+        {
+          fields: [
+            { fullName: 'field1', flags: 0 },
+            { fullName: 'k8s', flags: 0 },
+          ],
+        },
+      ],
     };
 
     act(() => {
