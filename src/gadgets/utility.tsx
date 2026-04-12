@@ -55,18 +55,27 @@ export function formatDuration(ns: number): string {
 }
 
 /**
- * Process a single column of gadget data
+ * Process a single column of gadget data into a raw value
  */
-export const processDataColumn = (
-  payload: any,
-  column: string,
-  fieldMeta?: FieldMeta
-): React.ReactNode | null => {
+export const processDataColumn = (payload: any, column: string): any => {
   if (column === IS_METRIC || column.includes(HEADLAMP_KEY) || column.includes(HEADLAMP_VALUE)) {
     return null;
   }
 
   const value = getProperty(payload, column);
+  return value;
+};
+
+/**
+ * Render a processed column value into JSX
+ */
+export const renderDataColumn = (
+  value: any,
+  column: string,
+  payload: any,
+  fieldMeta?: FieldMeta
+): React.ReactNode | null => {
+  if (value === null || value === undefined) return null;
 
   switch (column) {
     case 'k8s.containerName':
@@ -79,23 +88,26 @@ export const processDataColumn = (
         </Link>
       );
     case 'k8s.podName':
-      return payload.k8s['namespace'] ? (
+      return payload.k8s?.['namespace'] ? (
         <Link routeName="pod" params={{ name: value, namespace: payload.k8s['namespace'] }}>
           {value}
         </Link>
       ) : (
         value
       );
+    case 'timestamp':
+      // timestamp is handled by DateLabel in the table usually,
+      // but we can provide a default here if needed
+      return value;
     default: {
-      const raw = JSON.stringify(value).replace(/['"]+/g, '');
       const isDuration =
         fieldMeta?.type === 'gadget_duration_ns' ||
         fieldMeta?.annotations?.['columns.formatter'] === 'duration';
       if (isDuration) {
         const ns = Number(value);
-        return isNaN(ns) ? raw : formatDuration(ns);
+        return isNaN(ns) ? String(value) : formatDuration(ns);
       }
-      return raw;
+      return typeof value === 'object' ? JSON.stringify(value) : String(value);
     }
   }
 };
@@ -108,7 +120,7 @@ export class GadgetDataBuffer {
 
   constructor(
     private setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>
-  ) {}
+  ) { }
 
   public pushData(dsID: string, node: string, massagedData: any, isMetric: boolean) {
     if (isMetric) {
@@ -176,8 +188,7 @@ export const processGadgetData = (
   columns: string[],
   node: string,
   setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>,
-  bufferOrSetter: GadgetDataBuffer | React.Dispatch<React.SetStateAction<Record<string, any[]>>>,
-  columnMetaForDs?: ColumnMeta
+  bufferOrSetter: GadgetDataBuffer | React.Dispatch<React.SetStateAction<Record<string, any[]>>>
 ) => {
   if (columns.length === 0) return;
 
@@ -185,12 +196,12 @@ export const processGadgetData = (
   const massagedData: Record<string, any> = isMetric
     ? data
     : columns.reduce((acc, column) => {
-        const processedValue = processDataColumn(data, column, columnMetaForDs?.[column]);
-        if (processedValue !== null) {
-          acc[column] = processedValue;
-        }
-        return acc;
-      }, {});
+      const processedValue = processDataColumn(data, column);
+      if (processedValue !== null) {
+        acc[column] = processedValue;
+      }
+      return acc;
+    }, {});
 
   if (bufferOrSetter instanceof GadgetDataBuffer) {
     bufferOrSetter.pushData(dsID, node, massagedData, isMetric);
@@ -225,13 +236,12 @@ export const createGadgetCallbacks = (
   setLoading: (loading: boolean) => void,
   setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>,
   setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>,
-  prepareGadgetInfo?: (info: any) => void,
-  columnMeta?: AllColumnMeta
+  prepareGadgetInfo?: (info: any) => void
 ) => {
   const buffer = new GadgetDataBuffer(setBufferedGadgetData);
 
   return {
-    onGadgetInfo: prepareGadgetInfo || (() => {}),
+    onGadgetInfo: prepareGadgetInfo || (() => { }),
     onReady: () => setLoading(false),
     onDone: () => {
       setLoading(false);
@@ -242,15 +252,7 @@ export const createGadgetCallbacks = (
       const dataToProcess = Array.isArray(dataFromGadget) ? dataFromGadget : [dataFromGadget];
       setLoading(false);
       dataToProcess.forEach(data =>
-        processGadgetData(
-          data,
-          dsID,
-          dataColumns[dsID] || [],
-          node,
-          setGadgetData,
-          buffer,
-          columnMeta?.[dsID]
-        )
+        processGadgetData(data, dsID, dataColumns[dsID] || [], node, setGadgetData, buffer)
       );
     },
   };
