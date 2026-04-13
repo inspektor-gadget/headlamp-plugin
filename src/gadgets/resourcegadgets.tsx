@@ -115,7 +115,8 @@ const RunningGadgetsForResource = ({ resource, open }) => {
         },
         (err: Error) => {
           enqueueSnackbar(
-            `Failed to delete "${instance.name || instanceToDelete.slice(-8)}": ${err?.message ?? String(err)
+            `Failed to delete "${instance.name || instanceToDelete.slice(-8)}": ${
+              err?.message ?? String(err)
             }`,
             { variant: 'error' }
           );
