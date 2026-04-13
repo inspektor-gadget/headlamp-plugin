@@ -262,7 +262,7 @@ const usePortForward = (url: string | null): PortForwardState => {
 
         socketRef.current[url] = socket;
 
-        // Directly watch the raw WebSocket close/error events.
+        // Directly watch the raw WebSocket close event.
         // wrapWebSocket's onClose is only called for IG protocol-level events;
         // it does NOT fire when the underlying transport drops (pod deleted, network
         // failure, etc.). This listener catches those transport-level closures so
@@ -275,6 +275,7 @@ const usePortForward = (url: string | null): PortForwardState => {
               ig: null,
               error: new Error('Connection to gadget pod lost'),
             }));
+            cleanup(url);
           }
         });
 

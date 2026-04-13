@@ -123,10 +123,15 @@ export default function GenericGadgetRenderer({
     if (isConnected) {
       wasConnectedRef.current = true;
     } else if (wasConnectedRef.current && gadgetRunningStatus) {
-      setStreamError?.('Connection to gadget pod lost');
+      const identifier = podSelected || node;
+      setStreamError?.(
+        identifier
+          ? `Connection to gadget pod lost: ${identifier}`
+          : 'Connection to gadget pod lost'
+      );
       wasConnectedRef.current = false;
     }
-  }, [isConnected, gadgetRunningStatus]);
+  }, [isConnected, gadgetRunningStatus, podSelected, node]);
 
   useEffect(() => {
     setLoading(false);
