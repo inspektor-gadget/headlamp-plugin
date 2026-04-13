@@ -230,13 +230,13 @@ function GadgetRenderer({
       () => {
         const newID = imageName + '-custom-' + generateRandomString();
 
-        updateInstanceFromStorage(id, 'None', false);
         const allInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
         const instance = allInstances.find(instance => instance.id === id);
+        const filteredInstances = allInstances.filter(instance => instance.id !== id);
         localStorage.setItem(
           'headlamp_embeded_resources',
           JSON.stringify([
-            ...allInstances,
+            ...filteredInstances,
             {
               id: newID,
               name: instance.name,

@@ -10,6 +10,7 @@ import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Button } from '@mui/material';
 import { Box, Tooltip } from '@mui/material';
+import { useSnackbar } from 'notistack';
 import React, { useEffect, useState } from 'react';
 import { IGNotFound } from '../common/NotFound';
 import { isIGInstalled, useGadgetConn } from './conn';
@@ -17,13 +18,15 @@ import { isIGInstalled, useGadgetConn } from './conn';
 export function BackgroundRunning({ embedDialogOpen = false }) {
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
-  const [runningInstances, setRunningInstances] = React.useState(null);
+  const [runningInstances, setRunningInstances] = React.useState<any[] | null>(null);
   const [openConfirmDialog, setOpenConfirmDialog] = React.useState(false);
+
   const isIGInstallationFound = isIGInstalled(pods);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const ig = useGadgetConn(nodes, pods);
 
   const cluster = getCluster();
+  const { enqueueSnackbar } = useSnackbar();
 
   const tableData = React.useMemo(() => {
     return runningInstances?.filter(instance => instance.cluster === cluster) || [];
@@ -80,37 +83,78 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
     const selectedRows = tableData.filter((_, index) => rowSelection[index]);
     const selectedIds = new Set<string>(selectedRows.map((r: any) => r.id as string));
 
-    const localStorageInstances = JSON.parse(
-      localStorage.getItem('headlamp_embeded_resources') || '[]'
-    );
 
-    let updatedInstances = [...localStorageInstances];
-    let updatedDisplayInstances = [...(runningInstances || [])];
+
+    // Separate instances that need an API call (headless) from those that don't
+    const toDeleteLocally = new Set<string>();
+    const toDeleteRemotely: { id: string; name: string }[] = [];
 
     selectedIds.forEach(id => {
-      const instance = runningInstances.find(instance => instance.id === id);
+      const instance = (runningInstances || []).find(i => i.id === id);
       if (!instance) return;
-
-      if (instance.isHeadless !== undefined && !instance.isHeadless) {
-        updatedInstances = updatedInstances.filter(i => i.id !== id);
+      if (instance.isHeadless) {
+        toDeleteRemotely.push({ id, name: instance.name || id.slice(-8) });
       } else {
-        ig.deleteGadgetInstance(
-          id,
-          () => {},
-          err => {
-            console.error('Error deleting instance:', err);
-          }
-        );
-        updatedInstances = updatedInstances.filter(i => i.id !== id);
+        toDeleteLocally.add(id);
       }
-
-      updatedDisplayInstances = updatedDisplayInstances.filter(i => i.id !== id);
     });
 
-    localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
-    setRunningInstances(updatedDisplayInstances);
-    setRowSelection({}); // Reset row selection after updating data
-    setOpenConfirmDialog(false);
+    // Commit removals and close dialog once all async calls have settled
+    const remoteDeletedIds = new Set<string>();
+    let settledCount = 0;
+    const totalRemote = toDeleteRemotely.length;
+
+    const finalizeDelete = () => {
+      const allDeletedIds = new Set([...toDeleteLocally, ...remoteDeletedIds]);
+      let latestLocalStorageInstances: any[] = [];
+      try {
+        const stored = localStorage.getItem('headlamp_embeded_resources');
+        const parsed = stored ? JSON.parse(stored) : [];
+        latestLocalStorageInstances = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        latestLocalStorageInstances = [];
+      }
+      const updatedStorage = latestLocalStorageInstances.filter(i => !allDeletedIds.has(i.id));
+      localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedStorage));
+      setRunningInstances(prev => (prev || []).filter(i => !allDeletedIds.has(i.id)));
+      setRowSelection({});
+      setOpenConfirmDialog(false);
+    };
+
+    // No remote calls needed — finalize immediately
+    if (totalRemote === 0) {
+      finalizeDelete();
+      return;
+    }
+
+    if (!ig) {
+      enqueueSnackbar(
+        toDeleteLocally.size > 0
+          ? 'Not connected to gadget API. Local instances were deleted, but remote instances could not be deleted.'
+          : 'Not connected to gadget API. Remote instances could not be deleted. Please try again.',
+        { variant: 'error' }
+      );
+      finalizeDelete();
+      return;
+    }
+
+    toDeleteRemotely.forEach(({ id, name }) => {
+      ig.deleteGadgetInstance(
+        id,
+        () => {
+          remoteDeletedIds.add(id);
+          settledCount++;
+          if (settledCount === totalRemote) finalizeDelete();
+        },
+        (err: Error) => {
+          enqueueSnackbar(`Failed to delete "${name}": ${err?.message ?? String(err)}`, {
+            variant: 'error',
+          });
+          settledCount++;
+          if (settledCount === totalRemote) finalizeDelete();
+        }
+      );
+    });
   };
 
   if (pods === null) {
@@ -207,61 +251,61 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
           enableToolbarInternalActions={selectedCount === 0}
           {...(selectedCount > 0
             ? {
-                renderToolbarAlertBannerContent: ({ table }) => {
-                  const totalCount = table.getRowModel().rows.length;
-                  return (
+              renderToolbarAlertBannerContent: ({ table }) => {
+                const totalCount = table.getRowModel().rows.length;
+                return (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      paddingX: '1rem',
+                      paddingY: '0rem',
+                      width: '100%',
+                      height: '50px',
+                    }}
+                  >
                     <Box
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        paddingX: '1rem',
-                        paddingY: '0rem',
+                        justifyContent: 'space-between',
                         width: '100%',
-                        height: '50px',
                       }}
                     >
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          width: '100%',
-                        }}
-                      >
-                        <Box>
-                          {selectedCount} of {totalCount} row{totalCount > 1 ? 's' : ''} selected
-                        </Box>
-                        <Box>
-                          <Button
-                            sx={{
-                              cursor: 'pointer',
-                              color: '#3393DC',
-                              fontWeight: 500,
-                              textTransform: 'none',
-                              padding: 0,
-                              minWidth: 'unset',
-                            }}
-                            onClick={() => table.resetRowSelection()}
-                          >
-                            CLEAR SELECTION
-                          </Button>
-                        </Box>
+                      <Box>
+                        {selectedCount} of {totalCount} row{totalCount > 1 ? 's' : ''} selected
                       </Box>
-                      <Box ml={2}>
-                        <Tooltip title="Delete Instances">
-                          <Icon
-                            icon="mdi:delete"
-                            width="22px"
-                            height="22px"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => setOpenConfirmDialog(true)}
-                          />
-                        </Tooltip>
+                      <Box>
+                        <Button
+                          sx={{
+                            cursor: 'pointer',
+                            color: '#3393DC',
+                            fontWeight: 500,
+                            textTransform: 'none',
+                            padding: 0,
+                            minWidth: 'unset',
+                          }}
+                          onClick={() => table.resetRowSelection()}
+                        >
+                          CLEAR SELECTION
+                        </Button>
                       </Box>
                     </Box>
-                  );
-                },
-              }
+                    <Box ml={2}>
+                      <Tooltip title="Delete Instances">
+                        <Icon
+                          icon="mdi:delete"
+                          width="22px"
+                          height="22px"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setOpenConfirmDialog(true)}
+                        />
+                      </Tooltip>
+                    </Box>
+                  </Box>
+                );
+              },
+            }
             : {})}
         />
       </SectionBox>

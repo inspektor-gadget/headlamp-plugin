@@ -12,6 +12,7 @@ import {
   Paper,
   Typography,
 } from '@mui/material';
+import { useSnackbar } from 'notistack';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../common/helpers';
 import { MetricChart } from '../common/MetricChart';
@@ -26,9 +27,10 @@ function getGadgetPodForThisResourceNode(node, pods) {
 
 const RunningGadgetsForResource = ({ resource, open }) => {
   const [pods] = K8s.ResourceClasses.Pod.useList();
-  const [gadgetInstances, setGadgetInstances] = useState(null);
+  const [gadgetInstances, setGadgetInstances] = useState<any[] | null>(null);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
-  const [instanceToDelete, setInstanceToDelete] = useState(null);
+  const [instanceToDelete, setInstanceToDelete] = useState<string | null>(null);
+  const { enqueueSnackbar } = useSnackbar();
 
   const node =
     resource?.jsonData.kind === 'Node'
@@ -69,54 +71,55 @@ const RunningGadgetsForResource = ({ resource, open }) => {
   const confirmDeleteInstance = () => {
     if (!instanceToDelete) return;
 
-    // Get a copy of the current localStorage
-    const localStorageInstances = JSON.parse(
-      localStorage.getItem('headlamp_embeded_resources') || '[]'
-    );
-
-    // Find the instance to delete in the current state
-    const instance = gadgetInstances.find(instance => instance.id === instanceToDelete);
+    const instance = (gadgetInstances || []).find(i => i.id === instanceToDelete);
     if (!instance) {
-      console.error('Instance to delete not found in state.');
       setInstanceToDelete(null);
       setOpenConfirmDialog(false);
       return;
     }
 
-    let updatedLocalStorageInstances = [...localStorageInstances];
+    const removeFromStorage = (id: string) => {
+      let current: any[] = [];
+      try {
+        const stored = localStorage.getItem('headlamp_embeded_resources');
+        const parsed = stored ? JSON.parse(stored) : [];
+        current = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        current = [];
+      }
+      const updated = current.filter(i => i.id !== id);
+      localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updated));
+      setGadgetInstances(prev => (prev || []).filter(i => i.id !== id));
+      setInstanceToDelete(null);
+      setOpenConfirmDialog(false);
+    };
 
     if (instance.isHeadless) {
-      // Handle remote instance deletion
+      if (!ig) {
+        enqueueSnackbar('Not connected to gadget API. Please try again.', { variant: 'error' });
+        setInstanceToDelete(null);
+        setOpenConfirmDialog(false);
+        return;
+      }
       ig.deleteGadgetInstance(
         instanceToDelete,
         () => {
-          console.log('Remote instance deleted:', instanceToDelete);
+          removeFromStorage(instanceToDelete);
         },
-        err => {
-          console.error('Error deleting remote instance:', err);
+        (err: Error) => {
+          enqueueSnackbar(
+            `Failed to delete "${instance.name || instanceToDelete.slice(-8)}": ${
+              err?.message ?? String(err)
+            }`,
+            { variant: 'error' }
+          );
+          setInstanceToDelete(null);
+          setOpenConfirmDialog(false);
         }
       );
+    } else {
+      removeFromStorage(instanceToDelete);
     }
-
-    console.log('Deleting instance:', instanceToDelete);
-
-    // Remove the instance from localStorage
-    updatedLocalStorageInstances = updatedLocalStorageInstances.filter(
-      i => i.id !== instanceToDelete
-    );
-
-    // Update localStorage and state
-    localStorage.setItem(
-      'headlamp_embeded_resources',
-      JSON.stringify(updatedLocalStorageInstances)
-    );
-
-    setGadgetInstances(prevInstances =>
-      prevInstances.filter(instance => instance.id !== instanceToDelete)
-    );
-
-    setInstanceToDelete(null);
-    setOpenConfirmDialog(false);
   };
 
   // Group instances by image name
