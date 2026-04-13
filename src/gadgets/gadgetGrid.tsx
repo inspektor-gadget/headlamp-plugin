@@ -301,7 +301,7 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
                           generateRandomString(),
                         gadgetConfig: {
                           imageName: gadget.display_name?.split(' ').join('_'),
-                          version: 1,
+                          version: gadget.version,
                           paramValues: {},
                         },
                         description: gadget.description,

@@ -25,6 +25,21 @@ export function getProperty(obj, key) {
   return keys.reduce((acc, curr) => acc && acc[curr], obj);
 }
 
+export const isLatestTag = (imageURL: string) => {
+  const imageTag = imageURL.split(':')[1];
+
+  return imageTag === 'latest';
+};
+
+export function extractVersionFromImage(imageURL: string): string {
+  const tag = imageURL.split(':')[1];
+
+  if (!tag || tag === 'latest') return '1';
+
+  const versionMatch = tag.match(/v?(\d+\.\d+\.\d+)/);
+
+  return versionMatch ? versionMatch[1] : '1';
+}
 export const createIdentifier = (identifier, value) =>
   `headlamp_${JSON.stringify({ [identifier]: value })}`;
 
@@ -79,4 +94,8 @@ export function getServerURL() {
     return 'http://localhost:64446';
   }
   return 'http://localhost:4466';
+}
+
+export function normalizeName(name: string) {
+  return name.toLowerCase().replace(/[_\s]/g, '-').trim();
 }

@@ -2,9 +2,12 @@ import { Icon } from '@iconify/react';
 import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Box, Button, TextField } from '@mui/material';
 import { useSnackbar } from 'notistack';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { generateRandomString } from '../common/helpers';
+import { fetchGadgetVersionFromArtifactHub } from '../api/artifacthub';
+import { isLatestTag } from './helper';
+import { extractVersionFromImage } from './helper';
 
 export function GadgetInput({ resource, onAddGadget }) {
   const [imageURL, setImageURL] = useState('');
@@ -12,13 +15,21 @@ export function GadgetInput({ resource, onAddGadget }) {
   const { enqueueSnackbar } = useSnackbar();
   const encodedImageURL = encodeURIComponent(imageURL);
 
-  const handleRun = () => {
+  const handleRun = async () => {
+    let version: string;
+
+    if (isLatestTag(imageURL)) {
+      version = await fetchGadgetVersionFromArtifactHub(imageURL);
+    } else {
+      version = extractVersionFromImage(imageURL);
+    }
+
     const row: {
       id: string;
       isHeadless: boolean;
       gadgetConfig: {
         imageName: string;
-        version: number;
+        version: string;
         paramValues: object;
       };
       name: string;
@@ -30,7 +41,7 @@ export function GadgetInput({ resource, onAddGadget }) {
       isHeadless: undefined,
       gadgetConfig: {
         imageName: encodedImageURL,
-        version: 1,
+        version: version,
         paramValues: {},
       },
       name: 'gadget-custom-' + generateRandomString(),
