@@ -9,6 +9,41 @@ export type FieldMeta = { type?: string; annotations?: Record<string, string> };
 export type ColumnMeta = Record<string, FieldMeta>;
 export type AllColumnMeta = Record<string, ColumnMeta>;
 
+export function getSortedColumns(
+  columns: string[],
+  annotations?: Record<string, string>
+): string[] {
+  const preferredOrderStr = annotations?.['columns'];
+  if (preferredOrderStr) {
+    const preferredOrder = preferredOrderStr.split(',').map(s => s.trim());
+    return [...columns].sort((a, b) => {
+      const idxA = preferredOrder.indexOf(a);
+      const idxB = preferredOrder.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return 0;
+    });
+  }
+
+  // Fallback: prioritize k8s columns
+  const k8sOrder = ['k8s.node', 'k8s.namespace', 'k8s.podName', 'k8s.containerName'];
+  return [...columns].sort((a, b) => {
+    const isAK8s = a.startsWith('k8s.');
+    const isBK8s = b.startsWith('k8s.');
+    if (isAK8s && !isBK8s) return -1;
+    if (!isAK8s && isBK8s) return 1;
+    if (isAK8s && isBK8s) {
+      const idxA = k8sOrder.indexOf(a);
+      const idxB = k8sOrder.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+    }
+    return 0;
+  });
+}
+
 /**
  * Format a nanosecond duration into a human-readable string.
  */

@@ -85,7 +85,6 @@ export function GadgetDescription({
     );
   }
 
-  console.log('enableHistoricalData', enableHistoricalData);
   return (
     <Card elevation={2} sx={{ mx: 'auto', mt: 2, mb: 2 }}>
       <CardHeader
@@ -179,6 +178,7 @@ export function GadgetDescription({
                       <Select
                         labelId="embed-type-label"
                         value={embedView}
+                        size="small"
                         label="Embed Type"
                         onChange={e => {
                           setEmbedView(e.target.value);

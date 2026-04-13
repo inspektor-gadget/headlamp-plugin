@@ -6,10 +6,11 @@ import {
   SectionBox,
   Table,
 } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Button } from '@mui/material';
 import { Box, Tooltip } from '@mui/material';
+import { useSnackbar } from 'notistack';
 import React, { useEffect, useState } from 'react';
 import { IGNotFound } from '../common/NotFound';
 import { isIGInstalled, useGadgetConn } from './conn';
@@ -17,13 +18,14 @@ import { isIGInstalled, useGadgetConn } from './conn';
 export function BackgroundRunning({ embedDialogOpen = false }) {
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
-  const [runningInstances, setRunningInstances] = React.useState(null);
+  const [runningInstances, setRunningInstances] = React.useState<any[] | null>(null);
   const [openConfirmDialog, setOpenConfirmDialog] = React.useState(false);
-  const [tableInstance, setTableInstance] = useState(null);
+  const [tableInstance, setTableInstance] = useState<any>(null);
   const isIGInstallationFound = isIGInstalled(pods);
   const [selectedCount, setSelectedCount] = useState(0);
   const ig = useGadgetConn(nodes, pods);
   const cluster = getCluster();
+  const { enqueueSnackbar } = useSnackbar();
 
   useEffect(() => {
     if (!ig) return;
@@ -73,39 +75,80 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   const handleDeleteInstances = () => {
     if (!tableInstance) return;
 
-    const selectedRows = tableInstance.getSelectedRowModel().rows;
-    const selectedIds = new Set(selectedRows.map(r => r.original.id));
-    const localStorageInstances = JSON.parse(
-      localStorage.getItem('headlamp_embeded_resources') || '[]'
-    );
+    const capturedTable = tableInstance;
+    const selectedRows = capturedTable.getSelectedRowModel().rows;
+    const selectedIds = new Set(selectedRows.map(r => r.original.id)) as Set<string>;
 
-    let updatedInstances = [...localStorageInstances];
-    let updatedDisplayInstances = [...(runningInstances || [])];
+    // Separate instances that need an API call (headless) from those that don't
+    const toDeleteLocally = new Set<string>();
+    const toDeleteRemotely: { id: string; name: string }[] = [];
 
     selectedIds.forEach(id => {
-      const instance = runningInstances.find(instance => instance.id === id);
+      const instance = (runningInstances || []).find(i => i.id === id);
       if (!instance) return;
-
-      if (instance.isHeadless !== undefined && !instance.isHeadless) {
-        updatedInstances = updatedInstances.filter(i => i.id !== id);
+      if (instance.isHeadless) {
+        toDeleteRemotely.push({ id, name: instance.name || id.slice(-8) });
       } else {
-        ig.deleteGadgetInstance(
-          id,
-          () => {},
-          err => {
-            console.error('Error deleting instance:', err);
-          }
-        );
-        updatedInstances = updatedInstances.filter(i => i.id !== id);
+        toDeleteLocally.add(id);
       }
-
-      updatedDisplayInstances = updatedDisplayInstances.filter(i => i.id !== id);
     });
 
-    localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedInstances));
-    setRunningInstances(updatedDisplayInstances);
-    tableInstance.resetRowSelection(); // Reset row selection after updating data
-    setOpenConfirmDialog(false);
+    // Commit removals and close dialog once all async calls have settled
+    const remoteDeletedIds = new Set<string>();
+    let settledCount = 0;
+    const totalRemote = toDeleteRemotely.length;
+
+    const finalizeDelete = () => {
+      const allDeletedIds = new Set([...toDeleteLocally, ...remoteDeletedIds]);
+      let latestLocalStorageInstances: any[] = [];
+      try {
+        const stored = localStorage.getItem('headlamp_embeded_resources');
+        const parsed = stored ? JSON.parse(stored) : [];
+        latestLocalStorageInstances = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        latestLocalStorageInstances = [];
+      }
+      const updatedStorage = latestLocalStorageInstances.filter(i => !allDeletedIds.has(i.id));
+      localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedStorage));
+      setRunningInstances(prev => (prev || []).filter(i => !allDeletedIds.has(i.id)));
+      capturedTable.resetRowSelection();
+      setOpenConfirmDialog(false);
+    };
+
+    // No remote calls needed — finalize immediately
+    if (totalRemote === 0) {
+      finalizeDelete();
+      return;
+    }
+
+    if (!ig) {
+      enqueueSnackbar(
+        toDeleteLocally.size > 0
+          ? 'Not connected to gadget API. Local instances were deleted, but remote instances could not be deleted.'
+          : 'Not connected to gadget API. Remote instances could not be deleted. Please try again.',
+        { variant: 'error' }
+      );
+      finalizeDelete();
+      return;
+    }
+
+    toDeleteRemotely.forEach(({ id, name }) => {
+      ig.deleteGadgetInstance(
+        id,
+        () => {
+          remoteDeletedIds.add(id);
+          settledCount++;
+          if (settledCount === totalRemote) finalizeDelete();
+        },
+        (err: Error) => {
+          enqueueSnackbar(`Failed to delete "${name}": ${err?.message ?? String(err)}`, {
+            variant: 'error',
+          });
+          settledCount++;
+          if (settledCount === totalRemote) finalizeDelete();
+        }
+      );
+    });
   };
 
   if (pods === null) {
@@ -150,7 +193,19 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
     {
       id: 'Status',
       header: 'Status',
-      accessorFn: row => (row.isHeadless ? 'Running In Background' : 'Not Running'),
+      accessorFn: row => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box
+            sx={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              backgroundColor: row.isHeadless ? '#4caf50' : '#9e9e9e',
+            }}
+          />
+          {row.isHeadless ? 'Running' : 'Stopped'}
+        </Box>
+      ),
     },
     {
       id: 'embedded',

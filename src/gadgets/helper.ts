@@ -67,6 +67,7 @@ export function isElectron() {
 }
 
 export function isDockerDesktop(): boolean {
+  // @ts-expect-error
   if (window?.ddClient === undefined) {
     return false;
   }

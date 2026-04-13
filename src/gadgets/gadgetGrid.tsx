@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 import { Loader } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { getCluster, getClusterPrefixedPath } from '@kinvolk/headlamp-plugin/lib/Utils';
 import {
   Box,
@@ -163,7 +163,7 @@ export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resou
               height: '100%',
             }}
           >
-            <Loader />
+            <Loader title="" />
           </Box>
         </Box>
       </>
@@ -225,14 +225,13 @@ export function GadgetCardEmbedWrapper({ gadget, embedDialogOpen, onClose, resou
         <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
           {gadgetInfo ? (
             <GadgetCreationStepper
-              ig={ig}
               imageName={gadget?.display_name.split(' ').join('_')}
               enableEmbed
               gadgetInfo={gadgetInfo}
               resource={resource}
             />
           ) : (
-            <Loader />
+            <Loader title="Loading Gadget Info" />
           )}
         </Box>
       </Box>
@@ -356,10 +355,13 @@ const GadgetCard = ({ gadget, onEmbedClick, resource = null }) => {
 const StepContent = ({ activeStep, setActiveStep, resource, gadgetInfo, imageName }) => {
   const [currentView, setCurrentView] = useState('');
   const [filters, setFilters] = useState({});
+  const isNamespaceResoruce = resource?.jsonData?.kind === 'Namespace';
   const commonProps = {
     config: gadgetInfo,
-    namespace: resource?.jsonData?.metadata?.namespace,
-    pod: resource?.jsonData?.metadata?.name,
+    namespace: isNamespaceResoruce
+      ? resource?.jsonData?.metadata?.name
+      : resource?.jsonData?.metadata?.namespace,
+    pod: resource?.jsonData?.kind === 'Pod' ? resource?.jsonData?.metadata?.name : undefined,
   };
   switch (activeStep) {
     case 0:
@@ -501,11 +503,7 @@ function CreateGadgetInstance({ gadgetInfo, resource, imageName, enableEmbed = f
   );
 }
 
-const GadgetGrid = ({
-  gadgets,
-  onEmbedClick,
-  resource = null,
-}) => {
+const GadgetGrid = ({ gadgets, onEmbedClick, resource = null }) => {
   if (gadgets.length === 0) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="100%">
@@ -584,14 +582,7 @@ function Gadget({ gadget, nodes, pods, resource }) {
   }
   return (
     gadgetInfo &&
-    ig && (
-      <CreateGadgetInstance
-        gadgetInfo={gadgetInfo}
-        resource={resource}
-        ig={ig}
-        imageName={imageName}
-      />
-    )
+    ig && <CreateGadgetInstance gadgetInfo={gadgetInfo} resource={resource} imageName={imageName} />
   );
 }
 
