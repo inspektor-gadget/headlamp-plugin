@@ -83,8 +83,6 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
     const selectedRows = tableData.filter((_, index) => rowSelection[index]);
     const selectedIds = new Set<string>(selectedRows.map((r: any) => r.id as string));
 
-
-
     // Separate instances that need an API call (headless) from those that don't
     const toDeleteLocally = new Set<string>();
     const toDeleteRemotely: { id: string; name: string }[] = [];
@@ -251,61 +249,61 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
           enableToolbarInternalActions={selectedCount === 0}
           {...(selectedCount > 0
             ? {
-              renderToolbarAlertBannerContent: ({ table }) => {
-                const totalCount = table.getRowModel().rows.length;
-                return (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      paddingX: '1rem',
-                      paddingY: '0rem',
-                      width: '100%',
-                      height: '50px',
-                    }}
-                  >
+                renderToolbarAlertBannerContent: ({ table }) => {
+                  const totalCount = table.getRowModel().rows.length;
+                  return (
                     <Box
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between',
+                        paddingX: '1rem',
+                        paddingY: '0rem',
                         width: '100%',
+                        height: '50px',
                       }}
                     >
-                      <Box>
-                        {selectedCount} of {totalCount} row{totalCount > 1 ? 's' : ''} selected
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%',
+                        }}
+                      >
+                        <Box>
+                          {selectedCount} of {totalCount} row{totalCount > 1 ? 's' : ''} selected
+                        </Box>
+                        <Box>
+                          <Button
+                            sx={{
+                              cursor: 'pointer',
+                              color: '#3393DC',
+                              fontWeight: 500,
+                              textTransform: 'none',
+                              padding: 0,
+                              minWidth: 'unset',
+                            }}
+                            onClick={() => table.resetRowSelection()}
+                          >
+                            CLEAR SELECTION
+                          </Button>
+                        </Box>
                       </Box>
-                      <Box>
-                        <Button
-                          sx={{
-                            cursor: 'pointer',
-                            color: '#3393DC',
-                            fontWeight: 500,
-                            textTransform: 'none',
-                            padding: 0,
-                            minWidth: 'unset',
-                          }}
-                          onClick={() => table.resetRowSelection()}
-                        >
-                          CLEAR SELECTION
-                        </Button>
+                      <Box ml={2}>
+                        <Tooltip title="Delete Instances">
+                          <Icon
+                            icon="mdi:delete"
+                            width="22px"
+                            height="22px"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => setOpenConfirmDialog(true)}
+                          />
+                        </Tooltip>
                       </Box>
                     </Box>
-                    <Box ml={2}>
-                      <Tooltip title="Delete Instances">
-                        <Icon
-                          icon="mdi:delete"
-                          width="22px"
-                          height="22px"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => setOpenConfirmDialog(true)}
-                        />
-                      </Tooltip>
-                    </Box>
-                  </Box>
-                );
-              },
-            }
+                  );
+                },
+              }
             : {})}
         />
       </SectionBox>
