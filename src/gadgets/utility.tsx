@@ -16,12 +16,15 @@ export function getSortedColumns(
   const preferredOrderStr = annotations?.['columns'];
   if (preferredOrderStr) {
     const preferredOrder = preferredOrderStr.split(',').map(s => s.trim());
+    const orderMap = new Map(preferredOrder.map((name, index) => [name, index]));
     return [...columns].sort((a, b) => {
-      const idxA = preferredOrder.indexOf(a);
-      const idxB = preferredOrder.indexOf(b);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
+      const idxA = orderMap.get(a);
+      const idxB = orderMap.get(b);
+      const hasA = idxA !== undefined;
+      const hasB = idxB !== undefined;
+      if (hasA && hasB) return idxA - idxB;
+      if (hasA) return -1;
+      if (hasB) return 1;
       return 0;
     });
   }

@@ -216,7 +216,6 @@ export default function GadgetFilters({
     ];
 
     const components: React.ReactNode[] = [];
-    console.log(uniqueParams, 'uniqueParams');
     if (!initialNamespace && allNamespacesParam) {
       components.push(
         <Box key={allNamespacesParam.key}>
@@ -257,11 +256,11 @@ export default function GadgetFilters({
               {groupName}
             </Typography>
           )}
-          <Box>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', m: -1 }}>
             {paramsInGroup.map((param, index) => {
               if (param.key === 'annotation' || param.key === 'annotate') {
                 return (
-                  <Box key={param.key + index}>
+                  <Box sx={{ width: '100%', p: 1 }} key={param.key + index}>
                     <AnnotationFilter
                       param={param}
                       setFilters={setFilters}
@@ -275,7 +274,7 @@ export default function GadgetFilters({
 
               if (param.key === 'sort' || param.key === 'sorting') {
                 return (
-                  <Box key={param.key + index}>
+                  <Box sx={{ width: { xs: '100%', md: '33.33%' }, p: 1 }} key={param.key + index}>
                     <SortingFilter
                       param={param}
                       config={{
@@ -289,7 +288,7 @@ export default function GadgetFilters({
               }
               if (param.typeHint === 'bool') {
                 return (
-                  <Box key={param.key + index}>
+                  <Box sx={{ width: { xs: '100%', md: '33.33%' }, p: 1 }} key={param.key + index}>
                     <CheckboxFilter
                       param={param}
                       config={{
@@ -303,7 +302,7 @@ export default function GadgetFilters({
 
               if (param.key === 'filter' || param.typeHint === 'filter') {
                 return (
-                  <Box key={param.key + index}>
+                  <Box sx={{ width: '100%', p: 1 }} key={param.key + index}>
                     <FilterComponent
                       param={param}
                       config={{
@@ -318,7 +317,7 @@ export default function GadgetFilters({
 
               if (param.valueHint?.startsWith('k8s:')) {
                 return (
-                  <Box key={param.key + index}>
+                  <Box sx={{ width: { xs: '100%', md: '50%' }, p: 1 }} key={param.key + index}>
                     <K8sFilterComponent
                       param={param}
                       config={{
@@ -334,7 +333,7 @@ export default function GadgetFilters({
               }
               if (param.possibleValues && param.possibleValues.length > 0) {
                 return (
-                  <Box key={param.key + index}>
+                  <Box sx={{ width: { xs: '100%', md: '50%' }, p: 1 }} key={param.key + index}>
                     <SelectFilter
                       param={param}
                       config={{
@@ -347,8 +346,7 @@ export default function GadgetFilters({
               }
 
               return (
-                <Box key={param.key + index}>
-                  {param.key}
+                <Box sx={{ width: { xs: '100%', md: '50%' }, p: 1 }} key={param.key + index}>
                   <FilterInput param={param} onChange={handleFilterChange} />
                 </Box>
               );
@@ -364,5 +362,9 @@ export default function GadgetFilters({
 
   if (!config || !filterComponents.length) return null;
 
-  return <Box p={2}>{filterComponents}</Box>;
+  return (
+    <Box p={2}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', m: -1 }}>{filterComponents}</Box>
+    </Box>
+  );
 }

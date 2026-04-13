@@ -20,12 +20,19 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const [runningInstances, setRunningInstances] = React.useState<any[] | null>(null);
   const [openConfirmDialog, setOpenConfirmDialog] = React.useState(false);
-  const [tableInstance, setTableInstance] = useState<any>(null);
+
   const isIGInstallationFound = isIGInstalled(pods);
-  const [selectedCount, setSelectedCount] = useState(0);
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const ig = useGadgetConn(nodes, pods);
+
   const cluster = getCluster();
   const { enqueueSnackbar } = useSnackbar();
+
+  const tableData = React.useMemo(() => {
+    return runningInstances?.filter(instance => instance.cluster === cluster) || [];
+  }, [runningInstances, cluster]);
+
+  const selectedCount = Object.keys(rowSelection).filter(key => rowSelection[key]).length;
 
   useEffect(() => {
     if (!ig) return;
@@ -73,11 +80,8 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   }, [ig, embedDialogOpen]);
 
   const handleDeleteInstances = () => {
-    if (!tableInstance) return;
-
-    const capturedTable = tableInstance;
-    const selectedRows = capturedTable.getSelectedRowModel().rows;
-    const selectedIds = new Set(selectedRows.map(r => r.original.id)) as Set<string>;
+    const selectedRows = tableData.filter((_, index) => rowSelection[index]);
+    const selectedIds = new Set<string>(selectedRows.map((r: any) => r.id as string));
 
     // Separate instances that need an API call (headless) from those that don't
     const toDeleteLocally = new Set<string>();
@@ -111,7 +115,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
       const updatedStorage = latestLocalStorageInstances.filter(i => !allDeletedIds.has(i.id));
       localStorage.setItem('headlamp_embeded_resources', JSON.stringify(updatedStorage));
       setRunningInstances(prev => (prev || []).filter(i => !allDeletedIds.has(i.id)));
-      capturedTable.resetRowSelection();
+      setRowSelection({});
       setOpenConfirmDialog(false);
     };
 
@@ -233,92 +237,75 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
         }}
       />
       <SectionBox>
-        {selectedCount === 0 ? (
-          <Table
-            data={runningInstances?.filter(instance => instance.cluster === cluster) || []}
-            columns={columns}
-            loading={runningInstances === null}
-            emptyMessage="No Embedded Instances"
-            enableRowSelection
-            positionToolbarAlertBanner="top"
-            renderTopToolbarCustomActions={({ table }) => {
-              setTableInstance(table);
-              setSelectedCount(table.getSelectedRowModel().rows.length);
-              return null;
-            }}
-          />
-        ) : (
-          <Table
-            data={runningInstances?.filter(instance => instance.cluster === cluster) || []}
-            columns={columns}
-            loading={runningInstances === null}
-            emptyMessage="No Embedded Instances"
-            enableRowSelection
-            enableToolbarInternalActions={false}
-            positionToolbarAlertBanner="top"
-            renderToolbarAlertBannerContent={({ table }) => {
-              const selectedCount = table.getSelectedRowModel().rows.length;
-              const totalCount = table.getRowModel().rows.length;
-              return (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    paddingX: '1rem',
-                    paddingY: '0rem',
-                    width: '100%',
-                    height: '50px',
-                  }}
-                >
-                  {/* Left: X of Y selected + Clear */}
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      width: '100%',
-                    }}
-                  >
-                    <Box>
-                      {selectedCount} of {totalCount} row{totalCount > 1 ? 's' : ''} selected
-                    </Box>
-                    <Box>
-                      <Button
+        <Table
+          data={tableData}
+          columns={columns}
+          loading={runningInstances === null}
+          emptyMessage="No Embedded Instances"
+          enableRowSelection
+          onRowSelectionChange={setRowSelection}
+          state={{ rowSelection }}
+          positionToolbarAlertBanner="top"
+          enableToolbarInternalActions={selectedCount === 0}
+          {...(selectedCount > 0
+            ? {
+                renderToolbarAlertBannerContent: ({ table }) => {
+                  const totalCount = table.getRowModel().rows.length;
+                  return (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingX: '1rem',
+                        paddingY: '0rem',
+                        width: '100%',
+                        height: '50px',
+                      }}
+                    >
+                      <Box
                         sx={{
-                          cursor: 'pointer',
-                          color: '#3393DC',
-                          fontWeight: 500,
-                          textTransform: 'none',
-                          padding: 0,
-                          minWidth: 'unset',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%',
                         }}
-                        onClick={() => table.resetRowSelection()}
                       >
-                        CLEAR SELECTION
-                      </Button>
+                        <Box>
+                          {selectedCount} of {totalCount} row{totalCount > 1 ? 's' : ''} selected
+                        </Box>
+                        <Box>
+                          <Button
+                            sx={{
+                              cursor: 'pointer',
+                              color: '#3393DC',
+                              fontWeight: 500,
+                              textTransform: 'none',
+                              padding: 0,
+                              minWidth: 'unset',
+                            }}
+                            onClick={() => table.resetRowSelection()}
+                          >
+                            CLEAR SELECTION
+                          </Button>
+                        </Box>
+                      </Box>
+                      <Box ml={2}>
+                        <Tooltip title="Delete Instances">
+                          <Icon
+                            icon="mdi:delete"
+                            width="22px"
+                            height="22px"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => setOpenConfirmDialog(true)}
+                          />
+                        </Tooltip>
+                      </Box>
                     </Box>
-                  </Box>
-                  <Box ml={2}>
-                    <Tooltip title="Delete Instances">
-                      <Icon
-                        icon="mdi:delete"
-                        width="22px"
-                        height="22px"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => setOpenConfirmDialog(true)}
-                      />
-                    </Tooltip>
-                  </Box>
-                </Box>
-              );
-            }}
-            renderTopToolbarCustomActions={({ table }) => {
-              setTableInstance(table);
-              setSelectedCount(table.getSelectedRowModel().rows.length);
-              return null;
-            }}
-          />
-        )}
+                  );
+                },
+              }
+            : {})}
+        />
       </SectionBox>
     </>
   );

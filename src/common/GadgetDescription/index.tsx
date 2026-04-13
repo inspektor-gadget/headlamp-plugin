@@ -6,7 +6,6 @@ import {
   CardHeader,
   Divider,
   FormControlLabel,
-  Grid,
   IconButton,
   MenuItem,
   Select,
@@ -127,8 +126,8 @@ export function GadgetDescription({
       <Divider />
 
       <CardContent>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', m: -1.5 }}>
+          <Box sx={{ width: { xs: '100%', md: '50%' }, p: 1.5 }}>
             <Box sx={{ p: 2 }} style={{ height: '150px' }}>
               <InlineIcon icon="mdi:information-outline" style={{ marginRight: 8 }} />
               <Typography
@@ -156,9 +155,9 @@ export function GadgetDescription({
                 </Typography>
               </Box>
             </Box>
-          </Grid>
+          </Box>
 
-          <Grid item xs={12} md={6}>
+          <Box sx={{ width: { xs: '100%', md: '50%' }, p: 1.5 }}>
             <Box sx={{ p: 2 }} style={{ height: '150px' }}>
               <InlineIcon icon="mdi:cog-outline" style={{ marginRight: 8 }} />
               <Typography
@@ -239,8 +238,8 @@ export function GadgetDescription({
                 />
               </Box>
             </Box>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </CardContent>
     </Card>
   );
