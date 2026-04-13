@@ -35,6 +35,7 @@
       "plugin:jsx-a11y/recommended"
     ]
   },
+  "eslintIgnore": ["src/gadgets/wasm.js"],
   "devDependencies": {
     "@kinvolk/headlamp-plugin": "^0.11.4"
   },
