@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createContext } from 'react';
-import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../helpers';
 import { AllColumnMeta } from '../../gadgets/utility';
+import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../helpers';
 
 // Create a context for sharing gadget-related state
 export const GadgetContext = createContext(null);

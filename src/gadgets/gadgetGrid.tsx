@@ -23,10 +23,8 @@ import {
   Stepper,
   Tab,
   Tabs,
-  TextField,
   Typography,
 } from '@mui/material';
-import { useSnackbar } from 'notistack';
 import { useEffect, useState } from 'react';
 import { generatePath, useHistory } from 'react-router-dom';
 import { GadgetBackgroundInstanceForm } from '../common/gadgetbackgroundinstanceform';
