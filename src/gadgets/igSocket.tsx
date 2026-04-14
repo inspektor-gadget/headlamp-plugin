@@ -115,7 +115,6 @@ async function getIG(): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
         .then(result => {
           go.run(result.instance)
             .then(() => {
-              // console.log('WebAssembly instance initialized successfully');
               console.error('Something went wrong while running the WebAssembly instance');
             })
             .catch(err => {

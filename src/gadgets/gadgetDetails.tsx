@@ -1,5 +1,5 @@
 import { ConfirmDialog, Loader, SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
-import K8s from '@kinvolk/headlamp-plugin/lib/K8s';
+import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { getCluster, getClusterPrefixedPath } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Box, Typography } from '@mui/material';
 import { useContext, useEffect, useState } from 'react';
@@ -18,7 +18,7 @@ export function GadgetDetails() {
   const gadgetState = useGadgetState();
 
   if (nodes === null || pods === null) {
-    return <Loader />;
+    return <Loader title="Loading Gadget Details" />;
   }
   const { imageName, id } = useParams<{ imageName: string; id: string }>();
   const embeddedInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
@@ -78,6 +78,7 @@ function GadgetRenderer({
     gadgetConn,
     setPodsSelected,
     nodesSelected,
+    open,
     setOpen,
     setNodesSelected,
     setGadgetConn,
@@ -229,13 +230,13 @@ function GadgetRenderer({
       () => {
         const newID = imageName + '-custom-' + generateRandomString();
 
-        updateInstanceFromStorage(id, 'None', false);
         const allInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
         const instance = allInstances.find(instance => instance.id === id);
+        const filteredInstances = allInstances.filter(instance => instance.id !== id);
         localStorage.setItem(
           'headlamp_embeded_resources',
           JSON.stringify([
-            ...allInstances,
+            ...filteredInstances,
             {
               id: newID,
               name: instance.name,

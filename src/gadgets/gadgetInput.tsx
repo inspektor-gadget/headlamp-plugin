@@ -59,10 +59,9 @@ export function GadgetInput({ resource, onAddGadget }) {
 
   return (
     <Box mt={2} display="flex" alignItems="center">
-        
       <TextField
         label="Gadget Image URL"
-        placeholder='ghcr.io/inspektor-gadget/gadget/trace_open:latest'
+        placeholder="ghcr.io/inspektor-gadget/gadget/trace_open:latest"
         variant="outlined"
         size="small"
         fullWidth

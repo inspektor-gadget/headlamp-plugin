@@ -39,12 +39,12 @@ export function GadgetCreation({ resource, open, setOpen }) {
               <Icon icon="mdi:close" />
             </IconButton>
           </Box>
-            <Box sx={{ mb:8, display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Typography variant="caption" sx={{ fontSize: '1rem' }}>
-                Enter a gadget image URL or discover gadgets from ArtifactHub
-              </Typography>
-              <GadgetInput resource={''} onAddGadget={() => {}} />
-            </Box>
+          <Box sx={{ mb: 8, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography variant="caption" sx={{ fontSize: '1rem' }}>
+              Enter a gadget image URL or discover gadgets from ArtifactHub
+            </Typography>
+            <GadgetInput resource={''} onAddGadget={() => {}} />
+          </Box>
           <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
             <GadgetGrid
               resource={resource}
