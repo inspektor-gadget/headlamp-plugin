@@ -11,7 +11,7 @@ export function useGadgetState() {
   const [podsSelected, setPodsSelected] = useState([]);
   const [gadgetData, setGadgetData] = useState({});
   const [gadgetRunningStatus, setGadgetRunningStatus] = useState(false);
-  const [dataColumns, setDataColumns] = useState({});
+  const [dataColumns, setDataColumns] = useState<Record<string, string[]>>({});
   const [gadgetConfig, setGadgetConfig] = useState(null);
   const [filters, setFilters] = useState({});
   const [podStreamsConnected, setPodStreamsConnected] = useState(0);
@@ -42,8 +42,8 @@ export function useGadgetState() {
           content: row,
         },
       ]);
-      // Set the newly added tab as active
-      setActiveTabIndex(dynamicTabs.length);
+      // Set the newly added tab as active (+2 for the two static tabs before dynamic tabs in the UI)
+      setActiveTabIndex(dynamicTabs.length + 2);
     } else {
       // If tab exists, just set it as active
       setActiveTabIndex(existingTabIndex + 2); // +2 to account for initial two tabs

@@ -12,6 +12,8 @@
     "storybook": "headlamp-plugin storybook",
     "package": "headlamp-plugin package",
     "test": "headlamp-plugin test",
+    "test:run": "vitest run -c node_modules/@kinvolk/headlamp-plugin/config/vite.config.mjs",
+    "test:coverage": "vitest run -c node_modules/@kinvolk/headlamp-plugin/config/vite.config.mjs --coverage --coverage.provider=istanbul",
     "storybook-build": "headlamp-plugin storybook-build",
     "i18n": "headlamp-plugin i18n"
   },
