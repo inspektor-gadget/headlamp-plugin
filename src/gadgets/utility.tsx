@@ -162,7 +162,7 @@ export const createGadgetCallbacks = (
     onDone: () => setLoading(false),
     onError: (error: any) => {
       console.error('Gadget error:', error);
-      onStreamError?.(String(error));
+      onStreamError?.(error instanceof Error ? error.message : JSON.stringify(error));
     },
     onData: (dsID: string, dataFromGadget: any) => {
       const dataToProcess = Array.isArray(dataFromGadget) ? dataFromGadget : [dataFromGadget];

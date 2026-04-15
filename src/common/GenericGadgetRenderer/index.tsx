@@ -107,7 +107,7 @@ export default function GenericGadgetRenderer({
         },
         err => {
           console.error('Gadget run error:', err);
-          setStreamError?.(String(err));
+          setStreamError?.(err instanceof Error ? err.message : JSON.stringify(err));
         }
       );
     }

@@ -155,7 +155,7 @@ const usePortForward = (url: string | null): PortForwardState => {
   /**
    * Cleans up resources for a specific URL
    */
-  const cleanup = useCallback((targetUrl: string) => {
+  const cleanup = useCallback((targetUrl: string, error?: Error) => {
     // Close and cleanup WebSocket
     if (socketRef.current[targetUrl]) {
       socketRef.current[targetUrl].close();
@@ -174,7 +174,7 @@ const usePortForward = (url: string | null): PortForwardState => {
         ...prev,
         isConnected: false,
         ig: null,
-        error: undefined,
+        error,
       }));
     }
   }, []);
@@ -214,7 +214,7 @@ const usePortForward = (url: string | null): PortForwardState => {
     return () => {
       mountedRef.current = false;
       // Cleanup all connections on unmount
-      Object.keys(socketRef.current).forEach(cleanup);
+      Object.keys(socketRef.current).forEach(key => cleanup(key));
     };
   }, [cleanup]);
 
@@ -229,7 +229,7 @@ const usePortForward = (url: string | null): PortForwardState => {
         isConnected: false,
         error: undefined,
       });
-      Object.keys(socketRef.current).forEach(cleanup);
+      Object.keys(socketRef.current).forEach(key => cleanup(key));
       return;
     }
 
@@ -269,13 +269,7 @@ const usePortForward = (url: string | null): PortForwardState => {
         // isConnected correctly reflects the actual connection state.
         socket.addEventListener('close', () => {
           if (isCurrentRequest && mountedRef.current) {
-            setState(prev => ({
-              ...prev,
-              isConnected: false,
-              ig: null,
-              error: new Error('Connection to gadget pod lost'),
-            }));
-            cleanup(url);
+            cleanup(url, new Error('Connection to gadget pod lost'));
           }
         });
 
