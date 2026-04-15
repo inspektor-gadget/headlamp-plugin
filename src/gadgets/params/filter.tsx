@@ -58,7 +58,25 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
     }
 
     const ops = ['==', '!=', '<=', '>=', '~=', '<', '>'];
-    const parts = currentValue.split(/(?<!\\),/);
+    // State-machine split on unescaped commas.
+    // The escaping scheme encodes \ as \\ and , as \,, so a backslash is always
+    // followed by another character as a pair. A comma after \\ is therefore a
+    // true delimiter (even backslash count), not an escaped comma.
+    // The lookbehind /(?<!\\),/ fails for this case, so we scan manually.
+    const parts: string[] = [];
+    let segment = '';
+    for (let i = 0; i < currentValue.length; i++) {
+      if (currentValue[i] === '\\' && i + 1 < currentValue.length) {
+        segment += currentValue[i] + currentValue[i + 1];
+        i++;
+      } else if (currentValue[i] === ',') {
+        parts.push(segment);
+        segment = '';
+      } else {
+        segment += currentValue[i];
+      }
+    }
+    parts.push(segment);
     const parsedFilters = parts
       .map(part => {
         for (const op of ops) {

@@ -166,6 +166,7 @@ export default function GadgetFilters({
     (key: string, value: string | undefined) => {
       if (!value) {
         setFilters(prev => {
+          if (!(key in prev)) return prev;
           const newFilters = { ...prev };
           delete newFilters[key];
           return newFilters;
