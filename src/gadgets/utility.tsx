@@ -133,6 +133,8 @@ export const processGadgetData = (
       },
     }));
   } else {
+    // keep raw event for the detail inspector as a JSON string to reduce memory overhead
+    massagedData.__raw = JSON.stringify(data);
     setBufferedGadgetData(prevData => {
       const newData = [...(prevData[dsID] || []), massagedData];
       return {
