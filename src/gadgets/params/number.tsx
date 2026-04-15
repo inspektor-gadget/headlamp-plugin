@@ -4,7 +4,7 @@ import Title from './title'; // Assuming you've converted the Title component to
 
 const NumberFilter = ({ param, config }) => {
   const handleChange = event => {
-    config.set(param, event.target.value);
+    config.set(event.target.value);
   };
 
   return (
@@ -17,12 +17,11 @@ const NumberFilter = ({ param, config }) => {
         fullWidth
         variant="outlined"
         placeholder={param.defaultValue}
-        value={config.get(param) || ''}
+        value={config.get() || ''}
         onChange={handleChange}
         InputProps={{
           style: {
-            color: 'white',
-            borderRadius: '0.25rem', // This is equivalent to rounded
+            borderRadius: '0.25rem',
           },
         }}
       />

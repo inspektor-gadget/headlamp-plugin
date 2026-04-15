@@ -9,7 +9,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DataSource } from 'src/types';
 // Assuming you've converted the Title component to React
 
@@ -26,6 +26,10 @@ const operations = [
 const FilterComponent = ({ param, config, gadgetConfig }) => {
   const [filters, setFilters] = useState([]);
   const [expanded, setExpanded] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  // Tracks when init parsing found a non-empty config value but zero recognized fields.
+  // Prevents the sync effect from wiping the stored config on mount.
+  const parseFailed = useRef(false);
   const maxDescriptionLength = 100; // Characters before collapsing
   const shouldCollapse = param.description && param.description.length > maxDescriptionLength;
 
@@ -41,19 +45,87 @@ const FilterComponent = ({ param, config, gadgetConfig }) => {
     return tmpFields;
   }, [gadgetConfig.dataSources]);
 
+  // Initialization effect: parse existing config value into local state so the UI
+  // reflects any filter that was already set before this component mounted.
   useEffect(() => {
+    if (initialized) return;
+    if (!fields || fields.length === 0) return;
+
+    const currentValue = config.get();
+    if (!currentValue) {
+      setInitialized(true);
+      return;
+    }
+
+    const ops = ['==', '!=', '<=', '>=', '~=', '<', '>'];
+    // State-machine split on unescaped commas.
+    // The escaping scheme encodes \ as \\ and , as \,, so a backslash is always
+    // followed by another character as a pair. A comma after \\ is therefore a
+    // true delimiter (even backslash count), not an escaped comma.
+    // The lookbehind /(?<!\\),/ fails for this case, so we scan manually.
+    const parts: string[] = [];
+    let segment = '';
+    for (let i = 0; i < currentValue.length; i++) {
+      if (currentValue[i] === '\\' && i + 1 < currentValue.length) {
+        segment += currentValue[i] + currentValue[i + 1];
+        i++;
+      } else if (currentValue[i] === ',') {
+        parts.push(segment);
+        segment = '';
+      } else {
+        segment += currentValue[i];
+      }
+    }
+    parts.push(segment);
+    const parsedFilters = parts
+      .map(part => {
+        for (const op of ops) {
+          const idx = part.indexOf(op);
+          if (idx > 0) {
+            const key = part.slice(0, idx);
+            const value = part
+              .slice(idx + op.length)
+              .replace(/\\,/g, ',')
+              .replace(/\\\\/g, '\\');
+            if (fields.find(f => `${f.ds}:${f.fullName}` === key)) {
+              return { key, op, value };
+            }
+          }
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    if (parsedFilters.length > 0) {
+      setFilters(parsedFilters);
+    } else {
+      // currentValue was non-empty but no field keys matched — mark so the sync
+      // effect does not wipe the original config value on mount.
+      parseFailed.current = true;
+    }
+    setInitialized(true);
+  }, [config.get, fields, initialized]);
+
+  // Sync effect: serialize local filter state back to config whenever user edits.
+  useEffect(() => {
+    if (!initialized) return;
     const res = filters
       .map(f => {
         return `${f.key}${f.op}${f.value?.replace(/\\/g, '\\\\').replace(/,/g, '\\,') || ''}`;
       })
       .join(',');
     if (filters.length === 0) {
-      // dont' set this
-      config.set(undefined);
+      // Only clear the stored config when the user explicitly removed all filters.
+      // If parseFailed, the empty state is from init failing to match field keys —
+      // the original config value should be preserved.
+      if (!parseFailed.current) {
+        config.set(undefined);
+      }
     } else {
+      parseFailed.current = false;
       config.set(res);
     }
-  }, [filters, param, config]);
+  }, [filters, config.set, initialized]);
 
   const handleFilterChange = (index, field, value) => {
     setFilters(prevFilters => {

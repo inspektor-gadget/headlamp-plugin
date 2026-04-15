@@ -1,6 +1,6 @@
 import { Icon } from '@iconify/react';
 import { Box, Button, IconButton, MenuItem, Select, Typography } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { DataSource } from 'src/types';
 import Title from './title'; // Assuming you've converted the Title component to React
 
@@ -11,6 +11,10 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
   };
 
   const [filters, setFilters] = useState([]);
+  const [initialized, setInitialized] = useState(false);
+  // Tracks when init parsing found a non-empty config value but zero recognized fields.
+  // Prevents the sync effect from wiping the stored config on mount.
+  const parseFailed = useRef(false);
 
   const fields = React.useMemo(() => {
     const gadgetInfo = gadgetConfig.dataSources;
@@ -23,9 +27,57 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
       });
     });
     return tmpFields;
-  }, []);
+  }, [gadgetConfig.dataSources]);
 
   useEffect(() => {
+    if (initialized) {
+      return;
+    }
+
+    if (!fields || fields.length === 0) {
+      return;
+    }
+
+    const currentValue = typeof config.get === 'function' ? config.get() : undefined;
+
+    if (!currentValue) {
+      setInitialized(true);
+      return;
+    }
+
+    const parsedFilters = [];
+
+    currentValue.split(';').forEach(part => {
+      if (!part) return;
+      const [ds, fieldsPart] = part.split(':');
+      if (!ds || !fieldsPart) return;
+
+      fieldsPart.split(',').forEach(token => {
+        if (!token) return;
+        const sorting = token.startsWith('-') ? '-' : '';
+        const fieldName = sorting === '-' ? token.slice(1) : token;
+        const fieldObj = fields.find(f => f.ds === ds && f.field === fieldName);
+        if (fieldObj) {
+          parsedFilters.push({ sorting, field: fieldObj });
+        }
+      });
+    });
+
+    if (parsedFilters.length > 0) {
+      setFilters(parsedFilters);
+    } else {
+      // currentValue was non-empty but no stored fields matched the current fields list.
+      // Mark so the sync effect does not wipe the original config value on mount.
+      parseFailed.current = true;
+    }
+    setInitialized(true);
+  }, [config, fields, initialized]);
+
+  useEffect(() => {
+    if (!initialized) {
+      return;
+    }
+
     const dataSources = {};
     filters.forEach(f => {
       dataSources[f.field.ds] = [...(dataSources[f.field.ds] || []), f];
@@ -37,11 +89,17 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
       .join(';');
 
     if (filters.length === 0) {
-      config.set(undefined);
+      // Only clear the stored config when the user explicitly removed all sorts.
+      // If parseFailed, the empty state is from init failing to match field names —
+      // the original config value should be preserved.
+      if (!parseFailed.current) {
+        config.set(undefined);
+      }
     } else {
+      parseFailed.current = false;
       config.set(res);
     }
-  }, [filters, param, config]);
+  }, [filters, config, initialized]);
 
   const handleFieldChange = (index, newField) => {
     setFilters(prev => prev.map((f, i) => (i === index ? { ...f, field: newField } : f)));
@@ -58,6 +116,7 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
   };
 
   const addFilter = () => {
+    if (fields.length === 0) return;
     setFilters(prev => [...prev, { sorting: '', field: fields[0] }]);
   };
 
@@ -92,7 +151,12 @@ const SortingFilter = ({ param, config, gadgetConfig }) => {
             </IconButton>
           </Box>
         ))}
-        <Button variant="contained" onClick={addFilter} startIcon={<Typography>+</Typography>}>
+        <Button
+          variant="contained"
+          onClick={addFilter}
+          disabled={fields.length === 0}
+          startIcon={<Typography>+</Typography>}
+        >
           Add Sorting
         </Button>
       </Box>

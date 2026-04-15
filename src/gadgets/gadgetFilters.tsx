@@ -1,6 +1,7 @@
 import { Icon } from '@iconify/react';
 import {
   Box,
+  Button,
   Checkbox,
   FormControlLabel,
   InputAdornment,
@@ -9,7 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import Divider from '@mui/material/Divider';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { FILTERS_TYPE } from './filter_types';
 import { removeDuplicates } from './helper';
 import AnnotationFilter from './params/annotation';
@@ -18,6 +19,30 @@ import FilterComponent from './params/filter';
 import K8sFilterComponent from './params/k8sfilter';
 import SelectFilter from './params/select';
 import SortingFilter from './params/sortingfilter';
+
+/**
+ * Hook that returns a stable config object { get, set } for a given filter param.
+ * This prevents child components from re-rendering due to new object references.
+ */
+function useStableConfig(
+  filters: Record<string, string>,
+  handleFilterChange: (key: string, value: string | undefined) => void,
+  prefix: string,
+  key: string
+) {
+  const filterKey = prefix + key;
+  // Use a ref to hold the latest filters so `get` is stable but always reads current value
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
+  const get = useCallback(() => filtersRef.current[filterKey], [filterKey]);
+  const set = useCallback(
+    (value: string | undefined) => handleFilterChange(filterKey, value),
+    [filterKey, handleFilterChange]
+  );
+
+  return useMemo(() => ({ get, set }), [get, set]);
+}
 
 // Types for better type safety and documentation
 interface FilterParam {
@@ -38,7 +63,8 @@ interface GadgetFiltersProps {
   };
   setFilters: (func: (prev: Record<string, string>) => Record<string, string>) => void;
   filters: Record<string, string>;
-  onApplyFilters: () => void;
+  onApplyFilters?: () => void;
+  showApplyButton?: boolean;
   namespace?: string;
   pod?: string;
 }
@@ -133,11 +159,14 @@ export default function GadgetFilters({
   namespace: initialNamespace,
   pod: initialPod,
   filters,
+  onApplyFilters,
+  showApplyButton = false,
 }: GadgetFiltersProps) {
   const handleFilterChange = useCallback(
-    (key: string, value: string) => {
+    (key: string, value: string | undefined) => {
       if (!value) {
         setFilters(prev => {
+          if (!(key in prev)) return prev;
           const newFilters = { ...prev };
           delete newFilters[key];
           return newFilters;
@@ -180,189 +209,170 @@ export default function GadgetFilters({
     }
     if (
       (initialNamespace || initialPod) &&
+      allNamespacesParam &&
       filters[allNamespacesParam.prefix + allNamespacesParam.key] !== 'false'
     ) {
       handleFilterChange(allNamespacesParam.prefix + allNamespacesParam.key, 'false');
     }
-  }, [initialNamespace, initialPod, namespaceParam, allNamespacesParam, podParam]);
+  }, [
+    initialNamespace,
+    initialPod,
+    namespaceParam,
+    allNamespacesParam,
+    podParam,
+    handleFilterChange,
+  ]);
 
-  const filterComponents = useMemo(() => {
-    // Group params by their "group:" tag for sectioned display
+  const groupedParams = useMemo(() => {
     const groups: Record<string, FilterParam[]> = {};
 
+    // Derive new param objects for params missing typeHint — do not mutate originals
+    const typeHintOverrides: Record<string, string> = {
+      'otel-metrics-print-interval': 'string',
+      'runtime-containername': 'string',
+    };
+
     uniqueParams.forEach(param => {
-      // Special-case all-namespaces (handeled seperatly)
       if (param.key === 'all-namespaces') return;
 
-      const groupTag = param.tags?.find(tag => tag.startsWith('group:'));
+      const override = typeHintOverrides[param.key];
+      const resolvedParam = override ? { ...param, typeHint: override } : param;
 
+      const groupTag = resolvedParam.tags?.find(tag => tag.startsWith('group:'));
       const groupName = groupTag ? groupTag.replace('group:', '') : 'Other';
-
-      if (!groups[groupName]) {
-        groups[groupName] = [];
-      }
-      groups[groupName].push(param);
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(resolvedParam);
     });
 
-    // Desired order of groups;
-    const groupOrder = [
-      'Other',
-      'Data Collection',
-      'Data Filtering',
-      'eBPF',
-      'OCI',
-      'OpenTelemetry Metrics',
-      'Process',
-    ];
+    return groups;
+  }, [uniqueParams]);
 
-    const components: React.ReactNode[] = [];
-    console.log(uniqueParams, 'uniqueParams');
-    if (!initialNamespace && allNamespacesParam) {
-      components.push(
+  const groupOrder = [
+    'Other',
+    'Data Collection',
+    'Data Filtering',
+    'eBPF',
+    'OCI',
+    'OpenTelemetry Metrics',
+    'Process',
+  ];
+
+  const hasParams = groupOrder.some(g => groupedParams[g]?.length);
+
+  if (!config || (!hasParams && !(!initialNamespace && allNamespacesParam))) return null;
+
+  return (
+    <Box p={2}>
+      {!initialNamespace && allNamespacesParam && (
         <Box key={allNamespacesParam.key}>
-          <CheckboxFilter
+          <ParamFilterRenderer
             param={allNamespacesParam}
-            config={{
-              get: () => config[allNamespacesParam.prefix + allNamespacesParam.key],
-              set: value =>
-                handleFilterChange(allNamespacesParam.prefix + allNamespacesParam.key, value),
-            }}
+            filters={filters}
+            handleFilterChange={handleFilterChange}
+            gadgetConfig={config}
+            initialNamespace={initialNamespace}
+            initialPod={initialPod}
           />
         </Box>
-      );
-    }
-
-    // params that are missing typeHint frmo config
-    const otelMetricPrintIntervalParam = uniqueParams.find(
-      param => param.key === 'otel-metrics-print-interval'
-    );
-    const runtimeContainerNameParam = uniqueParams.find(
-      param => param.key === 'runtime-containername'
-    );
-    if (runtimeContainerNameParam) {
-      runtimeContainerNameParam.typeHint = 'string';
-    }
-    if (otelMetricPrintIntervalParam) {
-      otelMetricPrintIntervalParam.typeHint = 'string';
-    }
-
-    groupOrder.forEach(groupName => {
-      const paramsInGroup = groups[groupName];
-      if (!paramsInGroup || !paramsInGroup.length) return;
-
-      components.push(
-        <Box key={groupName} mt={2}>
-          {groupName !== 'Other' && (
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 800 }}>
-              {groupName}
-            </Typography>
-          )}
-          <Box>
-            {paramsInGroup.map((param, index) => {
-              if (param.key === 'annotation' || param.key === 'annotate') {
+      )}
+      {groupOrder.map(groupName => {
+        const paramsInGroup = groupedParams[groupName];
+        if (!paramsInGroup?.length) return null;
+        return (
+          <Box key={groupName} mt={2}>
+            {groupName !== 'Other' && (
+              <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 800 }}>
+                {groupName}
+              </Typography>
+            )}
+            <Box>
+              {paramsInGroup.map((param, index) => {
+                if (param.key === 'annotation' || param.key === 'annotate') {
+                  return (
+                    <Box key={param.key + index}>
+                      <AnnotationFilter
+                        param={param}
+                        setFilters={setFilters}
+                        filters={filters}
+                        // @ts-ignore
+                        dataSources={config.dataSources}
+                      />
+                    </Box>
+                  );
+                }
                 return (
                   <Box key={param.key + index}>
-                    <AnnotationFilter
+                    <ParamFilterRenderer
                       param={param}
-                      setFilters={setFilters}
                       filters={filters}
-                      // @ts-ignore
-                      dataSources={config.dataSources}
-                    />
-                  </Box>
-                );
-              }
-
-              if (param.key === 'sort' || param.key === 'sorting') {
-                return (
-                  <Box key={param.key + index}>
-                    <SortingFilter
-                      param={param}
-                      config={{
-                        get: () => config[param.prefix + param.key],
-                        set: value => handleFilterChange(param.prefix + param.key, value),
-                      }}
+                      handleFilterChange={handleFilterChange}
                       gadgetConfig={config}
+                      initialNamespace={initialNamespace}
+                      initialPod={initialPod}
                     />
                   </Box>
                 );
-              }
-              if (param.typeHint === 'bool') {
-                return (
-                  <Box key={param.key + index}>
-                    <CheckboxFilter
-                      param={param}
-                      config={{
-                        get: () => config[param.prefix + param.key],
-                        set: value => handleFilterChange(param.prefix + param.key, value),
-                      }}
-                    />
-                  </Box>
-                );
-              }
-
-              if (param.key === 'filter' || param.typeHint === 'filter') {
-                return (
-                  <Box key={param.key + index}>
-                    <FilterComponent
-                      param={param}
-                      config={{
-                        get: () => filters[param.prefix + param.key],
-                        set: value => handleFilterChange(param.prefix + param.key, value),
-                      }}
-                      gadgetConfig={config}
-                    />
-                  </Box>
-                );
-              }
-
-              if (param.valueHint?.startsWith('k8s:')) {
-                return (
-                  <Box key={param.key + index}>
-                    <K8sFilterComponent
-                      param={param}
-                      config={{
-                        get: () => filters[param.prefix + param.key],
-                        set: value => handleFilterChange(param.prefix + param.key, value),
-                      }}
-                      namespace={initialNamespace}
-                      pod={initialPod}
-                      gadgetConfig={config}
-                    />
-                  </Box>
-                );
-              }
-              if (param.possibleValues && param.possibleValues.length > 0) {
-                return (
-                  <Box key={param.key + index}>
-                    <SelectFilter
-                      param={param}
-                      config={{
-                        get: () => filters[param.prefix + param.key],
-                        set: value => handleFilterChange(param.prefix + param.key, value),
-                      }}
-                    />
-                  </Box>
-                );
-              }
-
-              return (
-                <Box key={param.key + index}>
-                  {param.key}
-                  <FilterInput param={param} onChange={handleFilterChange} />
-                </Box>
-              );
-            })}
+              })}
+            </Box>
+            <Divider sx={{ my: 2 }} />
           </Box>
-          <Divider sx={{ my: 2 }} />
+        );
+      })}
+      {showApplyButton && onApplyFilters && (
+        <Box display="flex" justifyContent="flex-end" mt={2}>
+          <Button variant="contained" color="primary" onClick={onApplyFilters}>
+            Apply Filters
+          </Button>
         </Box>
-      );
-    });
+      )}
+    </Box>
+  );
+}
 
-    return components;
-  }, [uniqueParams, handleFilterChange]);
+/**
+ * Renders a single param filter with a stable config object.
+ * Extracted as a component so useStableConfig hook can be called per-param.
+ */
+function ParamFilterRenderer({
+  param,
+  filters,
+  handleFilterChange,
+  gadgetConfig,
+  initialNamespace,
+  initialPod,
+}: {
+  param: FilterParam;
+  filters: Record<string, string>;
+  handleFilterChange: (key: string, value: string | undefined) => void;
+  gadgetConfig: any;
+  initialNamespace?: string;
+  initialPod?: string;
+}) {
+  const stableConfig = useStableConfig(filters, handleFilterChange, param.prefix, param.key);
 
-  if (!config || !filterComponents.length) return null;
+  if (param.key === 'sort' || param.key === 'sorting') {
+    return <SortingFilter param={param} config={stableConfig} gadgetConfig={gadgetConfig} />;
+  }
+  if (param.typeHint === 'bool') {
+    return <CheckboxFilter param={param} config={stableConfig} />;
+  }
+  if (param.key === 'filter' || param.typeHint === 'filter') {
+    return <FilterComponent param={param} config={stableConfig} gadgetConfig={gadgetConfig} />;
+  }
+  if (param.valueHint?.startsWith('k8s:')) {
+    return (
+      <K8sFilterComponent
+        param={param}
+        config={stableConfig}
+        namespace={initialNamespace ?? ''}
+        pod={initialPod ?? ''}
+        gadgetConfig={gadgetConfig}
+      />
+    );
+  }
+  if (param.possibleValues && param.possibleValues.length > 0) {
+    return <SelectFilter param={param} config={stableConfig} />;
+  }
 
-  return <Box p={2}>{filterComponents}</Box>;
+  return <FilterInput param={param} onChange={handleFilterChange} />;
 }
