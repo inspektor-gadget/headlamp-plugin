@@ -275,7 +275,8 @@ const usePortForward = (url: string | null): PortForwardState => {
           },
           onError: (error: Error) => {
             console.error(`IG connection error for ${url}:`, error);
-            if (mountedRef.current) {
+            cleanup(url);
+            if (isCurrentRequest && mountedRef.current) {
               setState(prev => ({
                 ...prev,
                 error,
@@ -283,17 +284,18 @@ const usePortForward = (url: string | null): PortForwardState => {
                 ig: null,
               }));
             }
-            cleanup(url);
           },
           onClose: () => {
             if (mountedRef.current) {
-              setState(prev => ({
-                ...prev,
-                isConnected: false,
-                ig: null,
-                error: new Error('Connection closed'),
-              }));
               cleanup(url);
+              if (isCurrentRequest) {
+                setState(prev => ({
+                  ...prev,
+                  isConnected: false,
+                  ig: null,
+                  error: new Error('Connection closed'),
+                }));
+              }
             }
           },
         });
