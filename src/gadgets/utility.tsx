@@ -153,13 +153,17 @@ export const createGadgetCallbacks = (
   setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>,
   setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>,
   prepareGadgetInfo?: (info: any) => void,
-  columnMeta?: AllColumnMeta
+  columnMeta?: AllColumnMeta,
+  onStreamError?: (msg: string) => void
 ) => {
   return {
     onGadgetInfo: prepareGadgetInfo || (() => {}),
     onReady: () => setLoading(false),
     onDone: () => setLoading(false),
-    onError: (error: any) => console.error('Gadget error:', error),
+    onError: (error: any) => {
+      console.error('Gadget error:', error);
+      onStreamError?.(error instanceof Error ? error.message : JSON.stringify(error));
+    },
     onData: (dsID: string, dataFromGadget: any) => {
       const dataToProcess = Array.isArray(dataFromGadget) ? dataFromGadget : [dataFromGadget];
       setLoading(false);

@@ -155,7 +155,7 @@ const usePortForward = (url: string | null): PortForwardState => {
   /**
    * Cleans up resources for a specific URL
    */
-  const cleanup = useCallback((targetUrl: string) => {
+  const cleanup = useCallback((targetUrl: string, error?: Error) => {
     // Close and cleanup WebSocket
     if (socketRef.current[targetUrl]) {
       socketRef.current[targetUrl].close();
@@ -174,7 +174,7 @@ const usePortForward = (url: string | null): PortForwardState => {
         ...prev,
         isConnected: false,
         ig: null,
-        error: undefined,
+        error,
       }));
     }
   }, []);
@@ -214,7 +214,7 @@ const usePortForward = (url: string | null): PortForwardState => {
     return () => {
       mountedRef.current = false;
       // Cleanup all connections on unmount
-      Object.keys(socketRef.current).forEach(cleanup);
+      Object.keys(socketRef.current).forEach(key => cleanup(key));
     };
   }, [cleanup]);
 
@@ -229,7 +229,7 @@ const usePortForward = (url: string | null): PortForwardState => {
         isConnected: false,
         error: undefined,
       });
-      Object.keys(socketRef.current).forEach(cleanup);
+      Object.keys(socketRef.current).forEach(key => cleanup(key));
       return;
     }
 
@@ -261,6 +261,17 @@ const usePortForward = (url: string | null): PortForwardState => {
         }
 
         socketRef.current[url] = socket;
+
+        // Directly watch the raw WebSocket close event.
+        // wrapWebSocket's onClose is only called for IG protocol-level events;
+        // it does NOT fire when the underlying transport drops (pod deleted, network
+        // failure, etc.). This listener catches those transport-level closures so
+        // isConnected correctly reflects the actual connection state.
+        socket.addEventListener('close', () => {
+          if (isCurrentRequest && mountedRef.current) {
+            cleanup(url, new Error('Connection to gadget pod lost'));
+          }
+        });
 
         // Initialize IG connection
         const igConnection = (window as any).wrapWebSocket(socket, {
