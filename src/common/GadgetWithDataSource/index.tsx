@@ -193,7 +193,13 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
       {inspectedRow && (
         <>
           <Box
+            role="button"
+            tabIndex={0}
+            aria-label="Close event details"
             onClick={() => setInspectedRow(null)}
+            onKeyDown={(e: React.KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') setInspectedRow(null);
+            }}
             sx={{
               position: 'fixed',
               top: 0,
@@ -202,9 +208,13 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
               height: '100%',
               backgroundColor: 'rgba(0,0,0,0.4)',
               zIndex: 1298,
+              cursor: 'default',
             }}
           />
           <Box
+            role="dialog"
+            aria-modal="true"
+            aria-label="Event details"
             sx={{
               position: 'fixed',
               top: 0,

@@ -91,7 +91,19 @@ export function EventDetailPanel({ row, onClose }: EventDetailPanelProps) {
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const rawData = row.__raw ?? row;
+  // __raw is stored as a JSON string (to keep memory footprint small); parse it back here
+  const rawData = useMemo<Record<string, any>>(() => {
+    const raw = row.__raw;
+    if (typeof raw === 'string') {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        // fall through
+      }
+    }
+    if (raw && typeof raw === 'object') return raw as Record<string, any>;
+    return row;
+  }, [row]);
   const subtitle = getEventSubtitle(rawData);
 
   // Memoize serialized JSON so both the raw view and copy handler share one serialization
