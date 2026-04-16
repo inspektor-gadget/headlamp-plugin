@@ -119,12 +119,12 @@ const K8sFilterComponent: React.FC<K8sFilterProps> = ({ param, config, namespace
     kind === 'namespace'
       ? 'Select namespaces...'
       : kind === 'pod'
-        ? 'Select pods...'
-        : kind === 'labels'
-          ? 'Select labels...'
-          : kind === 'container'
-            ? 'Select containers...'
-            : 'Select values...';
+      ? 'Select pods...'
+      : kind === 'labels'
+      ? 'Select labels...'
+      : kind === 'container'
+      ? 'Select containers...'
+      : 'Select values...';
 
   return (
     <Box my={1}>
@@ -150,8 +150,9 @@ const K8sFilterComponent: React.FC<K8sFilterProps> = ({ param, config, namespace
             {...params}
             label={param.title || param.key}
             placeholder={placeholder}
-            helperText={`Kubernetes ${kind + (kind.endsWith('s') ? '' : 's')
-              } to filter on. Supports ! negation.`}
+            helperText={`Kubernetes ${
+              kind + (kind.endsWith('s') ? '' : 's')
+            } to filter on. Supports ! negation.`}
           />
         )}
       />

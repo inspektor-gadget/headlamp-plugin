@@ -1,7 +1,7 @@
 import { Icon } from '@iconify/react';
 import { Box, Button, IconButton, MenuItem, Select, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
-import { DataSource } from 'src/types';
+import { DataSource } from '../../types';
 import Title from './title'; // Assuming you've converted the Title component to React
 
 const SortingFilter = ({ param, config, gadgetConfig }) => {
