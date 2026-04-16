@@ -9,7 +9,6 @@ import {
   CardContent,
   Chip,
   FormControl,
-  Grid,
   IconButton,
   InputLabel,
   List,
@@ -515,13 +514,13 @@ const GadgetGrid = ({ gadgets, onEmbedClick, resource = null }) => {
   }
 
   return (
-    <Grid container spacing={3}>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
       {gadgets.map(gadget => (
-        <Grid item xs={12} sm={6} md={4} key={gadget.package_id}>
+        <Box sx={{ flex: '1 1 calc(33.333% - 16px)', minWidth: 280 }} key={gadget.package_id}>
           <GadgetCard gadget={gadget} onEmbedClick={onEmbedClick} resource={resource} />
-        </Grid>
+        </Box>
       ))}
-    </Grid>
+    </Box>
   );
 };
 
