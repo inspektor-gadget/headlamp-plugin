@@ -4,9 +4,12 @@ import { Box } from '@mui/material';
 import { IGNotFound } from '../common/NotFound';
 import Gadget from '.';
 import { isIGInstalled } from './conn';
+import { IG_CONTAINER_KEY, IG_CONTAINER_VALUE } from './helper';
 
 export default function GadgetList() {
-  const [pods] = K8s.ResourceClasses.Pod.useList();
+  const [pods] = K8s.ResourceClasses.Pod.useList({
+    labelSelector: `${IG_CONTAINER_KEY}=${IG_CONTAINER_VALUE}`,
+  });
   const isIGInstallationFound = isIGInstalled(pods);
 
   if (pods === null) {

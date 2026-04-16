@@ -11,10 +11,13 @@ import GenericGadgetRenderer from '../common/GenericGadgetRenderer';
 import { generateRandomString, updateInstanceFromStorage } from '../common/helpers';
 import { NodeSelection } from '../common/NodeSelection';
 import { useGadgetConn } from './conn';
+import { IG_CONTAINER_KEY, IG_CONTAINER_VALUE } from './helper';
 
 export function GadgetDetails() {
   const [nodes] = K8s.ResourceClasses.Node.useList();
-  const [pods] = K8s.ResourceClasses.Pod.useList();
+  const [pods] = K8s.ResourceClasses.Pod.useList({
+    labelSelector: `${IG_CONTAINER_KEY}=${IG_CONTAINER_VALUE}`,
+  });
   const gadgetState = useGadgetState();
 
   if (nodes === null || pods === null) {
@@ -319,6 +322,7 @@ function GadgetRenderer({
               podsSelected={podsSelected}
               node={podSelected?.spec.nodeName}
               podSelected={podSelected?.jsonData.metadata.name}
+              podSelectedNamespace={podSelected?.jsonData.metadata.namespace}
               dataColumns={dataColumns}
               podStreamsConnected={podStreamsConnected}
               setPodStreamsConnected={setPodStreamsConnected}

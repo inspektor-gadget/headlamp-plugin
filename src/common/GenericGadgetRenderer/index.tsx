@@ -6,6 +6,7 @@ interface GenericGadgetRendererProps {
   podsSelected: string[];
   podStreamsConnected: number;
   podSelected: string;
+  podSelectedNamespace?: string;
   setGadgetConfig: (config: any) => void;
   dataColumns: Record<string, string[]>;
   gadgetRunningStatus: boolean;
@@ -25,6 +26,7 @@ export default function GenericGadgetRenderer({
   podsSelected,
   podStreamsConnected,
   podSelected,
+  podSelectedNamespace,
   dataColumns,
   gadgetRunningStatus,
   filters,
@@ -39,7 +41,9 @@ export default function GenericGadgetRenderer({
   columnMeta,
 }: GenericGadgetRendererProps) {
   const { ig, isConnected } = usePortForward(
-    `api/v1/namespaces/gadget/pods/${podSelected}/portforward?ports=8080`
+    `api/v1/namespaces/${
+      podSelectedNamespace || 'gadget'
+    }/pods/${podSelected}/portforward?ports=8080`
   );
   const gadgetRef = useRef<any>(null);
   const gadgetRunningStatusRef = useRef(gadgetRunningStatus);

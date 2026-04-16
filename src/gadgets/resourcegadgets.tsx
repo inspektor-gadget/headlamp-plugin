@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../common/helpers';
 import { MetricChart } from '../common/MetricChart';
 import { isIGPod } from './helper';
+import { IG_CONTAINER_KEY, IG_CONTAINER_VALUE } from './helper';
 import usePortForward from './igSocket';
 import { AllColumnMeta, getSortedColumns, processGadgetData } from './utility';
 
@@ -26,7 +27,9 @@ function getGadgetPodForThisResourceNode(node, pods) {
 }
 
 const RunningGadgetsForResource = ({ resource, open }) => {
-  const [pods] = K8s.ResourceClasses.Pod.useList();
+  const [pods] = K8s.ResourceClasses.Pod.useList({
+    labelSelector: `${IG_CONTAINER_KEY}=${IG_CONTAINER_VALUE}`,
+  });
   const [gadgetInstances, setGadgetInstances] = useState<any[] | null>(null);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [instanceToDelete, setInstanceToDelete] = useState<string | null>(null);
@@ -39,7 +42,7 @@ const RunningGadgetsForResource = ({ resource, open }) => {
   const matchingGadgetPodForThisResourceNode = getGadgetPodForThisResourceNode(node, pods);
   const { ig } = usePortForward(
     matchingGadgetPodForThisResourceNode
-      ? `api/v1/namespaces/gadget/pods/${matchingGadgetPodForThisResourceNode?.jsonData.metadata.name}/portforward?ports=8080`
+      ? `api/v1/namespaces/${matchingGadgetPodForThisResourceNode.jsonData.metadata.namespace}/pods/${matchingGadgetPodForThisResourceNode.jsonData.metadata.name}/portforward?ports=8080`
       : ''
   );
   const cluster = getCluster();

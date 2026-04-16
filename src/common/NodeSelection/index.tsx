@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { isIGPod } from '../../gadgets/helper';
+import { IG_CONTAINER_KEY, IG_CONTAINER_VALUE } from '../../gadgets/helper';
 
 // Improved type definitions
 interface Node {
@@ -61,8 +62,10 @@ interface NodeSelectionProps {
 }
 
 export function NodeSelection(props: NodeSelectionProps) {
-  const [nodes] = K8s.ResourceClasses.Node.useList();
-  const [pods] = K8s.ResourceClasses.Pod.useList();
+  const [nodes] = K8s.ResourceClasses.Node.useList() as unknown as [Node[], any];
+  const [pods] = K8s.ResourceClasses.Pod.useList({
+    labelSelector: `${IG_CONTAINER_KEY}=${IG_CONTAINER_VALUE}`,
+  }) as unknown as [Pod[], any];
   const [finalNodes, setFinalNodes] = useState<Node[]>(null);
   const {
     setPodsSelected,

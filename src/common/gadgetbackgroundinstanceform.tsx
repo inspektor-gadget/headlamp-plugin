@@ -14,6 +14,7 @@ import { useSnackbar } from 'notistack';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { useGadgetConn } from '../gadgets/conn';
+import { IG_CONTAINER_KEY, IG_CONTAINER_VALUE } from '../gadgets/helper';
 import { generateRandomString } from './helpers';
 
 interface InstanceConfig {
@@ -63,7 +64,9 @@ export function GadgetBackgroundInstanceForm({
   const { enqueueSnackbar } = useSnackbar();
   const { imageName } = useParams<{ imageName: string }>();
   const [nodes] = K8s.ResourceClasses.Node.useList();
-  const [pods] = K8s.ResourceClasses.Pod.useList();
+  const [pods] = K8s.ResourceClasses.Pod.useList({
+    labelSelector: `${IG_CONTAINER_KEY}=${IG_CONTAINER_VALUE}`,
+  });
   const ig = useGadgetConn(nodes, pods);
   const cluster = getCluster();
 
