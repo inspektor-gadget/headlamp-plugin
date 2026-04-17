@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
+import { gadgetRegistry } from '../../gadgets/GadgetRegistry';
 import usePortForward from '../../gadgets/igSocket';
-import { AllColumnMeta, createGadgetCallbacks } from '../../gadgets/utility';
+import { createGadgetCallbacks } from '../../gadgets/utility';
 
 interface GenericGadgetRendererProps {
   podsSelected: string[];
@@ -13,12 +14,10 @@ interface GenericGadgetRendererProps {
   setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
   setLoading: (loading: boolean) => void;
   gadgetInstance?: { id: string; gadgetConfig: { version: number } };
-  setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   node: string;
   prepareGadgetInfo: (info: any) => void;
   setPodStreamsConnected: React.Dispatch<React.SetStateAction<number>>;
   imageName: string;
-  columnMeta?: AllColumnMeta;
 }
 
 export default function GenericGadgetRenderer({
@@ -31,23 +30,33 @@ export default function GenericGadgetRenderer({
   setBufferedGadgetData,
   setLoading,
   gadgetInstance,
-  setGadgetData,
   node,
   prepareGadgetInfo,
   setPodStreamsConnected,
   imageName,
-  columnMeta,
 }: GenericGadgetRendererProps) {
-  const { ig, isConnected } = usePortForward(
-    `api/v1/namespaces/gadget/pods/${podSelected}/portforward?ports=8080`
+  const {
+    ig,
+    isConnected,
+    error: connectionError,
+  } = usePortForward(`api/v1/namespaces/gadget/pods/${podSelected}/portforward?ports=8080`);
+
+  const gadgetExecutionId = useRef<string>(
+    gadgetInstance?.id || `${imageName}-${node}-${podSelected}`
   );
-  const gadgetRef = useRef<any>(null);
-  const gadgetRunningStatusRef = useRef(gadgetRunningStatus);
-  const attachTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const attachStopRef = useRef<{ stop?: () => void } | null>(null);
   const mountedRef = useRef(true);
   const decodedImageName = decodeURIComponent(imageName || '');
-  function gadgetStartStopHandler() {
+
+  // Update registry status if connection status changes
+  useEffect(() => {
+    gadgetRegistry.register(gadgetExecutionId.current, decodedImageName);
+    gadgetRegistry.updateStatus(gadgetExecutionId.current, {
+      isConnected,
+      error: connectionError || undefined,
+    });
+  }, [isConnected, connectionError, decodedImageName]);
+
+  async function gadgetStartStopHandler() {
     if (!ig) return;
     setLoading(true);
 
@@ -55,54 +64,46 @@ export default function GenericGadgetRenderer({
       node,
       dataColumns,
       setLoading,
-      setGadgetData,
       setBufferedGadgetData,
-      prepareGadgetInfo,
-      columnMeta
+      prepareGadgetInfo
     );
-    if (gadgetInstance) {
-      // Clear any pending attachment timeout
-      if (attachTimeoutRef.current) {
-        clearTimeout(attachTimeoutRef.current);
-        attachTimeoutRef.current = null;
-      }
-      // Stop any existing attachment
-      if (attachStopRef.current?.stop) {
-        attachStopRef.current.stop();
-        attachStopRef.current = null;
-      }
 
-      attachTimeoutRef.current = setTimeout(() => {
-        // Guard: ensure component is still mounted and ig is still valid
-        if (!mountedRef.current || !ig) {
-          return;
-        }
-        // Note: attachGadgetInstance returns a stop handle but the interface types it as void
-        attachStopRef.current = ig.attachGadgetInstance(
+    try {
+      if (gadgetInstance) {
+        await gadgetRegistry.attachGadget(
+          ig,
+          gadgetExecutionId.current,
           {
             id: gadgetInstance.id,
             version: gadgetInstance.gadgetConfig.version,
           },
           callbacks
-        ) as unknown as { stop?: () => void };
-      }, 2000);
-    } else {
-      gadgetRef.current = ig.runGadget(
-        {
-          version: 1,
-          imageName: decodedImageName,
-          paramValues: filters,
-        },
-        {
-          ...callbacks,
-          onReady: () => {
-            if (!gadgetRunningStatusRef.current) {
-              gadgetRef.current?.stop();
-            }
+        );
+      } else {
+        await gadgetRegistry.runGadget(
+          ig,
+          gadgetExecutionId.current,
+          {
+            version: 1,
+            imageName: decodedImageName,
+            paramValues: filters,
           },
-        },
-        err => console.error('Gadget run error:', err)
-      );
+          {
+            ...callbacks,
+            onReady: () => {
+              callbacks.onReady();
+              // Internal check if still should be running
+              const status = gadgetRegistry.getStatus(gadgetExecutionId.current);
+              if (status && !status.isRunning) {
+                status.stop?.();
+              }
+            },
+          }
+        );
+      }
+    } catch (err) {
+      console.error('Gadget execution error:', err);
+      setLoading(false);
     }
   }
 
@@ -117,45 +118,24 @@ export default function GenericGadgetRenderer({
   }, [gadgetInstance, setLoading]);
 
   useEffect(() => {
-    gadgetRunningStatusRef.current = gadgetRunningStatus;
-    if (!gadgetRunningStatus && !gadgetInstance) {
-      // Stop runGadget
-      if (gadgetRef.current?.stop) {
-        gadgetRef.current.stop();
-      }
-      // Clear pending attachment timeout
-      if (attachTimeoutRef.current) {
-        clearTimeout(attachTimeoutRef.current);
-        attachTimeoutRef.current = null;
-      }
-      // Stop attachment if active
-      if (attachStopRef.current?.stop) {
-        attachStopRef.current.stop();
-        attachStopRef.current = null;
-      }
+    if (!gadgetRunningStatus) {
+      gadgetRegistry.updateStatus(gadgetExecutionId.current, { isRunning: false });
+      const status = gadgetRegistry.getStatus(gadgetExecutionId.current);
+      status?.stop?.();
       return;
     }
+
     if (gadgetRunningStatus && podsSelected.length === podStreamsConnected) {
       gadgetStartStopHandler();
     }
-  }, [gadgetRunningStatus, podStreamsConnected, podsSelected]);
+  }, [gadgetRunningStatus, podStreamsConnected, podsSelected, ig]);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      // Clear pending attachment timeout
-      if (attachTimeoutRef.current) {
-        clearTimeout(attachTimeoutRef.current);
-        attachTimeoutRef.current = null;
-      }
-      // Stop attachment if active
-      if (attachStopRef.current?.stop) {
-        attachStopRef.current.stop();
-        attachStopRef.current = null;
-      }
-      // Stop runGadget if active
-      gadgetRef.current?.stop();
+      const id = gadgetExecutionId.current;
+      gadgetRegistry.unregister(id);
     };
   }, []);
 
