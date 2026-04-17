@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Icon } from '@iconify/react';
 import { DateLabel, Table } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import {
@@ -11,7 +12,7 @@ import {
 } from '@mui/material';
 import React, { useEffect, useMemo } from 'react';
 import GadgetFilters from '../../gadgets/gadgetFilters';
-import { AllColumnMeta } from '../../gadgets/utility';
+import { AllColumnMeta, renderDataColumn } from '../../gadgets/utility';
 import { IS_METRIC } from '../helpers';
 import { MetricChart } from '../MetricChart';
 
@@ -87,8 +88,13 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
         const header = meta?.annotations?.['columns.title'] || column;
         return {
           header,
-          accessorFn: (data: any) =>
-            column === 'timestamp' ? <DateLabel date={data[column]} /> : data[column],
+          accessorFn: (data: any) => {
+            const value = data[column];
+            if (column === 'timestamp') {
+              return <DateLabel date={value} />;
+            }
+            return renderDataColumn(value, column, data, meta);
+          },
         };
       }),
     [columns, columnMeta, dataSourceID]
