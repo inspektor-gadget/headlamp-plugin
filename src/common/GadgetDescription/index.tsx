@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Icon, InlineIcon } from '@iconify/react';
 import {
   Box,

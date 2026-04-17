@@ -88,8 +88,8 @@ export const renderDataColumn = (
         </Link>
       );
     case 'k8s.podName':
-      return payload.k8s?.['namespace'] ? (
-        <Link routeName="pod" params={{ name: value, namespace: payload.k8s['namespace'] }}>
+      return payload['k8s.namespace'] ? (
+        <Link routeName="pod" params={{ name: value, namespace: payload['k8s.namespace'] }}>
           {value}
         </Link>
       ) : (
@@ -187,7 +187,6 @@ export const processGadgetData = (
   dsID: string,
   columns: string[],
   node: string,
-  setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>,
   bufferOrSetter: GadgetDataBuffer | React.Dispatch<React.SetStateAction<Record<string, any[]>>>
 ) => {
   if (columns.length === 0) return;
@@ -234,7 +233,6 @@ export const createGadgetCallbacks = (
   node: string,
   dataColumns: Record<string, string[]>,
   setLoading: (loading: boolean) => void,
-  setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>,
   setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>,
   prepareGadgetInfo?: (info: any) => void
 ) => {
@@ -252,7 +250,7 @@ export const createGadgetCallbacks = (
       const dataToProcess = Array.isArray(dataFromGadget) ? dataFromGadget : [dataFromGadget];
       setLoading(false);
       dataToProcess.forEach(data =>
-        processGadgetData(data, dsID, dataColumns[dsID] || [], node, setGadgetData, buffer)
+        processGadgetData(data, dsID, dataColumns[dsID] || [], node, buffer)
       );
     },
   };

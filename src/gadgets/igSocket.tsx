@@ -348,7 +348,15 @@ const usePortForward = (url: string | null): PortForwardState => {
         isConnected: false,
         error: undefined,
       });
-      Object.keys(socketRef.current).forEach(u => cleanup(u));
+      const trackedUrls = new Set([
+        ...Object.keys(socketRef.current),
+        ...Object.keys(reconnectTimeoutRef.current),
+        ...Object.keys(retryCountRef.current),
+      ]);
+      trackedUrls.forEach(u => {
+        cleanup(u);
+        delete retryCountRef.current[u];
+      });
       return;
     }
 

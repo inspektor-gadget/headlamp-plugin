@@ -343,14 +343,7 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
             );
           });
           filteredData.forEach(data =>
-            processGadgetData(
-              data,
-              dsID,
-              dataColumnsRef.current[dsID] || [],
-              node,
-              setGadgetData,
-              buffer
-            )
+            processGadgetData(data, dsID, dataColumnsRef.current[dsID] || [], node, buffer)
           );
         },
         onError: err => {
@@ -406,10 +399,6 @@ const RunningGadgetForActiveTab = ({ instance, resource, ig }) => {
       isComponentMounted = false;
       buffer.flush();
 
-      const status = gadgetRegistry.getStatus(gadgetExecutionId);
-      if (status?.isRunning) {
-        status.stop?.();
-      }
       gadgetRegistry.unregister(gadgetExecutionId);
 
       // Reset state
@@ -464,7 +453,7 @@ const GadgetDataView = ({
         },
       })) || []
     );
-  }, [dataSourceID, dataColumns]);
+  }, [dataSourceID, dataColumns, columnMeta]);
 
   const hasMetricField = fields.some(field => field.header === 'isMetric');
 

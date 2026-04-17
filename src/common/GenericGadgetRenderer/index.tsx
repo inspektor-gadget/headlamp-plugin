@@ -14,7 +14,6 @@ interface GenericGadgetRendererProps {
   setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
   setLoading: (loading: boolean) => void;
   gadgetInstance?: { id: string; gadgetConfig: { version: number } };
-  setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   node: string;
   prepareGadgetInfo: (info: any) => void;
   setPodStreamsConnected: React.Dispatch<React.SetStateAction<number>>;
@@ -31,7 +30,6 @@ export default function GenericGadgetRenderer({
   setBufferedGadgetData,
   setLoading,
   gadgetInstance,
-  setGadgetData,
   node,
   prepareGadgetInfo,
   setPodStreamsConnected,
@@ -66,7 +64,6 @@ export default function GenericGadgetRenderer({
       node,
       dataColumns,
       setLoading,
-      setGadgetData,
       setBufferedGadgetData,
       prepareGadgetInfo
     );
@@ -138,10 +135,6 @@ export default function GenericGadgetRenderer({
     return () => {
       mountedRef.current = false;
       const id = gadgetExecutionId.current;
-      const status = gadgetRegistry.getStatus(id);
-      if (status?.isRunning) {
-        status.stop?.();
-      }
       gadgetRegistry.unregister(id);
     };
   }, []);

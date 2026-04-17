@@ -79,14 +79,16 @@ class GadgetRegistry {
       this.updateStatus(id, { error: err as Error, isRunning: false });
     });
 
-    this.updateStatus(id, { isRunning: true, stop: (stopHandle as any)?.stop });
-
-    return () => {
+    const wrapperStop = () => {
       if ((stopHandle as any)?.stop) {
         (stopHandle as any).stop();
       }
       this.updateStatus(id, { isRunning: false, stop: undefined });
     };
+
+    this.updateStatus(id, { isRunning: true, stop: wrapperStop });
+
+    return wrapperStop;
   }
 
   public async attachGadget(
@@ -97,14 +99,16 @@ class GadgetRegistry {
   ): Promise<() => void> {
     const stopHandle = ig.attachGadgetInstance(params, callbacks);
 
-    this.updateStatus(id, { isRunning: true, stop: (stopHandle as any)?.stop });
-
-    return () => {
+    const wrapperStop = () => {
       if ((stopHandle as any)?.stop) {
         (stopHandle as any).stop();
       }
       this.updateStatus(id, { isRunning: false, stop: undefined });
     };
+
+    this.updateStatus(id, { isRunning: true, stop: wrapperStop });
+
+    return wrapperStop;
   }
 }
 
