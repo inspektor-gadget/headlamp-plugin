@@ -55,18 +55,27 @@ export function formatDuration(ns: number): string {
 }
 
 /**
- * Process a single column of gadget data
+ * Process a single column of gadget data into a raw value
  */
-export const processDataColumn = (
-  payload: any,
-  column: string,
-  fieldMeta?: FieldMeta
-): React.ReactNode | null => {
+export const processDataColumn = (payload: any, column: string): any => {
   if (column === IS_METRIC || column.includes(HEADLAMP_KEY) || column.includes(HEADLAMP_VALUE)) {
     return null;
   }
 
   const value = getProperty(payload, column);
+  return value;
+};
+
+/**
+ * Render a processed column value into JSX
+ */
+export const renderDataColumn = (
+  value: any,
+  column: string,
+  payload: any,
+  fieldMeta?: FieldMeta
+): React.ReactNode | null => {
+  if (value === null || value === undefined) return null;
 
   switch (column) {
     case 'k8s.containerName':
@@ -79,100 +88,148 @@ export const processDataColumn = (
         </Link>
       );
     case 'k8s.podName':
-      return payload.k8s['namespace'] ? (
-        <Link routeName="pod" params={{ name: value, namespace: payload.k8s['namespace'] }}>
+      return payload['k8s.namespace'] ? (
+        <Link routeName="pod" params={{ name: value, namespace: payload['k8s.namespace'] }}>
           {value}
         </Link>
       ) : (
         value
       );
+    case 'timestamp':
+      // timestamp is handled by DateLabel in the table usually,
+      // but we can provide a default here if needed
+      return value;
     default: {
-      const raw = JSON.stringify(value).replace(/['"]+/g, '');
       const isDuration =
         fieldMeta?.type === 'gadget_duration_ns' ||
         fieldMeta?.annotations?.['columns.formatter'] === 'duration';
       if (isDuration) {
         const ns = Number(value);
-        return isNaN(ns) ? raw : formatDuration(ns);
+        return isNaN(ns) ? String(value) : formatDuration(ns);
       }
-      return raw;
+      return typeof value === 'object' ? JSON.stringify(value) : String(value);
     }
   }
 };
 
+export class GadgetDataBuffer {
+  private pendingUpdates: Record<string, any[]> = {};
+  private metricUpdates: Record<string, Record<string, any>> = {};
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
+  private readonly UPDATE_INTERVAL = 300;
+
+  constructor(
+    private setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>
+  ) {}
+
+  public pushData(dsID: string, node: string, massagedData: any, isMetric: boolean) {
+    if (isMetric) {
+      if (!this.metricUpdates[dsID]) this.metricUpdates[dsID] = {};
+      this.metricUpdates[dsID][node] = massagedData;
+    } else {
+      if (!this.pendingUpdates[dsID]) this.pendingUpdates[dsID] = [];
+      this.pendingUpdates[dsID].push(massagedData);
+    }
+
+    if (!this.timeoutId) {
+      this.timeoutId = setTimeout(() => this.flush(), this.UPDATE_INTERVAL);
+    }
+  }
+
+  public flush() {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+
+    if (
+      Object.keys(this.pendingUpdates).length === 0 &&
+      Object.keys(this.metricUpdates).length === 0
+    ) {
+      return;
+    }
+
+    const currentPendingUpdates = this.pendingUpdates;
+    const currentMetricUpdates = this.metricUpdates;
+
+    this.pendingUpdates = {};
+    this.metricUpdates = {};
+
+    this.setBufferedGadgetData(prevData => {
+      const newData = { ...prevData };
+      let hasChanges = false;
+
+      for (const dsID of Object.keys(currentMetricUpdates)) {
+        newData[dsID] = {
+          ...(newData[dsID] || {}),
+          ...currentMetricUpdates[dsID],
+        } as any;
+        hasChanges = true;
+      }
+
+      for (const dsID of Object.keys(currentPendingUpdates)) {
+        const existingData = newData[dsID] || [];
+        const combined = [...existingData, ...currentPendingUpdates[dsID]];
+        newData[dsID] = combined.slice(-MAX_DATA_LIMIT);
+        hasChanges = true;
+      }
+
+      return hasChanges ? newData : prevData;
+    });
+  }
+}
+
 /**
- * Process gadget data and update state
+ * Process gadget data and update state through the buffer
  */
 export const processGadgetData = (
   data: any,
   dsID: string,
   columns: string[],
   node: string,
-  setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>,
-  setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>,
-  columnMetaForDs?: ColumnMeta
+  buffer: GadgetDataBuffer
 ) => {
   if (columns.length === 0) return;
 
-  const massagedData: Record<string, any> = columns.includes(IS_METRIC)
+  const isMetric = columns.includes(IS_METRIC);
+  const massagedData: Record<string, any> = isMetric
     ? data
     : columns.reduce((acc, column) => {
-        const processedValue = processDataColumn(data, column, columnMetaForDs?.[column]);
+        const processedValue = processDataColumn(data, column);
         if (processedValue !== null) {
           acc[column] = processedValue;
         }
         return acc;
       }, {});
 
-  if (columns.includes(IS_METRIC)) {
-    setBufferedGadgetData(prevData => ({
-      ...prevData,
-      [dsID]: {
-        ...prevData[dsID],
-        [node]: massagedData,
-      },
-    }));
-  } else {
-    setBufferedGadgetData(prevData => {
-      const newData = [...(prevData[dsID] || []), massagedData];
-      return {
-        ...prevData,
-        [dsID]: newData.slice(-MAX_DATA_LIMIT),
-      };
-    });
-  }
+  buffer.pushData(dsID, node, massagedData, isMetric);
 };
 
 /**
- * Setup gadget callbacks
+ * Setup gadget callbacks utilizing batched buffering
  */
 export const createGadgetCallbacks = (
   node: string,
   dataColumns: Record<string, string[]>,
   setLoading: (loading: boolean) => void,
-  setGadgetData: React.Dispatch<React.SetStateAction<Record<string, any>>>,
   setBufferedGadgetData: React.Dispatch<React.SetStateAction<Record<string, any[]>>>,
-  prepareGadgetInfo?: (info: any) => void,
-  columnMeta?: AllColumnMeta
+  prepareGadgetInfo?: (info: any) => void
 ) => {
+  const buffer = new GadgetDataBuffer(setBufferedGadgetData);
+
   return {
     onGadgetInfo: prepareGadgetInfo || (() => {}),
     onReady: () => setLoading(false),
-    onDone: () => setLoading(false),
+    onDone: () => {
+      setLoading(false);
+      buffer.flush(); // Flush remaining items when gadget stops
+    },
     onError: (error: any) => console.error('Gadget error:', error),
     onData: (dsID: string, dataFromGadget: any) => {
       const dataToProcess = Array.isArray(dataFromGadget) ? dataFromGadget : [dataFromGadget];
       setLoading(false);
       dataToProcess.forEach(data =>
-        processGadgetData(
-          data,
-          dsID,
-          dataColumns[dsID] || [],
-          node,
-          setGadgetData,
-          setBufferedGadgetData,
-          columnMeta?.[dsID]
-        )
+        processGadgetData(data, dsID, dataColumns[dsID] || [], node, buffer)
       );
     },
   };

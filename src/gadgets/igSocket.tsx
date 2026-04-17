@@ -136,7 +136,7 @@ async function getIG(): Promise<WebAssembly.WebAssemblyInstantiatedSource> {
 }
 
 /**
- * Custom hook for handling port forwarding connections
+ * Custom hook for handling port forwarding connections with auto-reconnection
  * @param url - The URL to connect to, can be null if no connection is needed
  * @returns PortForwardState object containing connection status and IG instance
  */
@@ -147,15 +147,20 @@ const usePortForward = (url: string | null): PortForwardState => {
     isConnected: false,
   });
 
-  // Refs for tracking active connections and component mounted status
+  // Refs for tracking active connections, retries, and component mounted status
   const streamRef = useRef<Record<string, StreamRef>>({});
   const socketRef = useRef<Record<string, WebSocket>>({});
   const mountedRef = useRef(true);
+  const reconnectTimeoutRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const retryCountRef = useRef<Record<string, number>>({});
+
+  const MAX_RETRY_COUNT = 5;
+  const INITIAL_RETRY_DELAY = 1000;
 
   /**
    * Cleans up resources for a specific URL
    */
-  const cleanup = useCallback((targetUrl: string) => {
+  const cleanup = useCallback((targetUrl: string, isReconnecting = false) => {
     // Close and cleanup WebSocket
     if (socketRef.current[targetUrl]) {
       socketRef.current[targetUrl].close();
@@ -168,8 +173,14 @@ const usePortForward = (url: string | null): PortForwardState => {
       delete streamRef.current[targetUrl];
     }
 
-    // Update state if component is still mounted
-    if (mountedRef.current) {
+    // Clear any pending reconnection timeout
+    if (reconnectTimeoutRef.current[targetUrl]) {
+      clearTimeout(reconnectTimeoutRef.current[targetUrl]);
+      delete reconnectTimeoutRef.current[targetUrl];
+    }
+
+    // Update state if component is still mounted and we're not just about to reconnect
+    if (mountedRef.current && !isReconnecting) {
       setState(prev => ({
         ...prev,
         isConnected: false,
@@ -206,6 +217,110 @@ const usePortForward = (url: string | null): PortForwardState => {
   }, []);
 
   /**
+   * Main connection function that can be retried
+   */
+  const initConnection = useCallback(
+    async (targetUrl: string) => {
+      if (!targetUrl || !mountedRef.current) return;
+
+      try {
+        await getIG();
+
+        if (!mountedRef.current) return;
+
+        const additionalProtocols = [
+          'v4.channel.k8s.io',
+          'v3.channel.k8s.io',
+          'v2.channel.k8s.io',
+          'channel.k8s.io',
+        ];
+
+        // Initialize stream
+        streamRef.current[targetUrl] = await stream(targetUrl, () => {}, { additionalProtocols });
+
+        // Get socket with timeout
+        const socket = await prepareSocket(targetUrl);
+        if (!mountedRef.current) {
+          socket.close();
+          return;
+        }
+
+        socketRef.current[targetUrl] = socket;
+
+        // Reset retry count on successful connection
+        retryCountRef.current[targetUrl] = 0;
+
+        // Initialize IG connection
+        const igConnection = (window as any).wrapWebSocket(socket, {
+          onReady: () => {
+            if (mountedRef.current) {
+              setState({
+                ig: igConnection,
+                isConnected: true,
+                error: undefined,
+              });
+            }
+          },
+          onError: (error: Error) => {
+            console.error(`IG connection error for ${targetUrl}:`, error);
+            handleReconnect(targetUrl);
+          },
+          onClose: () => {
+            console.warn(`IG connection closed for ${targetUrl}`);
+            handleReconnect(targetUrl);
+          },
+        });
+      } catch (error) {
+        console.error('Failed to initialize connection:', error);
+        handleReconnect(targetUrl);
+      }
+    },
+    [cleanup, prepareSocket]
+  );
+
+  /**
+   * Handles reconnection logic with exponential backoff
+   */
+  const handleReconnect = useCallback(
+    (targetUrl: string) => {
+      if (!mountedRef.current || !targetUrl) return;
+
+      cleanup(targetUrl, true);
+
+      const currentRetryCount = retryCountRef.current[targetUrl] || 0;
+      if (currentRetryCount < MAX_RETRY_COUNT) {
+        const nextRetryCount = currentRetryCount + 1;
+        retryCountRef.current[targetUrl] = nextRetryCount;
+
+        const delay = INITIAL_RETRY_DELAY * Math.pow(2, currentRetryCount);
+        console.log(`Reconnecting to ${targetUrl} in ${delay}ms (attempt ${nextRetryCount})`);
+
+        reconnectTimeoutRef.current[targetUrl] = setTimeout(() => {
+          if (mountedRef.current) {
+            initConnection(targetUrl);
+          }
+        }, delay);
+
+        setState(prev => ({
+          ...prev,
+          isConnected: false,
+          ig: null,
+          error: new Error(`Connection lost. Retrying (attempt ${nextRetryCount})...`),
+        }));
+      } else {
+        console.error(`Max reconnection attempts reached for ${targetUrl}`);
+        setState(prev => ({
+          ...prev,
+          isConnected: false,
+          ig: null,
+          error: new Error('Maximum reconnection attempts reached. Please check your connection.'),
+        }));
+      }
+    },
+    [cleanup, initConnection]
+  );
+
+  /**
    * Handle component mounting/unmounting
    */
   useEffect(() => {
@@ -213,8 +328,12 @@ const usePortForward = (url: string | null): PortForwardState => {
 
     return () => {
       mountedRef.current = false;
-      // Cleanup all connections on unmount
-      Object.keys(socketRef.current).forEach(cleanup);
+      // Cleanup all connections and timeouts on unmount
+      Object.keys(socketRef.current).forEach(u => cleanup(u));
+      Object.keys(reconnectTimeoutRef.current).forEach(u => {
+        clearTimeout(reconnectTimeoutRef.current[u]);
+        delete reconnectTimeoutRef.current[u];
+      });
     };
   }, [cleanup]);
 
@@ -229,97 +348,27 @@ const usePortForward = (url: string | null): PortForwardState => {
         isConnected: false,
         error: undefined,
       });
-      Object.keys(socketRef.current).forEach(cleanup);
+      const trackedUrls = new Set([
+        ...Object.keys(socketRef.current),
+        ...Object.keys(reconnectTimeoutRef.current),
+        ...Object.keys(retryCountRef.current),
+      ]);
+      trackedUrls.forEach(u => {
+        cleanup(u);
+        delete retryCountRef.current[u];
+      });
       return;
     }
 
-    let isCurrentRequest = true;
+    // Reset retry count for new URL
+    retryCountRef.current[url] = 0;
+    initConnection(url);
 
-    const initConnection = async () => {
-      try {
-        await getIG();
-
-        if (!isCurrentRequest || !mountedRef.current) {
-          return;
-        }
-
-        const additionalProtocols = [
-          'v4.channel.k8s.io',
-          'v3.channel.k8s.io',
-          'v2.channel.k8s.io',
-          'channel.k8s.io',
-        ];
-
-        // Initialize stream
-        streamRef.current[url] = await stream(url, () => {}, { additionalProtocols });
-
-        // Get socket with timeout
-        const socket = await prepareSocket(url);
-        if (!isCurrentRequest || !mountedRef.current) {
-          socket.close();
-          return;
-        }
-
-        socketRef.current[url] = socket;
-
-        // Initialize IG connection
-        const igConnection = (window as any).wrapWebSocket(socket, {
-          onReady: () => {
-            if (isCurrentRequest && mountedRef.current) {
-              setState({
-                ig: igConnection,
-                isConnected: true,
-                error: undefined,
-              });
-            }
-          },
-          onError: (error: Error) => {
-            console.error(`IG connection error for ${url}:`, error);
-            if (mountedRef.current) {
-              setState(prev => ({
-                ...prev,
-                error,
-                isConnected: false,
-                ig: null,
-              }));
-            }
-            cleanup(url);
-          },
-          onClose: () => {
-            if (mountedRef.current) {
-              setState(prev => ({
-                ...prev,
-                isConnected: false,
-                ig: null,
-                error: new Error('Connection closed'),
-              }));
-              cleanup(url);
-            }
-          },
-        });
-      } catch (error) {
-        console.error('Failed to initialize connection:', error);
-        if (mountedRef.current) {
-          setState(prev => ({
-            ...prev,
-            error: error instanceof Error ? error : new Error(String(error)),
-            isConnected: false,
-            ig: null,
-          }));
-        }
-        cleanup(url);
-      }
-    };
-
-    // Start connection
-    initConnection();
-
-    // Cleanup on url change or unmount
+    // Cleanup on url change
     return () => {
-      isCurrentRequest = false;
       cleanup(url);
     };
-  }, [url, cleanup, prepareSocket]);
+  }, [url, cleanup, initConnection]);
 
   return state;
 };
