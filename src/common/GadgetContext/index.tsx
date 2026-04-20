@@ -43,7 +43,7 @@ export function useGadgetState() {
         },
       ]);
       // Set the newly added tab as active
-      setActiveTabIndex(dynamicTabs.length);
+      setActiveTabIndex(dynamicTabs.length + 2);
     } else {
       // If tab exists, just set it as active
       setActiveTabIndex(existingTabIndex + 2); // +2 to account for initial two tabs
