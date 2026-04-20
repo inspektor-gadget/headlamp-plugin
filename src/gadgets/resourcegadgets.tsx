@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { doesInstanceMatchResource } from '../common/embedScoping';
 import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../common/helpers';
 import { MetricChart } from '../common/MetricChart';
 import { isIGPod } from './helper';
@@ -47,11 +48,11 @@ const RunningGadgetsForResource = ({ resource, open }) => {
   const processLocalStorageInstances = useMemo(
     () => localStorageInstances => {
       if (!localStorageInstances) return [];
-      return localStorageInstances
-        .filter(item => item.kind === resource?.jsonData.kind && item.cluster === cluster)
-        .filter(i => i.isEmbedded);
+      return localStorageInstances.filter(item =>
+        doesInstanceMatchResource(item, resource?.jsonData, cluster)
+      );
     },
-    [resource?.jsonData.kind, cluster, open]
+    [resource?.jsonData, cluster, open]
   );
 
   useEffect(() => {

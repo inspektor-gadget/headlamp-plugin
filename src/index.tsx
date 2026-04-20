@@ -12,8 +12,10 @@ import {
 } from '@kinvolk/headlamp-plugin/lib/components/common';
 import { DetailsViewSectionProps } from '@kinvolk/headlamp-plugin/lib/components/DetailsViewSection/DetailsViewSection';
 import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
+import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Box, Typography } from '@mui/material';
 import { useState } from 'react';
+import { hasEmbeddedInstancesForResource } from './common/embedScoping';
 import { IGNotFound } from './common/NotFound';
 import { GadgetCreation } from './gadgets/gadgetcreationinresource';
 import { GadgetDetails } from './gadgets/gadgetDetails';
@@ -54,7 +56,12 @@ registerRoute({
 registerDetailsViewSection(({ resource }: DetailsViewSectionProps) => {
   const embeddedResources = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
   const [open, setOpen] = useState(false);
-  const isResourceEmbedded = embeddedResources.find((r: any) => r.kind === resource?.jsonData.kind);
+  const cluster = getCluster();
+  const isResourceEmbedded = hasEmbeddedInstancesForResource(
+    embeddedResources,
+    resource?.jsonData,
+    cluster
+  );
   const [pods] = K8s.ResourceClasses.Pod.useList();
 
   const isIGInstalled = pods?.find((pod: any) => isIGPod(pod));

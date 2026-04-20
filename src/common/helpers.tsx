@@ -27,11 +27,12 @@ export function updateInstanceFromStorage(
 
     instance.isHeadless = isHeadless; // Update isHeadless property
     if (embedView !== 'None') {
-      instance.kind = embedView; // Update kind with embedView
-      instance.isEmbedded = true; // Mark as embedded
+      instance.kind = embedView;
+      instance.isEmbedded = true;
     } else {
-      delete instance.kind; // Remove kind if embedView is 'None'
-      instance.isEmbedded = false; // Mark as non-embedded
+      delete instance.kind;
+      instance.isEmbedded = false;
+      delete instance.embeddedResource;
     }
     instance.gadgetConfig.paramValues = paramValues; // Update paramValues
 

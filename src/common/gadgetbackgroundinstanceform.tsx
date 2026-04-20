@@ -14,6 +14,7 @@ import { useSnackbar } from 'notistack';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { useGadgetConn } from '../gadgets/conn';
+import { deriveResourceRef } from './embedScoping';
 import { generateRandomString } from './helpers';
 
 interface InstanceConfig {
@@ -98,6 +99,11 @@ export function GadgetBackgroundInstanceForm({
       return;
     }
 
+    const hasResourceContext = !!(resource && resource.jsonData);
+    const resourceRef = hasResourceContext
+      ? deriveResourceRef(resource.jsonData, cluster)
+      : undefined;
+
     const newInstance = {
       id: instanceConfig.name + '' + Math.random(),
       name: instanceConfig.name,
@@ -112,7 +118,8 @@ export function GadgetBackgroundInstanceForm({
       cluster: cluster,
       isHeadless: false,
       tags: instanceConfig.tags,
-      isEmbedded: true,
+      isEmbedded: hasResourceContext,
+      ...(resourceRef ? { embeddedResource: resourceRef } : {}),
     };
     if (instanceConfig.runInBackground) {
       // Make a call to ig.createGadgetInstance when Run In Background is checked

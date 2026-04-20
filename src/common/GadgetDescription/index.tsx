@@ -31,6 +31,7 @@ export function GadgetDescription({
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
   const { gadgetRunningStatus } = useContext(GadgetContext);
+  const isResourceScoped = !!gadgetInstance?.embeddedResource;
 
   useEffect(() => {
     findGadgetInstance();
@@ -175,36 +176,49 @@ export function GadgetDescription({
                   <FormControlLabel
                     labelPlacement="start"
                     control={
-                      <Select
-                        labelId="embed-type-label"
-                        value={embedView}
-                        size="small"
-                        label="Embed Type"
-                        onChange={e => {
-                          setEmbedView(e.target.value);
-                          const allInstances = JSON.parse(
-                            localStorage.getItem('headlamp_embeded_resources') || '[]'
-                          );
-                          const index = allInstances.findIndex(instance => instance.id === id);
-                          if (index !== -1) {
-                            if (e.target.value !== 'None') {
-                              allInstances[index].isEmbedded = true;
-                            } else {
-                              allInstances[index].isEmbedded = false;
-                            }
-                            allInstances[index].kind = e.target.value;
-                            localStorage.setItem(
-                              'headlamp_embeded_resources',
-                              JSON.stringify(allInstances)
-                            );
-                            setGadgetInstance({ ...gadgetInstance, kind: e.target.value });
-                          }
-                        }}
+                      <Tooltip
+                        title={
+                          isResourceScoped
+                            ? 'This gadget is scoped to a specific resource. To change its embed type, remove it and re-add it from the target resource page.'
+                            : ''
+                        }
+                        disableHoverListener={!isResourceScoped}
                       >
-                        <MenuItem value="None">None</MenuItem>
-                        <MenuItem value="Pod">Pod</MenuItem>
-                        <MenuItem value="Node">Node</MenuItem>
-                      </Select>
+                        {/* A span is needed so Tooltip works on a disabled element */}
+                        <span>
+                          <Select
+                            labelId="embed-type-label"
+                            value={embedView}
+                            size="small"
+                            label="Embed Type"
+                            disabled={isResourceScoped}
+                            onChange={e => {
+                              setEmbedView(e.target.value);
+                              const allInstances = JSON.parse(
+                                localStorage.getItem('headlamp_embeded_resources') || '[]'
+                              );
+                              const index = allInstances.findIndex(instance => instance.id === id);
+                              if (index !== -1) {
+                                if (e.target.value !== 'None') {
+                                  allInstances[index].isEmbedded = true;
+                                } else {
+                                  allInstances[index].isEmbedded = false;
+                                }
+                                allInstances[index].kind = e.target.value;
+                                localStorage.setItem(
+                                  'headlamp_embeded_resources',
+                                  JSON.stringify(allInstances)
+                                );
+                                setGadgetInstance({ ...gadgetInstance, kind: e.target.value });
+                              }
+                            }}
+                          >
+                            <MenuItem value="None">None</MenuItem>
+                            <MenuItem value="Pod">Pod</MenuItem>
+                            <MenuItem value="Node">Node</MenuItem>
+                          </Select>
+                        </span>
+                      </Tooltip>
                     }
                     label={
                       <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>

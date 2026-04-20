@@ -199,6 +199,9 @@ function GadgetRenderer({
             cluster: getCluster(),
             kind: embedView,
             isEmbedded: embedView !== 'None',
+            ...(instance?.embeddedResource
+              ? { embeddedResource: instance.embeddedResource }
+              : {}),
           };
           const updatedEmbeddedInstances = [...updatedInstances, newInstance];
           localStorage.setItem(
@@ -252,6 +255,9 @@ function GadgetRenderer({
               nodes: [],
               cluster: getCluster(),
               isEmbedded: false,
+              ...(instance?.embeddedResource
+                ? { embeddedResource: instance.embeddedResource }
+                : {}),
             },
           ])
         );
