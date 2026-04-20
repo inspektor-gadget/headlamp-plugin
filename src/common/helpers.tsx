@@ -42,3 +42,15 @@ export function updateInstanceFromStorage(
 
   return null;
 }
+
+export function isValidOCIImageReference(imageURL: string): boolean {
+  const trimmed = imageURL.trim();
+  const ociImageReferenceRegex =
+    /^(?:[a-z0-9.-]+(?::[0-9]+)?\/)[a-z0-9]+(?:[._/-][a-z0-9]+)*(?::[a-z0-9._-]+)?$/;
+
+  return ociImageReferenceRegex.test(trimmed);
+}
+
+export function isValidGadgetImageReference(imageURL: string): boolean {
+  return imageURL.includes('/gadget/');
+}

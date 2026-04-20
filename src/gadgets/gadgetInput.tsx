@@ -2,17 +2,44 @@ import { Icon } from '@iconify/react';
 import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Box, Button, TextField } from '@mui/material';
 import { useSnackbar } from 'notistack';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useHistory } from 'react-router-dom';
-import { generateRandomString } from '../common/helpers';
+import {
+  generateRandomString,
+  isValidOCIImageReference,
+  isValidGadgetImageReference,
+} from '../common/helpers';
 
 export function GadgetInput({ resource, onAddGadget }) {
   const [imageURL, setImageURL] = useState('');
   const history = useHistory();
   const { enqueueSnackbar } = useSnackbar();
-  const encodedImageURL = encodeURIComponent(imageURL);
 
   const handleRun = () => {
+    const trimmedURL = imageURL.trim();
+    if (!trimmedURL) {
+      enqueueSnackbar('Image URL cannot be empty', { variant: 'error' });
+      return;
+    }
+
+    if (!isValidOCIImageReference(trimmedURL)) {
+      enqueueSnackbar(
+        'Invalid OCI image reference. Example: ghcr.io/inspektor-gadget/gadget/trace_open:latest',
+        { variant: 'error' }
+      );
+      return;
+    }
+
+    if (!isValidGadgetImageReference(trimmedURL)) {
+      enqueueSnackbar(
+        'Only Inspektor Gadget OCI images are supported. Example: ghcr.io/inspektor-gadget/gadget/trace_open:latest',
+        { variant: 'error' }
+      );
+      return;
+    }
+
+    const encodedImageURL = encodeURIComponent(trimmedURL);
+
     const row: {
       id: string;
       isHeadless: boolean;
@@ -45,7 +72,7 @@ export function GadgetInput({ resource, onAddGadget }) {
     localStorage.setItem('headlamp_embeded_resources', JSON.stringify(instances));
     if (resource) {
       onAddGadget(row);
-      enqueueSnackbar(`Added gadget ${imageURL}`, {
+      enqueueSnackbar(`Added gadget ${trimmedURL}`, {
         variant: 'success',
       });
       setImageURL('');
@@ -75,7 +102,7 @@ export function GadgetInput({ resource, onAddGadget }) {
           startIcon={<Icon icon="mdi:plus" />}
           onClick={() => handleRun()}
           sx={{ ml: 2 }}
-          disabled={!imageURL}
+          disabled={!imageURL.trim()}
         >
           Add
         </Button>
