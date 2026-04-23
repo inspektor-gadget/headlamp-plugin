@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { buildPortForwardURL } from '../../gadgets/helper';
 import usePortForward from '../../gadgets/igSocket';
 import { AllColumnMeta, createGadgetCallbacks } from '../../gadgets/utility';
 
@@ -6,6 +7,7 @@ interface GenericGadgetRendererProps {
   podsSelected: string[];
   podStreamsConnected: number;
   podSelected: string;
+  podNamespace: string;
   setGadgetConfig: (config: any) => void;
   dataColumns: Record<string, string[]>;
   gadgetRunningStatus: boolean;
@@ -25,6 +27,7 @@ export default function GenericGadgetRenderer({
   podsSelected,
   podStreamsConnected,
   podSelected,
+  podNamespace,
   dataColumns,
   gadgetRunningStatus,
   filters,
@@ -38,9 +41,7 @@ export default function GenericGadgetRenderer({
   imageName,
   columnMeta,
 }: GenericGadgetRendererProps) {
-  const { ig, isConnected } = usePortForward(
-    `api/v1/namespaces/gadget/pods/${podSelected}/portforward?ports=8080`
-  );
+  const { ig, isConnected } = usePortForward(buildPortForwardURL(podSelected, podNamespace));
   const gadgetRef = useRef<any>(null);
   const gadgetRunningStatusRef = useRef(gadgetRunningStatus);
   const attachTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -16,7 +16,7 @@ import { useSnackbar } from 'notistack';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../common/helpers';
 import { MetricChart } from '../common/MetricChart';
-import { isIGPod } from './helper';
+import { buildPortForwardURL, isIGPod } from './helper';
 import usePortForward from './igSocket';
 import { AllColumnMeta, getSortedColumns, processGadgetData } from './utility';
 
@@ -39,8 +39,11 @@ const RunningGadgetsForResource = ({ resource, open }) => {
   const matchingGadgetPodForThisResourceNode = getGadgetPodForThisResourceNode(node, pods);
   const { ig } = usePortForward(
     matchingGadgetPodForThisResourceNode
-      ? `api/v1/namespaces/gadget/pods/${matchingGadgetPodForThisResourceNode?.jsonData.metadata.name}/portforward?ports=8080`
-      : ''
+      ? buildPortForwardURL(
+          matchingGadgetPodForThisResourceNode?.jsonData.metadata.name,
+          matchingGadgetPodForThisResourceNode?.jsonData.metadata.namespace
+        )
+      : null
   );
   const cluster = getCluster();
 
