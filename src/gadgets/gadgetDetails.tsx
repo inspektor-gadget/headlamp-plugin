@@ -319,6 +319,7 @@ function GadgetRenderer({
               podsSelected={podsSelected}
               node={podSelected?.spec.nodeName}
               podSelected={podSelected?.jsonData.metadata.name}
+              podNamespace={podSelected?.jsonData.metadata.namespace}
               dataColumns={dataColumns}
               podStreamsConnected={podStreamsConnected}
               setPodStreamsConnected={setPodStreamsConnected}

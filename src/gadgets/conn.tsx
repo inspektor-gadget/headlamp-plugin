@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams } from 'react-router';
-import { isIGPod } from './helper';
+import { buildPortForwardURL, isIGPod } from './helper';
 import usePortForward from './igSocket';
 
 export function useGadgetConn(nodes: any | any[] | null, pods: any[] | null) {
@@ -24,7 +24,7 @@ export function useGadgetConn(nodes: any | any[] | null, pods: any[] | null) {
     }
     const url =
       pod && isIGInstalled(pods)
-        ? `api/v1/namespaces/gadget/pods/${pod.jsonData.metadata.name}/portforward?ports=8080`
+        ? buildPortForwardURL(pod.jsonData.metadata.name, pod.jsonData.metadata.namespace)
         : null;
     setPortForwardUrl(url);
   }, [nodes, pods]);

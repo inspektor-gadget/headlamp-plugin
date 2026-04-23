@@ -78,5 +78,30 @@ export function getServerURL() {
   if (isDockerDesktop()) {
     return 'http://localhost:64446';
   }
-  return 'http://localhost:4466';
+  if (isElectron()) {
+    return 'http://localhost:4466';
+  }
+  // For standard browser environments (in-cluster), use relative URLs.
+  // Headlamp API proxying will automatically route this traffic correctly.
+  return '';
+}
+
+/**
+ * Build a port-forward URL for an Inspektor Gadget pod.
+ *
+ * Derives the namespace dynamically from the pod's own metadata instead of
+ * hardcoding a specific namespace, so the plugin works regardless of where
+ * Inspektor Gadget is installed.
+ *
+ * @param podName - The name of the IG pod.
+ * @param podNamespace - The namespace the IG pod lives in.
+ * @returns The Kubernetes port-forward API path, or `null` when either
+ *          argument is missing.
+ */
+export function buildPortForwardURL(
+  podName: string | undefined | null,
+  podNamespace: string | undefined | null
+): string | null {
+  if (!podName || !podNamespace) return null;
+  return `api/v1/namespaces/${podNamespace}/pods/${podName}/portforward?ports=8080`;
 }
