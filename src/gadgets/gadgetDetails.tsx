@@ -13,6 +13,7 @@ import { NodeSelection } from '../common/NodeSelection';
 import { useGadgetConn } from './conn';
 
 export function GadgetDetails() {
+  const { imageName, id } = useParams<{ imageName: string; id: string }>();
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const gadgetState = useGadgetState();
@@ -20,7 +21,6 @@ export function GadgetDetails() {
   if (nodes === null || pods === null) {
     return <Loader title="Loading Gadget Details" />;
   }
-  const { imageName, id } = useParams<{ imageName: string; id: string }>();
   const embeddedInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
   const matchedInstance = embeddedInstances.find(instance => instance.id === id);
 
