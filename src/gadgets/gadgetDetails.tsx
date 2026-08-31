@@ -1,7 +1,7 @@
 import { ConfirmDialog, Loader, SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
 import K8s from '@kinvolk/headlamp-plugin/lib/k8s';
 import { getCluster, getClusterPrefixedPath } from '@kinvolk/headlamp-plugin/lib/Utils';
-import { Box, Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import { useContext, useEffect, useState } from 'react';
 import { generatePath, useHistory, useParams } from 'react-router-dom';
 import { GadgetContext, useGadgetState } from '../common/GadgetContext';
@@ -134,14 +134,25 @@ function GadgetRenderer({
         },
         err => {
           console.error('Failed to get gadget info:', err);
-          // Reset the flag so we can try again if needed
+          // Keep infoRequested set so the effect doesn't fire again on its
+          // own: resetting it here re-runs the effect immediately (it is in
+          // the dependency array), which turns a persistent failure into a
+          // tight, unthrottled retry loop. Retrying is done explicitly via
+          // the Retry button instead.
           setError(err);
           setIsGadgetInfoFetched(true);
-          setInfoRequested(false);
         }
       );
     }
   }, [ig, decodedImageName, infoRequested, prepareGadgetInfo, gadgetConn]);
+
+  function retryGadgetInfoFetch() {
+    setError(null);
+    setIsGadgetInfoFetched(false);
+    // Clearing the flag re-arms the fetch effect above for a single new
+    // request.
+    setInfoRequested(false);
+  }
 
   function headlessGadgetRunCallback() {
     // i am trying to run now what's my embedded state, also this is a run in background callback so i now isHeadless is true
@@ -327,9 +338,18 @@ function GadgetRenderer({
           ))}
 
         {error ? (
-          <Typography variant="body1" color="error">
-            {error}
-          </Typography>
+          <Box mt={2}>
+            <Typography variant="body1" color="error">
+              {`Failed to fetch gadget info: ${
+                typeof error === 'string' ? error : error?.message || 'unknown error'
+              }`}
+            </Typography>
+            <Box mt={1}>
+              <Button variant="outlined" onClick={retryGadgetInfoFetch}>
+                Retry
+              </Button>
+            </Box>
+          </Box>
         ) : (
           isGadgetInfoFetched &&
           dataSources.map((dataSource, index) => {
