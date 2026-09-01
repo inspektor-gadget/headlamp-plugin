@@ -1,6 +1,6 @@
 import { Link } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import React from 'react';
-import { HEADLAMP_KEY, HEADLAMP_VALUE, IS_METRIC } from '../common/helpers';
+import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../common/helpers';
 import { getProperty } from './helper';
 
 export const MAX_DATA_LIMIT = 20000;
@@ -42,6 +42,62 @@ export function getSortedColumns(
     }
     return 0;
   });
+}
+
+/**
+ * Turn a getGadgetInfo response into the per-datasource column lists and
+ * field metadata the tables render from. Shared by GadgetContext and
+ * RunningGadgetsForResource so the logic can't drift between them.
+ */
+export function prepareGadgetInfoData(info): {
+  fields: Record<string, string[]>;
+  meta: AllColumnMeta;
+} {
+  const fields: Record<string, string[]> = {};
+  const meta: AllColumnMeta = {};
+  info.dataSources.forEach((dataSource, index) => {
+    const dsID = dataSource.id || index;
+    const annotations = dataSource.annotations;
+    const isMetricAnnotationAvailable =
+      annotations &&
+      Object.keys(annotations).find(
+        annotationKey => annotationKey === 'metrics.print' && annotations[annotationKey] === 'true'
+      );
+
+    // Build per-field metadata map for this datasource
+    meta[dsID] = {};
+    dataSource.fields
+      .filter(field => (field.flags & 4) === 0)
+      .filter(field => field.fullName !== 'k8s')
+      .forEach(field => {
+        meta[dsID][field.fullName] = {
+          type: field.type,
+          annotations: field.annotations,
+        };
+      });
+
+    const fieldNames = dataSource.fields
+      .filter(field => (field.flags & 4) === 0)
+      .map(field => field.fullName)
+      .filter(field => field !== 'k8s');
+
+    if (isMetricAnnotationAvailable) {
+      // Fields may come without tags or annotations; a metric datasource is
+      // not guaranteed to have a non-key field either, so guard every step
+      // instead of crashing the whole details page.
+      const key = dataSource.fields.find(field => field.tags?.includes('role:key'))?.fullName;
+      const value = dataSource.fields.find(field => !field.tags?.includes('role:key'));
+      const metricUnit = value?.annotations?.['metrics.unit'] ?? '';
+      fieldNames.push(`${HEADLAMP_KEY}_${key}`);
+      fieldNames.push(`${HEADLAMP_VALUE}_${value?.fullName}`);
+      fieldNames.push(`${HEADLAMP_METRIC_UNIT}_${metricUnit}`);
+      fieldNames.push(IS_METRIC);
+      fields[dsID] = fieldNames;
+    } else {
+      fields[dsID] = getSortedColumns(fieldNames, dataSource.annotations);
+    }
+  });
+  return { fields, meta };
 }
 
 /**
