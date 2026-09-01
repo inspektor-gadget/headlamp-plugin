@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { createContext } from 'react';
-import { AllColumnMeta, getSortedColumns } from '../../gadgets/utility';
-import { HEADLAMP_KEY, HEADLAMP_METRIC_UNIT, HEADLAMP_VALUE, IS_METRIC } from '../helpers';
+import { AllColumnMeta, prepareGadgetInfoData } from '../../gadgets/utility';
 
 // Create a context for sharing gadget-related state
 export const GadgetContext = createContext(null);
@@ -61,53 +60,7 @@ export function useGadgetState() {
 
   const prepareGadgetInfo = info => {
     setIsGadgetInfoFetched(true);
-    const fields = {};
-    const meta: AllColumnMeta = {};
-    info.dataSources.forEach((dataSource, index) => {
-      const dsID = dataSource.id || index;
-      const annotations = dataSource.annotations;
-      const isMetricAnnotationAvailable =
-        annotations &&
-        Object.keys(annotations).find(
-          annotationKey =>
-            annotationKey === 'metrics.print' && annotations[annotationKey] === 'true'
-        );
-
-      // Build per-field metadata map for this datasource
-      meta[dsID] = {};
-      dataSource.fields
-        .filter(field => (field.flags & 4) === 0)
-        .filter(field => field.fullName !== 'k8s')
-        .forEach(field => {
-          meta[dsID][field.fullName] = {
-            type: field.type,
-            annotations: field.annotations,
-          };
-        });
-
-      if (isMetricAnnotationAvailable) {
-        const fieldsFromDataSource = dataSource.fields
-          .filter(field => (field.flags & 4) === 0)
-          .map(field => field.fullName)
-          .filter(field => field !== 'k8s');
-
-        const key = dataSource.fields.find(field => field.tags.includes('role:key'))?.fullName;
-        const value = dataSource.fields.find(field => !field.tags.includes('role:key'));
-        const metricUnit = value.annotations['metrics.unit'];
-        fieldsFromDataSource.push(`${HEADLAMP_KEY}_${key}`);
-        fieldsFromDataSource.push(`${HEADLAMP_VALUE}_${value?.fullName}`);
-        fieldsFromDataSource.push(`${HEADLAMP_METRIC_UNIT}_${metricUnit}`);
-        fieldsFromDataSource.push(IS_METRIC);
-        fields[dsID] = fieldsFromDataSource;
-      } else {
-        const extractedFields = dataSource.fields
-          .filter(field => (field.flags & 4) === 0)
-          .map(field => field.fullName)
-          .filter(field => field !== 'k8s');
-        fields[dsID] = getSortedColumns(extractedFields, dataSource.annotations);
-      }
-    });
-
+    const { fields, meta } = prepareGadgetInfoData(info);
     setGadgetConfig(info);
     setDataSources(info.dataSources);
     setDataColumns({ ...fields });
