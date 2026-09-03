@@ -189,9 +189,13 @@ export function GadgetWithDataSource(props: GadgetWithDataSourceProps) {
                       // disabled={podsSelected.length === 0 || gadgetRunningStatus}
                       onClick={() => {
                         if (gadgetRunningStatus) {
+                          // Stop: only open the stop/delete confirmation; the
+                          // instance is deleted (and status updated) once the
+                          // user confirms.
                           headlessGadgetDeleteCallback(gadgetInstance);
+                        } else {
+                          headlessGadgetRunCallback(gadgetInstance);
                         }
-                        headlessGadgetRunCallback(gadgetInstance);
                       }}
                       variant="outlined"
                       disabled={loading}
