@@ -32,7 +32,7 @@ helm repo update
 ```bash
 initContainers:
   - name: "headlamp-plugins"
-    image: ghcr.io/inspektor-gadget/headlamp-plugin:0.1.0-beta.2
+    image: ghcr.io/inspektor-gadget/headlamp-plugin:0.1.0-beta.3
     imagePullPolicy: Always
     command:
       [
