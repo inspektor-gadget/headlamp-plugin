@@ -1,4 +1,4 @@
-FROM node:18@sha256:d0bbfdbad0bff8253e6159dcbee42141db4fc309365d5b8bcfce46ed71569078 AS builder
+FROM node:22@sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d AS builder
 
 WORKDIR /headlamp-plugins
 
@@ -28,7 +28,11 @@ RUN echo "Extracting plugin $PLUGIN..."; \
     cd /headlamp-plugins/$PLUGIN; npx --no-install headlamp-plugin extract . /headlamp-plugins/build/${PLUGIN} \
     && cp /headlamp-plugins/$PLUGIN/main.wasm.gz /headlamp-plugins/build/${PLUGIN}/
 
-FROM alpine:3.20.3@sha256:beefdbd8a1da6d2915566fde36db9db0b524eb737fc57cd1367effd16dc0d06d
+FROM alpine:3.24.1@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+
+# ARG values do not carry over between stages, redeclare it so the COPY below
+# receives the same build argument as the builder stage.
+ARG PLUGIN
 
 # Create the target directory if it doesn't exist
 RUN mkdir -p /plugins/headlamp-ig
@@ -36,4 +40,4 @@ RUN mkdir -p /plugins/headlamp-ig
 # Copy the built plugin files from the builder image to /plugins/headlamp-ig
 COPY --from=builder /headlamp-plugins/build/${PLUGIN}/ /plugins/headlamp-ig/
 
-CMD ["echo Plugin(s) installed at /plugins/headlamp-ig/; ls /plugins/headlamp-ig/*"]
+CMD ["sh", "-c", "echo Plugin(s) installed at /plugins/headlamp-ig/; ls /plugins/headlamp-ig/*"]
