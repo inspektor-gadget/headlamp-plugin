@@ -1,5 +1,5 @@
 import { SectionBox } from '@kinvolk/headlamp-plugin/lib/components/common';
-import { Box } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 import _ from 'lodash';
 import React from 'react';
 import {
@@ -28,6 +28,7 @@ function prepareChartData(data, value) {
 
 export function MetricChart(props: { data: any; fields: any; node: any }) {
   const { data, fields, node } = props;
+  const theme = useTheme();
   const [chartData, setChartData] = React.useState([]);
   const value = fields
     .find(field => field?.header?.includes(HEADLAMP_VALUE))
@@ -47,9 +48,9 @@ export function MetricChart(props: { data: any; fields: any; node: any }) {
       <SectionBox
         title={`Metric Chart for node ${node}`}
         sx={{
-          backgroundColor: '#f9f9fc',
+          backgroundColor: theme.palette.background.paper,
           borderRadius: 2,
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          boxShadow: theme.shadows[2],
         }}
       >
         <Box width="100%" height="40vh" display="flex" justifyContent="center" alignItems="center">
@@ -63,43 +64,56 @@ export function MetricChart(props: { data: any; fields: any; node: any }) {
                 bottom: 20,
               }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" vertical={false} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke={theme.palette.divider}
+                vertical={false}
+              />
               <XAxis
                 dataKey="name"
                 label={{
                   value: unit || 'Scale',
                   position: 'insideBottom',
                   offset: -10,
-                  fill: '#666',
+                  fill: theme.palette.text.secondary,
                 }}
+                tick={{ fill: theme.palette.text.secondary }}
                 tickLine={false}
-                axisLine={{ stroke: '#999' }}
+                axisLine={{ stroke: theme.palette.text.disabled }}
               />
               <YAxis
                 label={{
                   value: value,
                   angle: -90,
                   position: 'insideLeft',
-                  fill: '#666',
+                  fill: theme.palette.text.secondary,
                 }}
+                tick={{ fill: theme.palette.text.secondary }}
                 tickLine={false}
-                axisLine={{ stroke: '#999' }}
+                axisLine={{ stroke: theme.palette.text.disabled }}
               />
               <Tooltip
                 cursor={{ fill: 'transparent' }}
                 contentStyle={{
-                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  backgroundColor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
                   borderRadius: 8,
                 }}
+                labelStyle={{ color: theme.palette.text.primary }}
               />
               <Legend
                 verticalAlign="top"
                 wrapperStyle={{
                   paddingBottom: 10,
-                  color: '#333',
+                  color: theme.palette.text.primary,
                 }}
               />
-              <Bar dataKey={`${value}`} fill="#3f51b5" barSize={40} radius={[5, 5, 0, 0]} />
+              <Bar
+                dataKey={`${value}`}
+                fill={theme.palette.primary.main}
+                barSize={40}
+                radius={[5, 5, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </Box>
