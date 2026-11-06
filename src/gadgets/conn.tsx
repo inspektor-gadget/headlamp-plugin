@@ -24,7 +24,7 @@ export function useGadgetConn(nodes: any | any[] | null, pods: any[] | null) {
     }
     const url =
       pod && isIGInstalled(pods)
-        ? `api/v1/namespaces/gadget/pods/${pod.jsonData.metadata.name}/portforward?ports=8080`
+        ? `api/v1/namespaces/${pod.jsonData.metadata.namespace}/pods/${pod.jsonData.metadata.name}/portforward?ports=8080`
         : null;
     setPortForwardUrl(url);
   }, [nodes, pods]);
