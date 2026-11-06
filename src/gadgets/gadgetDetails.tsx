@@ -16,11 +16,12 @@ export function GadgetDetails() {
   const [nodes] = K8s.ResourceClasses.Node.useList();
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const gadgetState = useGadgetState();
+  // Hooks must be called unconditionally, before any early return
+  const { imageName, id } = useParams<{ imageName: string; id: string }>();
 
   if (nodes === null || pods === null) {
     return <Loader title="Loading Gadget Details" />;
   }
-  const { imageName, id } = useParams<{ imageName: string; id: string }>();
   const embeddedInstances = JSON.parse(localStorage.getItem('headlamp_embeded_resources') || '[]');
   const matchedInstance = embeddedInstances.find(instance => instance.id === id);
 
