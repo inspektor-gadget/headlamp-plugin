@@ -5,7 +5,7 @@ import { AllColumnMeta, createGadgetCallbacks } from '../../gadgets/utility';
 interface GenericGadgetRendererProps {
   podsSelected: string[];
   podStreamsConnected: number;
-  podSelected: string;
+  podSelected: any;
   setGadgetConfig: (config: any) => void;
   dataColumns: Record<string, string[]>;
   gadgetRunningStatus: boolean;
@@ -38,8 +38,9 @@ export default function GenericGadgetRenderer({
   imageName,
   columnMeta,
 }: GenericGadgetRendererProps) {
+  const podSelectedMeta = (podSelected as any)?.jsonData?.metadata;
   const { ig, isConnected } = usePortForward(
-    `api/v1/namespaces/gadget/pods/${podSelected}/portforward?ports=8080`
+    `api/v1/namespaces/${podSelectedMeta?.namespace ?? 'gadget'}/pods/${podSelectedMeta?.name ?? podSelected}/portforward?ports=8080`
   );
   const gadgetRef = useRef<any>(null);
   const gadgetRunningStatusRef = useRef(gadgetRunningStatus);
