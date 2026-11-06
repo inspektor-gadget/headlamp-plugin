@@ -91,9 +91,9 @@ export function useGadgetState() {
           .map(field => field.fullName)
           .filter(field => field !== 'k8s');
 
-        const key = dataSource.fields.find(field => field.tags.includes('role:key'))?.fullName;
-        const value = dataSource.fields.find(field => !field.tags.includes('role:key'));
-        const metricUnit = value.annotations['metrics.unit'];
+        const key = dataSource.fields.find(field => field.tags?.includes('role:key'))?.fullName;
+        const value = dataSource.fields.find(field => !field.tags?.includes('role:key'));
+        const metricUnit = value?.annotations?.['metrics.unit'];
         fieldsFromDataSource.push(`${HEADLAMP_KEY}_${key}`);
         fieldsFromDataSource.push(`${HEADLAMP_VALUE}_${value?.fullName}`);
         fieldsFromDataSource.push(`${HEADLAMP_METRIC_UNIT}_${metricUnit}`);
