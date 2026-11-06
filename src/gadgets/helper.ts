@@ -78,5 +78,11 @@ export function getServerURL() {
   if (isDockerDesktop()) {
     return 'http://localhost:64446';
   }
-  return 'http://localhost:4466';
+  if (isElectron()) {
+    return 'http://localhost:4466';
+  }
+  // When Headlamp runs in-cluster, the plugin is served by the Headlamp
+  // backend at the same origin as the UI. Routing API traffic to localhost
+  // sends it to the user's machine instead of the cluster.
+  return typeof window !== 'undefined' ? window.location.origin : '';
 }
