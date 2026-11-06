@@ -39,7 +39,7 @@ const RunningGadgetsForResource = ({ resource, open }) => {
   const matchingGadgetPodForThisResourceNode = getGadgetPodForThisResourceNode(node, pods);
   const { ig } = usePortForward(
     matchingGadgetPodForThisResourceNode
-      ? `api/v1/namespaces/gadget/pods/${matchingGadgetPodForThisResourceNode?.jsonData.metadata.name}/portforward?ports=8080`
+      ? `api/v1/namespaces/${matchingGadgetPodForThisResourceNode?.jsonData.metadata.namespace}/pods/${matchingGadgetPodForThisResourceNode?.jsonData.metadata.name}/portforward?ports=8080`
       : ''
   );
   const cluster = getCluster();
