@@ -134,10 +134,11 @@ function GadgetRenderer({
         },
         err => {
           console.error('Failed to get gadget info:', err);
-          // Reset the flag so we can try again if needed
+          // Keep infoRequested set: resetting it re-triggers the fetch effect
+          // immediately, producing a tight unbounded retry loop while IG is
+          // unreachable. The error is surfaced to the user instead.
           setError(err);
           setIsGadgetInfoFetched(true);
-          setInfoRequested(false);
         }
       );
     }
