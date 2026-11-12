@@ -11,7 +11,7 @@ import { getCluster } from '@kinvolk/headlamp-plugin/lib/Utils';
 import { Button } from '@mui/material';
 import { Box, Tooltip } from '@mui/material';
 import { useSnackbar } from 'notistack';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { IGNotFound } from '../common/NotFound';
 import { isIGInstalled, useGadgetConn } from './conn';
 
@@ -20,9 +20,20 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   const [pods] = K8s.ResourceClasses.Pod.useList();
   const [runningInstances, setRunningInstances] = React.useState<any[] | null>(null);
   const [openConfirmDialog, setOpenConfirmDialog] = React.useState(false);
-  const [tableInstance, setTableInstance] = useState<any>(null);
+  const tableRef = useRef<any>(null);
   const isIGInstallationFound = isIGInstalled(pods);
   const [selectedCount, setSelectedCount] = useState(0);
+
+  // `renderTopToolbarCustomActions` is invoked while the table renders, so we
+  // must not call setState there. Keep the table in a ref and defer the count
+  // update to a microtask, after React has finished rendering.
+  const syncSelectedCount = useCallback((table: any) => {
+    tableRef.current = table;
+    queueMicrotask(() => {
+      const count = tableRef.current?.getSelectedRowModel().rows.length ?? 0;
+      setSelectedCount(prev => (prev === count ? prev : count));
+    });
+  }, []);
   const ig = useGadgetConn(nodes, pods);
   const cluster = getCluster();
   const { enqueueSnackbar } = useSnackbar();
@@ -73,9 +84,9 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
   }, [ig, embedDialogOpen]);
 
   const handleDeleteInstances = () => {
-    if (!tableInstance) return;
+    if (!tableRef.current) return;
 
-    const capturedTable = tableInstance;
+    const capturedTable = tableRef.current;
     const selectedRows = capturedTable.getSelectedRowModel().rows;
     const selectedIds = new Set(selectedRows.map(r => r.original.id)) as Set<string>;
 
@@ -242,8 +253,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
             enableRowSelection
             positionToolbarAlertBanner="top"
             renderTopToolbarCustomActions={({ table }) => {
-              setTableInstance(table);
-              setSelectedCount(table.getSelectedRowModel().rows.length);
+              syncSelectedCount(table);
               return null;
             }}
           />
@@ -313,8 +323,7 @@ export function BackgroundRunning({ embedDialogOpen = false }) {
               );
             }}
             renderTopToolbarCustomActions={({ table }) => {
-              setTableInstance(table);
-              setSelectedCount(table.getSelectedRowModel().rows.length);
+              syncSelectedCount(table);
               return null;
             }}
           />
